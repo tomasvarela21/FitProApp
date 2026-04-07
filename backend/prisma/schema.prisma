@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  TRAINER
+  STUDENT
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+}
+
+enum StudentStatus {
+  INVITED
+  ACTIVE
+  PAUSED
+  INACTIVE
+}
+
+model User {
+  id                 String     @id @default(cuid())
+  email              String     @unique
+  passwordHash       String?
+  role               UserRole
+  status             UserStatus @default(INVITED)
+  emailVerifiedAt    DateTime?
+  mustChangePassword Boolean    @default(false)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  trainer Trainer?
+  student Student?
+}
+
+model Trainer {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  firstName String
+  lastName  String
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  students        Student[]
+  sentInvitations AccountInvitation[] @relation("TrainerSentInvitations")
+}
+
+model Student {
+  id          String        @id @default(cuid())
+  trainerId   String
+  userId      String?       @unique
+  email       String
+  dni         String
+  firstName   String
+  lastName    String
+  phone       String?
+  status      StudentStatus @default(INVITED)
+  invitedAt   DateTime?
+  activatedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  trainer            Trainer             @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  user               User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  accountInvitations AccountInvitation[]
+
+  @@index([trainerId])
+  @@index([email])
+}
+
+model AccountInvitation {
+  id                 String    @id @default(cuid())
+  studentId          String
+  email              String
+  tokenHash          String
+  expiresAt          DateTime
+  usedAt             DateTime?
+  createdByTrainerId String
+  createdAt          DateTime  @default(now())
+
+  student          Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdByTrainer Trainer @relation("TrainerSentInvitations", fields: [createdByTrainerId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([email])
+  @@index([createdByTrainerId])
+}
