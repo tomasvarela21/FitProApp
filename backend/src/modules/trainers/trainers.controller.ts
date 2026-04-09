@@ -11,4 +11,16 @@ export class TrainersController {
       .status(201)
       .json(successResponse("Entrenador creado correctamente", trainer));
   });
+
+  static getDashboardSummary = asyncHandler(
+    async (req: Request, res: Response) => {
+      const result = await TrainersService.getDashboardSummary(
+        req.user!.userId
+      );
+
+      return res
+        .status(200)
+        .json(successResponse("Dashboard obtenido correctamente", result));
+    }
+  );
 }

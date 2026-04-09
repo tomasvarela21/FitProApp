@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../../infrastructure/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
 import { generateRawToken, hashToken } from "../../shared/utils/token";
+import { EmailService } from "../../infrastructure/email/email.service";
 import { StudentsMapper } from "./students.mapper";
 import {
   CreateStudentInput,
@@ -27,39 +28,54 @@ export class StudentsService {
       throw new AppError("Ya existe un usuario con ese email", 409);
     }
 
-    const user = await prisma.user.create({
-      data: {
-        email: data.email,
-        role: "STUDENT",
-        status: "INVITED",
-      },
-    });
-
-    const student = await prisma.student.create({
-      data: {
-        trainerId: trainer.id,
-        userId: user.id,
-        email: data.email,
-        dni: data.dni,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        phone: data.phone,
-        status: "INVITED",
-        invitedAt: new Date(),
-      },
-    });
-
     const rawToken = generateRawToken();
     const tokenHash = hashToken(rawToken);
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24);
 
-    const invitation = await prisma.accountInvitation.create({
-      data: {
-        studentId: student.id,
-        email: data.email,
-        tokenHash,
-        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
-        createdByTrainerId: trainer.id,
-      },
+    const { student, invitation } = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email: data.email,
+          role: "STUDENT",
+          status: "INVITED",
+        },
+      });
+
+      const student = await tx.student.create({
+        data: {
+          trainerId: trainer.id,
+          userId: user.id,
+          email: data.email,
+          dni: data.dni,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone,
+          status: "INVITED",
+          invitedAt: new Date(),
+        },
+      });
+
+      const invitation = await tx.accountInvitation.create({
+        data: {
+          studentId: student.id,
+          email: data.email,
+          tokenHash,
+          expiresAt,
+          createdByTrainerId: trainer.id,
+        },
+      });
+
+      return { student, invitation };
+    });
+
+    // Enviar email de invitación (no bloqueante)
+    EmailService.sendInvitation({
+      to: data.email,
+      firstName: data.firstName,
+      trainerName: `${trainer.firstName} ${trainer.lastName}`,
+      invitationToken: rawToken,
+    }).catch((err) => {
+      console.error("[StudentsService] Error enviando email de invitación:", err);
     });
 
     return {
@@ -107,9 +123,7 @@ export class StudentsService {
     const [students, total] = await Promise.all([
       prisma.student.findMany({
         where,
-        orderBy: {
-          createdAt: "desc",
-        },
+        orderBy: { createdAt: "desc" },
         skip,
         take: limit,
       }),
@@ -185,5 +199,110 @@ export class StudentsService {
     });
 
     return StudentsMapper.toDetail(updatedStudent);
+  }
+
+  static async deleteStudent(trainerUserId: string, studentId: string) {
+    const trainer = await prisma.trainer.findUnique({
+      where: { userId: trainerUserId },
+    });
+
+    if (!trainer) {
+      throw new AppError("El entrenador autenticado no existe", 404);
+    }
+
+    const student = await prisma.student.findFirst({
+      where: {
+        id: studentId,
+        trainerId: trainer.id,
+      },
+    });
+
+    if (!student) {
+      throw new AppError("Alumno no encontrado", 404);
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.student.delete({
+        where: { id: studentId },
+      });
+
+      if (student.userId) {
+        await tx.user.delete({
+          where: { id: student.userId },
+        });
+      }
+    });
+
+    return { deleted: true };
+  }
+
+  static async resendInvitation(trainerUserId: string, studentId: string) {
+    const trainer = await prisma.trainer.findUnique({
+      where: { userId: trainerUserId },
+    });
+
+    if (!trainer) {
+      throw new AppError("El entrenador autenticado no existe", 404);
+    }
+
+    const student = await prisma.student.findFirst({
+      where: {
+        id: studentId,
+        trainerId: trainer.id,
+      },
+    });
+
+    if (!student) {
+      throw new AppError("Alumno no encontrado", 404);
+    }
+
+    if (student.status !== "INVITED") {
+      throw new AppError("Solo se puede reenviar la invitación a alumnos con estado INVITED", 400);
+    }
+
+    const rawToken = generateRawToken();
+    const tokenHash = hashToken(rawToken);
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24);
+
+    await prisma.$transaction(async (tx) => {
+      // Invalidar invitaciones anteriores
+      await tx.accountInvitation.updateMany({
+        where: {
+          studentId: student.id,
+          usedAt: null,
+        },
+        data: {
+          usedAt: new Date(),
+        },
+      });
+
+      // Crear nueva invitación
+      await tx.accountInvitation.create({
+        data: {
+          studentId: student.id,
+          email: student.email,
+          tokenHash,
+          expiresAt,
+          createdByTrainerId: trainer.id,
+        },
+      });
+    });
+
+    // Enviar email (no bloqueante)
+    EmailService.sendInvitation({
+      to: student.email,
+      firstName: student.firstName,
+      trainerName: `${trainer.firstName} ${trainer.lastName}`,
+      invitationToken: rawToken,
+    }).catch((err) => {
+      console.error("[StudentsService] Error reenviando invitación:", err);
+    });
+
+    return {
+      sent: true,
+      ...(process.env.NODE_ENV === "development"
+        ? { invitationToken: rawToken }
+        : {}),
+    };
   }
 }

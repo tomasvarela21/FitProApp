@@ -1,7 +1,10 @@
 import { prisma } from "../../infrastructure/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
 import { hashPassword } from "../../shared/utils/hash";
+import { TrainersMapper } from "./trainers.mapper";
 import { CreateTrainerInput } from "./trainers.schema";
+
+const DASHBOARD_RECENT_LIMIT = 5;
 
 export class TrainersService {
   static async createTrainer(data: CreateTrainerInput) {
@@ -44,6 +47,37 @@ export class TrainersService {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       trainer: user.trainer,
+    };
+  }
+
+  static async getDashboardSummary(trainerUserId: string) {
+    const trainer = await prisma.trainer.findUnique({
+      where: { userId: trainerUserId },
+    });
+
+    if (!trainer) {
+      throw new AppError("El entrenador autenticado no existe", 404);
+    }
+
+    const baseWhere = { trainerId: trainer.id };
+
+    const [total, active, invited, paused, inactive, recentStudents] =
+      await Promise.all([
+        prisma.student.count({ where: baseWhere }),
+        prisma.student.count({ where: { ...baseWhere, status: "ACTIVE" } }),
+        prisma.student.count({ where: { ...baseWhere, status: "INVITED" } }),
+        prisma.student.count({ where: { ...baseWhere, status: "PAUSED" } }),
+        prisma.student.count({ where: { ...baseWhere, status: "INACTIVE" } }),
+        prisma.student.findMany({
+          where: baseWhere,
+          orderBy: { createdAt: "desc" },
+          take: DASHBOARD_RECENT_LIMIT,
+        }),
+      ]);
+
+    return {
+      stats: { total, active, invited, paused, inactive },
+      recentStudents: recentStudents.map(TrainersMapper.toDashboardStudent),
     };
   }
 }

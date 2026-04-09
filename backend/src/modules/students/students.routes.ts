@@ -27,3 +27,13 @@ studentsRouter.patch(
   validate(updateStudentSchema),
   StudentsController.updateStudent
 );
+
+studentsRouter.post(
+  "/:studentId/resend-invitation",
+  StudentsController.resendInvitation
+);
+
+studentsRouter.delete(
+  "/:studentId",
+  StudentsController.deleteStudent
+);

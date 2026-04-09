@@ -56,4 +56,34 @@ export class StudentsController {
       .status(200)
       .json(successResponse("Alumno actualizado correctamente", result));
   });
+
+  static resendInvitation = asyncHandler(async (req: Request, res: Response) => {
+    const studentId = Array.isArray(req.params.studentId)
+      ? req.params.studentId[0]
+      : req.params.studentId;
+
+    const result = await StudentsService.resendInvitation(
+      req.user!.userId,
+      studentId
+    );
+
+    return res
+      .status(200)
+      .json(successResponse("Invitación reenviada correctamente", result));
+  });
+
+  static deleteStudent = asyncHandler(async (req: Request, res: Response) => {
+    const studentId = Array.isArray(req.params.studentId)
+      ? req.params.studentId[0]
+      : req.params.studentId;
+
+    const result = await StudentsService.deleteStudent(
+      req.user!.userId,
+      studentId
+    );
+
+    return res
+      .status(200)
+      .json(successResponse("Alumno eliminado correctamente", result));
+  });
 }
