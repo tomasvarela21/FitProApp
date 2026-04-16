@@ -112,7 +112,7 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const assignForm = useForm<AssignForm>({
+  const assignForm = useForm<AssignForm, unknown, AssignForm>({
     resolver: zodResolver(assignSchema),
     defaultValues: {
       startDate: new Date().toISOString().split("T")[0],

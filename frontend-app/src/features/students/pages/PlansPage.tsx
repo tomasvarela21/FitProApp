@@ -52,7 +52,7 @@ export const PlansPage = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const form = useForm<PlanForm>({
+  const form = useForm<PlanForm, unknown, PlanForm>({
     resolver: zodResolver(planSchema),
   });
 
