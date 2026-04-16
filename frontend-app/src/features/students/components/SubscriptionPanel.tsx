@@ -53,8 +53,14 @@ const FREQUENCY_LABELS: Record<string, string> = {
 const assignSchema = z.object({
   planId: z.string().min(1, "Seleccioná un plan"),
   startDate: z.string().min(1, "Seleccioná una fecha"),
-  totalAmount: z.coerce.number().positive("El monto debe ser mayor a 0"),
-  installmentCount: z.coerce.number().int().min(1).max(24),
+  totalAmount: z.preprocess(
+    (val) => Number(val),
+    z.number().positive("El monto debe ser mayor a 0")
+  ),
+  installmentCount: z.preprocess(
+    (val) => Number(val),
+    z.number().int().min(1).max(24)
+  ),
   frequency: z.enum(["BIWEEKLY", "MONTHLY"]),
 });
 
@@ -112,7 +118,7 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const assignForm = useForm<AssignForm, unknown, AssignForm>({
+  const assignForm = useForm<AssignForm>({
     resolver: zodResolver(assignSchema),
     defaultValues: {
       startDate: new Date().toISOString().split("T")[0],

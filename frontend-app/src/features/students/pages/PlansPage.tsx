@@ -37,7 +37,10 @@ const DURATION_LABELS: Record<string, string> = {
 const planSchema = z.object({
   name: z.string().min(2, "El nombre es obligatorio"),
   description: z.string().optional(),
-  price: z.coerce.number().positive("El precio debe ser mayor a 0"),
+  price: z.preprocess(
+    (val) => Number(val),
+    z.number().positive("El precio debe ser mayor a 0")
+  ),
   duration: z.enum(["MONTHLY", "QUARTERLY", "SEMIANNUAL", "ANNUAL"]),
 });
 
@@ -52,7 +55,7 @@ export const PlansPage = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const form = useForm<PlanForm, unknown, PlanForm>({
+  const form = useForm<PlanForm>({
     resolver: zodResolver(planSchema),
   });
 
