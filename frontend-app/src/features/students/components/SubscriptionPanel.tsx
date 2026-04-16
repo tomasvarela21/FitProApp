@@ -53,14 +53,8 @@ const FREQUENCY_LABELS: Record<string, string> = {
 const assignSchema = z.object({
   planId: z.string().min(1, "Seleccioná un plan"),
   startDate: z.string().min(1, "Seleccioná una fecha"),
-  totalAmount: z.preprocess(
-    (val) => Number(val),
-    z.number().positive("El monto debe ser mayor a 0")
-  ),
-  installmentCount: z.preprocess(
-    (val) => Number(val),
-    z.number().int().min(1).max(24)
-  ),
+  totalAmount: z.number().positive("El monto debe ser mayor a 0"),
+  installmentCount: z.number().int().min(1).max(24),
   frequency: z.enum(["BIWEEKLY", "MONTHLY"]),
 });
 
@@ -381,7 +375,7 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
               <Input
                 type="number"
                 placeholder={selectedPlan?.price.toString() ?? "0"}
-                {...assignForm.register("totalAmount")}
+                {...assignForm.register("totalAmount", { valueAsNumber: true })}
               />
               {assignForm.formState.errors.totalAmount && (
                 <p className="text-xs text-destructive">
@@ -397,7 +391,7 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
                   type="number"
                   min="1"
                   max="24"
-                  {...assignForm.register("installmentCount")}
+                  {...assignForm.register("installmentCount", { valueAsNumber: true })}
                 />
               </div>
               <div className="space-y-1.5">

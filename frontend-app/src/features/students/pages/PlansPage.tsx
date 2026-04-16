@@ -37,10 +37,7 @@ const DURATION_LABELS: Record<string, string> = {
 const planSchema = z.object({
   name: z.string().min(2, "El nombre es obligatorio"),
   description: z.string().optional(),
-  price: z.preprocess(
-    (val) => Number(val),
-    z.number().positive("El precio debe ser mayor a 0")
-  ),
+  price: z.number().positive("El precio debe ser mayor a 0"),
   duration: z.enum(["MONTHLY", "QUARTERLY", "SEMIANNUAL", "ANNUAL"]),
 });
 
@@ -154,7 +151,7 @@ export const PlansPage = () => {
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label>Precio ($)</Label>
-          <Input type="number" placeholder="0" {...form.register("price")} />
+          <Input type="number" placeholder="0" {...form.register("price", { valueAsNumber: true })} />
           {form.formState.errors.price && (
             <p className="text-xs text-destructive">
               {form.formState.errors.price.message}
