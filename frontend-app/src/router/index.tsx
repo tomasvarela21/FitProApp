@@ -5,6 +5,8 @@ import { LoginPage } from "@/features/auth/pages/LoginPage";
 import { ActivateAccountPage } from "@/features/auth/pages/ActivateAccountPage";
 import { DashboardPage } from "@/features/dashboard/pages/DashboardPage";
 import { StudentsPage } from "@/features/students/pages/StudentsPage";
+import { ProfilePage } from "@/features/auth/pages/ProfilePage";
+import { PlansPage } from "@/features/students/pages/PlansPage";
 import { AppLayout } from "@/components/shared/Layout/AppLayout";
 
 type PrivateRouteProps = {
@@ -53,6 +55,8 @@ export const AppRouter = () => {
           <Route index element={<Navigate to="/app/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="students" element={<StudentsPage />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="plans" element={<PlansPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/app/dashboard" replace />} />

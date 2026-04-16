@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SubscriptionPanel } from "./SubscriptionPanel";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -171,7 +172,7 @@ export const StudentDetailSheet = ({
     <>
       {/* Detail / Edit Dialog */}
       <Dialog open={open && !isDeleting} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg overflow-y-auto max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>
               {isEditing ? "Editar alumno" : "Detalle del alumno"}
@@ -363,6 +364,11 @@ export const StudentDetailSheet = ({
                   <Trash2 className="w-4 h-4" />
                   Eliminar
                 </Button>
+              </div>
+
+              {/* Panel de suscripción */}
+              <div className="mt-4">
+                <SubscriptionPanel studentId={student.id} />
               </div>
             </div>
           )}

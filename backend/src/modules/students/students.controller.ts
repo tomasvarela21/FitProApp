@@ -16,7 +16,7 @@ export class StudentsController {
   static listStudents = asyncHandler(async (req: Request, res: Response) => {
     const parsedQuery = listStudentsQuerySchema.parse(req.query);
 
-    const result = await StudentsService.listStudents(
+    const result = await StudentsService.listStudentsWithSubscription(
       req.user!.userId,
       parsedQuery
     );

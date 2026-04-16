@@ -23,4 +23,23 @@ export class TrainersController {
         .json(successResponse("Dashboard obtenido correctamente", result));
     }
   );
+
+  static getProfile = asyncHandler(async (req: Request, res: Response) => {
+    const result = await TrainersService.getProfile(req.user!.userId);
+
+    return res
+      .status(200)
+      .json(successResponse("Perfil obtenido correctamente", result));
+  });
+
+  static updateProfile = asyncHandler(async (req: Request, res: Response) => {
+    const result = await TrainersService.updateProfile(
+      req.user!.userId,
+      req.body
+    );
+
+    return res
+      .status(200)
+      .json(successResponse("Perfil actualizado correctamente", result));
+  });
 }

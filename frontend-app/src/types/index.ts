@@ -14,7 +14,23 @@ export type AuthUser = {
   } | null;
 };
 
+export type TrainerProfile = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  email: string;
+  createdAt: string;
+};
+
 export type StudentStatus = "INVITED" | "ACTIVE" | "PAUSED" | "INACTIVE";
+
+export type StudentSubscriptionSummary = {
+  id: string;
+  planName: string;
+  endDate: string;
+  subscriptionStatus: "ACTIVE" | "EXPIRING_SOON" | "OVERDUE" | "PAID";
+};
 
 export type Student = {
   id: string;
@@ -27,6 +43,7 @@ export type Student = {
   activatedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  subscription: StudentSubscriptionSummary | null;
 };
 
 export type PaginatedResponse<T> = {
@@ -58,9 +75,24 @@ export type DashboardRecentStudent = {
   createdAt: string;
 };
 
+export type ExpiringAlert = {
+  subscriptionId: string;
+  installmentId: string;
+  studentId: string;
+  studentName: string;
+  planName: string;
+  installmentNumber: number;
+  endDate: string;
+  daysUntilExpiry: number;
+};
+
 export type DashboardSummary = {
   stats: DashboardStats;
   recentStudents: DashboardRecentStudent[];
+  alerts: {
+    expiringSoon: ExpiringAlert[];
+    expired: ExpiringAlert[];
+  };
 };
 
 export type ApiSuccess<T> = {
@@ -73,4 +105,61 @@ export type ApiError = {
   ok: false;
   message: string;
   errors?: unknown;
+};
+
+export type PlanDuration = "MONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL";
+
+export type Plan = {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  duration: PlanDuration;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SubscriptionStatus = "ACTIVE" | "EXPIRED" | "CANCELLED";
+
+export type InstallmentStatus = "PENDING" | "PAID" | "OVERDUE";
+export type PaymentFrequency = "BIWEEKLY" | "MONTHLY";
+
+export type Installment = {
+  id: string;
+  number: number;
+  amount: number;
+  dueDate: string;
+  paidAt: string | null;
+  status: InstallmentStatus;
+  notes: string | null;
+};
+
+export type Subscription = {
+  id: string;
+  studentId: string;
+  studentName: string;
+  planId: string;
+  planName: string;
+  planDuration: PlanDuration;
+  frequency: PaymentFrequency;
+  totalAmount: number;
+  installmentCount: number;
+  paidAmount: number;
+  pendingAmount: number;
+  status: SubscriptionStatus;
+  startDate: string;
+  endDate: string;
+  daysUntilExpiry: number;
+  createdAt: string;
+  installments: Installment[];
+};
+
+export type Payment = {
+  id: string;
+  amount: number;
+  paidAt: string;
+  periodLabel: string;
+  notes: string | null;
+  createdAt: string;
 };

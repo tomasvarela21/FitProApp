@@ -53,6 +53,10 @@ model Trainer {
   user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   students        Student[]
   sentInvitations AccountInvitation[] @relation("TrainerSentInvitations")
+  plans           Plan[]
+  subscriptions   Subscription[]
+  payments        Payment[]
+  installments    Installment[]
 }
 
 model Student {
@@ -73,6 +77,7 @@ model Student {
   trainer            Trainer             @relation(fields: [trainerId], references: [id], onDelete: Cascade)
   user               User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
   accountInvitations AccountInvitation[]
+  subscriptions      Subscription[]
 
   @@index([trainerId])
   @@index([email])
@@ -94,4 +99,109 @@ model AccountInvitation {
   @@index([studentId])
   @@index([email])
   @@index([createdByTrainerId])
+}
+
+enum PlanDuration {
+  MONTHLY
+  QUARTERLY
+  SEMIANNUAL
+  ANNUAL
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+model Plan {
+  id          String       @id @default(cuid())
+  trainerId   String
+  name        String
+  description String?
+  price       Decimal      @db.Decimal(10, 2)
+  duration    PlanDuration
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  trainer       Trainer        @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  subscriptions Subscription[]
+
+  @@index([trainerId])
+}
+
+model Subscription {
+  id          String             @id @default(cuid())
+  studentId   String
+  planId      String
+  trainerId   String
+  status           SubscriptionStatus @default(ACTIVE)
+  startDate        DateTime
+  endDate          DateTime
+  totalAmount      Decimal            @db.Decimal(10, 2)
+  installmentCount Int                @default(1)
+  frequency        PaymentFrequency   @default(MONTHLY)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  student      Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  plan         Plan          @relation(fields: [planId], references: [id], onDelete: Cascade)
+  trainer      Trainer       @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  payments     Payment[]
+  installments Installment[]
+
+  @@index([studentId])
+  @@index([planId])
+  @@index([trainerId])
+  @@index([endDate])
+}
+
+model Payment {
+  id             String       @id @default(cuid())
+  subscriptionId String
+  trainerId      String
+  amount         Decimal      @db.Decimal(10, 2)
+  paidAt         DateTime     @default(now())
+  periodLabel    String
+  notes          String?
+  createdAt      DateTime     @default(now())
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  trainer      Trainer      @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@index([trainerId])
+}
+
+enum InstallmentStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+enum PaymentFrequency {
+  BIWEEKLY
+  MONTHLY
+}
+
+model Installment {
+  id             String            @id @default(cuid())
+  subscriptionId String
+  trainerId      String
+  number         Int
+  amount         Decimal           @db.Decimal(10, 2)
+  dueDate        DateTime
+  paidAt         DateTime?
+  status         InstallmentStatus @default(PENDING)
+  notes          String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  trainer      Trainer      @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@index([trainerId])
+  @@index([dueDate])
 }

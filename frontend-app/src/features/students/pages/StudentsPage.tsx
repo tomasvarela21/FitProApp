@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Search, UserPlus } from "lucide-react";
+import { Search, UserPlus, AlertTriangle, XCircle, CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/shared/StatusBadge/StatusBadge";
 import { PageHeader } from "@/components/shared/PageHeader/PageHeader";
 import { CreateStudentSheet } from "@/features/students/components/CreateStudentSheet";
@@ -22,10 +23,51 @@ const StudentRowSkeleton = () => (
     </div>
     <div className="flex items-center gap-6">
       <Skeleton className="h-5 w-16 rounded-full" />
+      <Skeleton className="h-5 w-20 rounded-full" />
       <Skeleton className="h-3 w-24" />
     </div>
   </div>
 );
+
+const SubscriptionBadge = ({
+  subscription,
+}: {
+  subscription: Student["subscription"];
+}) => {
+  if (!subscription)
+    return (
+      <Badge variant="outline" className="bg-zinc-500/10 text-zinc-500 border-zinc-500/20 text-xs">
+        Sin plan
+      </Badge>
+    );
+
+  if (subscription.subscriptionStatus === "OVERDUE")
+    return (
+      <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20 gap-1 text-xs">
+        <XCircle className="w-3 h-3" /> Con deuda
+      </Badge>
+    );
+
+  if (subscription.subscriptionStatus === "EXPIRING_SOON")
+    return (
+      <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20 gap-1 text-xs">
+        <AlertTriangle className="w-3 h-3" /> Por vencer
+      </Badge>
+    );
+
+  if (subscription.subscriptionStatus === "PAID")
+    return (
+      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 gap-1 text-xs">
+        <CheckCircle2 className="w-3 h-3" /> Pagado
+      </Badge>
+    );
+
+  return (
+    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 gap-1 text-xs">
+      <CheckCircle2 className="w-3 h-3" /> Al día
+    </Badge>
+  );
+};
 
 export const StudentsPage = () => {
   const { students, meta, isLoading, page, setPage, search, setSearch } =
@@ -34,7 +76,7 @@ export const StudentsPage = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = (e: React.SyntheticEvent) => {
     e.preventDefault();
     setSearch(searchInput);
     setPage(1);
@@ -68,7 +110,6 @@ export const StudentsPage = () => {
         onClose={() => setSelectedStudent(null)}
       />
 
-      {/* Search */}
       <form onSubmit={handleSearch} className="flex gap-2 mb-6">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -98,7 +139,6 @@ export const StudentsPage = () => {
         )}
       </form>
 
-      {/* Table */}
       <Card>
         <CardContent className="p-0">
           <div className="flex items-center px-6 py-3 border-b border-border bg-muted/40 rounded-t-lg">
@@ -107,9 +147,14 @@ export const StudentsPage = () => {
                 Alumno
               </span>
             </div>
-            <div className="w-28 text-right">
+            <div className="w-24 text-right">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Estado
+              </span>
+            </div>
+            <div className="w-28 text-right">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Plan
               </span>
             </div>
             <div className="w-32 text-right">
@@ -129,9 +174,7 @@ export const StudentsPage = () => {
             <div className="py-16 text-center">
               <UserPlus className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
               <p className="text-sm font-medium">
-                {search
-                  ? "No se encontraron alumnos"
-                  : "No tenés alumnos aún"}
+                {search ? "No se encontraron alumnos" : "No tenés alumnos aún"}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 {search
@@ -161,8 +204,11 @@ export const StudentsPage = () => {
                       </p>
                     </div>
                   </div>
-                  <div className="w-28 flex justify-end">
+                  <div className="w-24 flex justify-end">
                     <StatusBadge status={student.status} />
+                  </div>
+                  <div className="w-28 flex justify-end">
+                    <SubscriptionBadge subscription={student.subscription} />
                   </div>
                   <div className="w-32 text-right">
                     <span className="text-xs text-muted-foreground whitespace-nowrap">

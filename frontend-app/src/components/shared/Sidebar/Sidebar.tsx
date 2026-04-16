@@ -4,6 +4,8 @@ import {
   Users,
   LogOut,
   Dumbbell,
+  UserCircle,
+  CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -21,6 +23,16 @@ const navItems = [
     label: "Alumnos",
     href: "/app/students",
     icon: Users,
+  },
+  {
+    label: "Planes",
+    href: "/app/plans",
+    icon: CreditCard,
+  },
+  {
+    label: "Mi perfil",
+    href: "/app/profile",
+    icon: UserCircle,
   },
 ];
 

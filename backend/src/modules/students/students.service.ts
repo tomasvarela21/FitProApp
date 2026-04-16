@@ -305,4 +305,105 @@ export class StudentsService {
         : {}),
     };
   }
+
+  static async listStudentsWithSubscription(
+    trainerUserId: string,
+    query: ListStudentsQueryInput
+  ) {
+    const trainer = await prisma.trainer.findUnique({
+      where: { userId: trainerUserId },
+    });
+
+    if (!trainer) {
+      throw new AppError("El entrenador autenticado no existe", 404);
+    }
+
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    const skip = (page - 1) * limit;
+    const search = query.search?.trim();
+
+    const where: Prisma.StudentWhereInput = {
+      trainerId: trainer.id,
+      ...(search
+        ? {
+            OR: [
+              { firstName: { contains: search, mode: "insensitive" } },
+              { lastName: { contains: search, mode: "insensitive" } },
+              { email: { contains: search, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    };
+
+    const now = new Date();
+    const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const [students, total] = await Promise.all([
+      prisma.student.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+        include: {
+          subscriptions: {
+            where: { status: { in: ["ACTIVE", "EXPIRED"] } },
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            include: {
+              plan: true,
+              installments: {
+                orderBy: { number: "asc" },
+              },
+            },
+          },
+        },
+      }),
+      prisma.student.count({ where }),
+    ]);
+
+    return {
+      items: students.map((s) => {
+        const sub = s.subscriptions[0] ?? null;
+        let subscriptionStatus: string | null = null;
+
+        if (sub) {
+          const hasOverdue = sub.installments.some(
+            (i) => i.status === "OVERDUE" ||
+            (i.status === "PENDING" && i.dueDate < now)
+          );
+          const hasExpiringSoon = sub.installments.some(
+            (i) =>
+              i.status === "PENDING" &&
+              i.dueDate >= now &&
+              i.dueDate <= in7Days
+          );
+          const allPaid = sub.installments.every((i) => i.status === "PAID");
+
+          if (hasOverdue) subscriptionStatus = "OVERDUE";
+          else if (hasExpiringSoon) subscriptionStatus = "EXPIRING_SOON";
+          else if (allPaid) subscriptionStatus = "PAID";
+          else subscriptionStatus = "ACTIVE";
+        }
+
+        return {
+          ...StudentsMapper.toListItem(s),
+          subscription: sub
+            ? {
+                id: sub.id,
+                planName: sub.plan.name,
+                endDate: sub.endDate,
+                subscriptionStatus,
+              }
+            : null,
+        };
+      }),
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit) || 1,
+      },
+    };
+  }
 }
