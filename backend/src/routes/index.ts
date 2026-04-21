@@ -20,9 +20,11 @@ router.use("/plans", plansRouter);
 router.use("/subscriptions", subscriptionsRouter);
 router.use("/payments", paymentsRouter);
 
-if (process.env.NODE_ENV === "development") {
-  router.post("/test-alerts", async (_req, res) => {
-    await sendDailyPaymentAlerts();
-    res.json({ ok: true, message: "Job ejecutado" });
-  });
-}
+router.post("/run-alerts", async (req, res) => {
+  const secret = req.headers["x-cron-secret"];
+  if (secret !== process.env.CRON_SECRET) {
+    return res.status(401).json({ ok: false, message: "No autorizado" });
+  }
+  sendDailyPaymentAlerts().catch(console.error);
+  return res.status(200).json({ ok: true, message: "Job iniciado" });
+});
