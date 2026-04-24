@@ -86,4 +86,19 @@ export class StudentsController {
       .status(200)
       .json(successResponse("Alumno eliminado correctamente", result));
   });
+
+  static resetPassword = asyncHandler(async (req: Request, res: Response) => {
+    const studentId = Array.isArray(req.params.studentId)
+      ? req.params.studentId[0]
+      : req.params.studentId;
+
+    const result = await StudentsService.resetStudentPassword(
+      req.user!.userId,
+      studentId
+    );
+
+    return res
+      .status(200)
+      .json(successResponse("Contraseña reseteada y email enviado", result));
+  });
 }

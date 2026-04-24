@@ -7,7 +7,13 @@ import { Dumbbell, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { authApi } from "@/api/auth.api";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -37,11 +43,15 @@ export const LoginPage = () => {
       const res = await authApi.login(data);
       const { accessToken, user } = res.data.data;
       setAuth(accessToken, user);
-      navigate("/app/dashboard");
+      if (user.role === "STUDENT") {
+        navigate("/student/dashboard");
+      } else {
+        navigate("/app/dashboard");
+      }
     } catch (err: unknown) {
       const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Error al iniciar sesión";
+        (err as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message ?? "Credenciales inválidas";
       setError(message);
     }
   };
@@ -49,7 +59,6 @@ export const LoginPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm space-y-6">
-        {/* Logo */}
         <div className="flex flex-col items-center gap-2 text-center">
           <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary">
             <Dumbbell className="w-6 h-6 text-primary-foreground" />
@@ -63,12 +72,14 @@ export const LoginPage = () => {
         <Card>
           <CardHeader className="pb-4">
             <CardTitle className="text-lg">Iniciar sesión</CardTitle>
-            <CardDescription>
-              Ingresá con tu cuenta de entrenador
-            </CardDescription>
+            <CardDescription>Ingresá con tu cuenta</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form
+              onSubmit={handleSubmit(onSubmit)}
+              noValidate
+              className="space-y-4"
+            >
               <div className="space-y-1.5">
                 <Label htmlFor="email">Email</Label>
                 <Input

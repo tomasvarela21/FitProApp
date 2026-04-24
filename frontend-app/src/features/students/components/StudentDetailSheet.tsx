@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { SubscriptionPanel } from "./SubscriptionPanel";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Pencil, X, Trash2, Send } from "lucide-react";
+import { Loader2, Pencil, X, Trash2, Send, KeyRound } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -26,6 +25,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/shared/StatusBadge/StatusBadge";
 import { studentsApi } from "@/api/students.api";
+import { SubscriptionPanel } from "./SubscriptionPanel";
 import type { Student, StudentStatus } from "@/types";
 
 const editStudentSchema = z.object({
@@ -37,7 +37,7 @@ const editStudentSchema = z.object({
 
 type EditStudentForm = z.infer<typeof editStudentSchema>;
 
-type StudentDetailSheetProps = {
+type Props = {
   student: Student | null;
   open: boolean;
   onClose: () => void;
@@ -56,17 +56,15 @@ const DetailRow = ({
   </div>
 );
 
-export const StudentDetailSheet = ({
-  student,
-  open,
-  onClose,
-}: StudentDetailSheetProps) => {
+export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -99,6 +97,7 @@ export const StudentDetailSheet = ({
     setIsEditing(false);
     setIsDeleting(false);
     setResendSuccess(false);
+    setResetSuccess(false);
     setError(null);
     onClose();
   };
@@ -154,6 +153,25 @@ export const StudentDetailSheet = ({
       setError(message);
     } finally {
       setIsResending(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!student) return;
+    setIsResettingPassword(true);
+    setError(null);
+    try {
+      await studentsApi.resetPassword(student.id);
+      setResetSuccess(true);
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      setTimeout(() => setResetSuccess(false), 3000);
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message ?? "Error al resetear la contraseña";
+      setError(message);
+    } finally {
+      setIsResettingPassword(false);
     }
   };
 
@@ -270,8 +288,9 @@ export const StudentDetailSheet = ({
               </div>
             </form>
           ) : (
-            <div className="mt-2">
-              <div className="flex items-center gap-4 mb-6">
+            <div className="mt-2 space-y-4">
+              {/* Avatar + nombre */}
+              <div className="flex items-center gap-4">
                 <div className="flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 text-primary text-lg font-bold shrink-0">
                   {student.firstName[0]}
                   {student.lastName[0]}
@@ -286,17 +305,14 @@ export const StudentDetailSheet = ({
                 </div>
               </div>
 
-              <Separator className="mb-2" />
+              <Separator />
 
               <div className="divide-y divide-border">
                 <DetailRow
                   label="Estado"
                   value={<StatusBadge status={student.status} />}
                 />
-                <DetailRow
-                  label="Teléfono"
-                  value={student.phone ?? "—"}
-                />
+                <DetailRow label="Teléfono" value={student.phone ?? "—"} />
                 <DetailRow
                   label="Invitado"
                   value={formatDate(student.invitedAt)}
@@ -312,24 +328,32 @@ export const StudentDetailSheet = ({
               </div>
 
               {error && (
-                <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 mt-4">
+                <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2">
                   <p className="text-xs text-destructive">{error}</p>
                 </div>
               )}
 
               {resendSuccess && (
-                <div className="rounded-md bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 mt-4">
+                <div className="rounded-md bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
                   <p className="text-xs text-emerald-600">
                     ✓ Invitación reenviada correctamente
                   </p>
                 </div>
               )}
 
-              {/* Reenviar invitación — solo para INVITED */}
+              {resetSuccess && (
+                <div className="rounded-md bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
+                  <p className="text-xs text-emerald-600">
+                    ✓ Email de reset enviado correctamente
+                  </p>
+                </div>
+              )}
+
+              {/* Reenviar invitación — solo INVITED */}
               {student.status === "INVITED" && (
                 <Button
                   variant="outline"
-                  className="w-full gap-2 mt-4"
+                  className="w-full gap-2"
                   onClick={handleResendInvitation}
                   disabled={isResending}
                 >
@@ -347,7 +371,32 @@ export const StudentDetailSheet = ({
                 </Button>
               )}
 
-              <div className="flex gap-3 mt-3">
+              {/* Reset contraseña — solo ACTIVE */}
+              {student.status === "ACTIVE" && (
+                <Button
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={handleResetPassword}
+                  disabled={isResettingPassword}
+                >
+                  {isResettingPassword ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <KeyRound className="w-4 h-4" />
+                      Resetear contraseña
+                    </>
+                  )}
+                </Button>
+              )}
+
+              {/* Panel de suscripción */}
+              <SubscriptionPanel studentId={student.id} />
+
+              <div className="flex gap-3">
                 <Button
                   variant="outline"
                   className="flex-1 gap-2"
@@ -365,17 +414,12 @@ export const StudentDetailSheet = ({
                   Eliminar
                 </Button>
               </div>
-
-              {/* Panel de suscripción */}
-              <div className="mt-4">
-                <SubscriptionPanel studentId={student.id} />
-              </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Confirm Delete Dialog */}
+      {/* Confirm Delete */}
       <Dialog open={isDeleting} onOpenChange={() => setIsDeleting(false)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
@@ -388,13 +432,11 @@ export const StudentDetailSheet = ({
               . Esta acción no se puede deshacer.
             </DialogDescription>
           </DialogHeader>
-
           {error && (
             <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2">
               <p className="text-xs text-destructive">{error}</p>
             </div>
           )}
-
           <DialogFooter className="gap-3 sm:gap-3">
             <Button
               variant="outline"

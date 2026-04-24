@@ -406,4 +406,76 @@ export class StudentsService {
       },
     };
   }
+
+  static async resetStudentPassword(
+    trainerUserId: string,
+    studentId: string
+  ) {
+    const trainer = await prisma.trainer.findUnique({
+      where: { userId: trainerUserId },
+    });
+    if (!trainer) throw new AppError("Entrenador no encontrado", 404);
+
+    const student = await prisma.student.findFirst({
+      where: { id: studentId, trainerId: trainer.id },
+      include: { user: true },
+    });
+    if (!student) throw new AppError("Alumno no encontrado", 404);
+    if (!student.user) throw new AppError("El alumno no tiene cuenta vinculada", 400);
+
+    const rawToken = generateRawToken();
+    const tokenHash = hashToken(rawToken);
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24);
+
+    await prisma.$transaction([
+      // Resetear cuenta
+      prisma.user.update({
+        where: { id: student.userId! },
+        data: {
+          passwordHash: null,
+          status: "INVITED",
+          emailVerifiedAt: null,
+        },
+      }),
+      // Resetear alumno
+      prisma.student.update({
+        where: { id: studentId },
+        data: {
+          status: "INVITED",
+          activatedAt: null,
+        },
+      }),
+      // Invalidar invitaciones anteriores
+      prisma.accountInvitation.updateMany({
+        where: { studentId, usedAt: null },
+        data: { usedAt: new Date() },
+      }),
+    ]);
+
+    // Crear nueva invitación
+    await prisma.accountInvitation.create({
+      data: {
+        studentId,
+        email: student.email,
+        tokenHash,
+        expiresAt,
+        createdByTrainerId: trainer.id,
+      },
+    });
+
+    // Enviar email
+    EmailService.sendInvitation({
+      to: student.email,
+      firstName: student.firstName,
+      trainerName: `${trainer.firstName} ${trainer.lastName}`,
+      invitationToken: rawToken,
+    }).catch((err) => {
+      console.error("[StudentsService] Error enviando reset:", err);
+    });
+
+    return {
+      sent: true,
+      ...(process.env.NODE_ENV === "development" ? { invitationToken: rawToken } : {}),
+    };
+  }
 }

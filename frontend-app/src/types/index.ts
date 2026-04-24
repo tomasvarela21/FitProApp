@@ -163,3 +163,42 @@ export type Payment = {
   notes: string | null;
   createdAt: string;
 };
+
+export type StudentProfile = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string | null;
+  status: string;
+  activatedAt: string | null;
+  trainer: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string | null;
+  };
+};
+
+export type StudentSubscription = {
+  id: string;
+  planName: string;
+  planDuration: PlanDuration;
+  frequency: PaymentFrequency;
+  totalAmount: number;
+  installmentCount: number;
+  paidAmount: number;
+  pendingAmount: number;
+  status: SubscriptionStatus;
+  startDate: string;
+  endDate: string;
+  daysUntilExpiry: number;
+  nextInstallment: {
+    id: string;
+    number: number;
+    amount: number;
+    dueDate: string;
+    status: InstallmentStatus;
+  } | null;
+  installments: Installment[];
+};

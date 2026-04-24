@@ -33,6 +33,11 @@ studentsRouter.post(
   StudentsController.resendInvitation
 );
 
+studentsRouter.post(
+  "/:studentId/reset-password",
+  StudentsController.resetPassword
+);
+
 studentsRouter.delete(
   "/:studentId",
   StudentsController.deleteStudent

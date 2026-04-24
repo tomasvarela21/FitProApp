@@ -5,6 +5,7 @@ import { studentsRouter } from "../modules/students/students.routes";
 import { plansRouter } from "../modules/plans/plans.routes";
 import { subscriptionsRouter } from "../modules/subscriptions/subscriptions.routes";
 import { paymentsRouter } from "../modules/payments/payments.routes";
+import { studentPortalRouter } from "../modules/student-portal/student-portal.routes";
 import { sendDailyPaymentAlerts } from "../infrastructure/jobs/payment-alerts.job";
 
 export const router = Router();
@@ -19,6 +20,7 @@ router.use("/students", studentsRouter);
 router.use("/plans", plansRouter);
 router.use("/subscriptions", subscriptionsRouter);
 router.use("/payments", paymentsRouter);
+router.use("/student", studentPortalRouter);
 
 router.post("/run-alerts", async (req, res) => {
   const secret = req.headers["x-cron-secret"];

@@ -44,4 +44,9 @@ export const studentsApi = {
     apiClient.post<ApiSuccess<{ sent: boolean }>>(
       `/students/${id}/resend-invitation`
     ),
+
+  resetPassword: (id: string) =>
+    apiClient.post<ApiSuccess<{ sent: boolean }>>(
+      `/students/${id}/reset-password`
+    ),
 };
