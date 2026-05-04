@@ -57,6 +57,8 @@ model Trainer {
   subscriptions   Subscription[]
   payments        Payment[]
   installments    Installment[]
+  exercises       Exercise[]
+  routines        Routine[]
 }
 
 model Student {
@@ -78,6 +80,7 @@ model Student {
   user               User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
   accountInvitations AccountInvitation[]
   subscriptions      Subscription[]
+  studentRoutines    StudentRoutine[]
 
   @@index([trainerId])
   @@index([email])
@@ -204,4 +207,164 @@ model Installment {
   @@index([subscriptionId])
   @@index([trainerId])
   @@index([dueDate])
+}
+
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum MovementType {
+  PUSH
+  PULL
+  HINGE
+  SQUAT
+  CARRY
+  CORE
+  CARDIO
+  OLYMPIC
+}
+
+enum MediaType {
+  GIF
+  YOUTUBE
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+model MuscleGroup {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  exercises Exercise[]
+}
+
+model Equipment {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  exercises Exercise[]
+}
+
+model Exercise {
+  id            String       @id @default(cuid())
+  name          String
+  description   String?
+  muscleGroupId String
+  difficulty    Difficulty   @default(BEGINNER)
+  movementType  MovementType
+  equipmentId   String?
+  mediaUrl      String?
+  mediaType     MediaType?
+  isGlobal      Boolean      @default(false)
+  trainerId     String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  muscleGroup      MuscleGroup       @relation(fields: [muscleGroupId], references: [id])
+  equipment        Equipment?        @relation(fields: [equipmentId], references: [id])
+  trainer          Trainer?          @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  routineExercises RoutineExercise[]
+
+  @@index([muscleGroupId])
+  @@index([trainerId])
+  @@index([isGlobal])
+}
+
+model Routine {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  daysOfWeek  DayOfWeek[]
+  isGlobal    Boolean     @default(false)
+  trainerId   String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  trainer          Trainer?          @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  routineExercises RoutineExercise[]
+  studentRoutines  StudentRoutine[]
+
+  @@index([trainerId])
+  @@index([isGlobal])
+}
+
+model RoutineExercise {
+  id              String  @id @default(cuid())
+  routineId       String
+  exerciseId      String
+  order           Int
+  sets            Int
+  reps            String
+  suggestedWeight Float?
+  suggestedRpe    Float?
+  restSeconds     Int     @default(90)
+  notes           String?
+
+  routine     Routine      @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  exercise    Exercise     @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  workoutSets WorkoutSet[]
+
+  @@index([routineId])
+  @@index([exerciseId])
+}
+
+model StudentRoutine {
+  id         String   @id @default(cuid())
+  studentId  String
+  routineId  String
+  isActive   Boolean  @default(true)
+  assignedAt DateTime @default(now())
+  notes      String?
+
+  student     Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  routine     Routine      @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  workoutLogs WorkoutLog[]
+
+  @@index([studentId])
+  @@index([routineId])
+}
+
+model WorkoutLog {
+  id               String   @id @default(cuid())
+  studentRoutineId String
+  date             DateTime @default(now())
+  notes            String?
+  createdAt        DateTime @default(now())
+
+  studentRoutine StudentRoutine @relation(fields: [studentRoutineId], references: [id], onDelete: Cascade)
+  workoutSets    WorkoutSet[]
+
+  @@index([studentRoutineId])
+  @@index([date])
+}
+
+model WorkoutSet {
+  id                String   @id @default(cuid())
+  workoutLogId      String
+  routineExerciseId String
+  setNumber         Int
+  reps              Int
+  weight            Float?
+  rpe               Float?
+  notes             String?
+  createdAt         DateTime @default(now())
+
+  workoutLog      WorkoutLog      @relation(fields: [workoutLogId], references: [id], onDelete: Cascade)
+  routineExercise RoutineExercise @relation(fields: [routineExerciseId], references: [id], onDelete: Cascade)
+
+  @@index([workoutLogId])
+  @@index([routineExerciseId])
 }
