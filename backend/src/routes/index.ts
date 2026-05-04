@@ -6,6 +6,8 @@ import { plansRouter } from "../modules/plans/plans.routes";
 import { subscriptionsRouter } from "../modules/subscriptions/subscriptions.routes";
 import { paymentsRouter } from "../modules/payments/payments.routes";
 import { studentPortalRouter } from "../modules/student-portal/student-portal.routes";
+import { exercisesRouter } from "../modules/exercises/exercises.routes";
+import { routinesRouter, studentRoutinesRouter } from "../modules/routines/routines.routes";
 import { sendDailyPaymentAlerts } from "../infrastructure/jobs/payment-alerts.job";
 
 export const router = Router();
@@ -17,10 +19,13 @@ router.get("/", (_req, res) => {
 router.use("/auth", authRouter);
 router.use("/trainers", trainersRouter);
 router.use("/students", studentsRouter);
+router.use("/students", studentRoutinesRouter);
 router.use("/plans", plansRouter);
 router.use("/subscriptions", subscriptionsRouter);
 router.use("/payments", paymentsRouter);
 router.use("/student", studentPortalRouter);
+router.use("/exercises", exercisesRouter);
+router.use("/routines", routinesRouter);
 
 router.post("/run-alerts", async (req, res) => {
   const secret = req.headers["x-cron-secret"];
