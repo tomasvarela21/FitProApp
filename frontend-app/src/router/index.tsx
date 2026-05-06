@@ -7,17 +7,15 @@ import { ProfilePage } from "@/features/auth/pages/ProfilePage";
 import { DashboardPage } from "@/features/dashboard/pages/DashboardPage";
 import { StudentsPage } from "@/features/students/pages/StudentsPage";
 import { PlansPage } from "@/features/students/pages/PlansPage";
+import { ExercisesPage } from "@/features/exercises/pages/ExercisesPage";
+import { ExerciseGroupPage } from "@/features/exercises/pages/ExerciseGroupPage";
+import { RoutinesPage } from "@/features/routines/pages/RoutinesPage";
 import { StudentDashboardPage } from "@/features/student-portal/pages/StudentDashboardPage";
 import { StudentProfilePage } from "@/features/student-portal/pages/StudentProfilePage";
 import { AppLayout } from "@/components/shared/Layout/AppLayout";
 import { StudentLayout } from "@/components/shared/StudentLayout/StudentLayout";
 
 type RouteProps = { children: ReactNode };
-
-const PrivateRoute = ({ children }: RouteProps) => {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
-};
 
 const PublicRoute = ({ children }: RouteProps) => {
   const { isAuthenticated, user } = useAuth();
@@ -71,6 +69,9 @@ export const AppRouter = () => {
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="students" element={<StudentsPage />} />
           <Route path="plans" element={<PlansPage />} />
+          <Route path="exercises" element={<ExercisesPage />} />
+          <Route path="exercises/:slug" element={<ExerciseGroupPage />} />
+          <Route path="routines" element={<RoutinesPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
 

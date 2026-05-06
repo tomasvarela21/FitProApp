@@ -63,7 +63,7 @@ function toRoutineDto(sr: StudentRoutineWithRelations) {
       id: routine.id,
       name: routine.name,
       description: routine.description,
-      daysOfWeek: routine.daysOfWeek,
+      daysOfWeek: [...new Set(routine.routineExercises.map(re => re.dayOfWeek))],
       exercises: routine.routineExercises.map((re) => ({
         id: re.id,
         order: re.order,
@@ -124,7 +124,8 @@ export class WorkoutService {
     if (!studentRoutine) return null;
 
     const today = DAY_MAP[new Date().getDay()];
-    const isTrainingDay = studentRoutine.routine.daysOfWeek.includes(today as never);
+    const routineDays = [...new Set(studentRoutine.routine.routineExercises.map(re => re.dayOfWeek))];
+    const isTrainingDay = routineDays.includes(today as never);
 
     if (!isTrainingDay) return null;
 

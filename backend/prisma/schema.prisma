@@ -284,14 +284,13 @@ model Exercise {
 }
 
 model Routine {
-  id          String      @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
   description String?
-  daysOfWeek  DayOfWeek[]
-  isGlobal    Boolean     @default(false)
+  isGlobal    Boolean  @default(false)
   trainerId   String?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   trainer          Trainer?          @relation(fields: [trainerId], references: [id], onDelete: Cascade)
   routineExercises RoutineExercise[]
@@ -302,15 +301,16 @@ model Routine {
 }
 
 model RoutineExercise {
-  id              String  @id @default(cuid())
+  id              String    @id @default(cuid())
   routineId       String
   exerciseId      String
+  dayOfWeek       DayOfWeek
   order           Int
   sets            Int
   reps            String
   suggestedWeight Float?
   suggestedRpe    Float?
-  restSeconds     Int     @default(90)
+  restSeconds     Int       @default(90)
   notes           String?
 
   routine     Routine      @relation(fields: [routineId], references: [id], onDelete: Cascade)
@@ -319,6 +319,7 @@ model RoutineExercise {
 
   @@index([routineId])
   @@index([exerciseId])
+  @@index([dayOfWeek])
 }
 
 model StudentRoutine {

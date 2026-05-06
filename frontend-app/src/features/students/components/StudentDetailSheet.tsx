@@ -26,6 +26,7 @@ import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/shared/StatusBadge/StatusBadge";
 import { studentsApi } from "@/api/students.api";
 import { SubscriptionPanel } from "./SubscriptionPanel";
+import { RoutinePanel } from "./RoutinePanel";
 import type { Student, StudentStatus } from "@/types";
 
 const editStudentSchema = z.object({
@@ -190,7 +191,7 @@ export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
     <>
       {/* Detail / Edit Dialog */}
       <Dialog open={open && !isDeleting} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-lg overflow-y-auto max-h-[90vh]">
+        <DialogContent className="sm:max-w-5xl w-[95vw] max-h-[95vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
             <DialogTitle>
               {isEditing ? "Editar alumno" : "Detalle del alumno"}
@@ -396,6 +397,9 @@ export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
               {/* Panel de suscripción */}
               <SubscriptionPanel studentId={student.id} />
 
+              {/* Panel de rutinas */}
+              <RoutinePanel studentId={student.id} />
+
               <div className="flex gap-3">
                 <Button
                   variant="outline"
@@ -421,7 +425,7 @@ export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
 
       {/* Confirm Delete */}
       <Dialog open={isDeleting} onOpenChange={() => setIsDeleting(false)}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="w-[95vw] max-w-sm">
           <DialogHeader>
             <DialogTitle>¿Eliminar alumno?</DialogTitle>
             <DialogDescription>

@@ -5,13 +5,13 @@ import { AppError } from "../../shared/errors/app-error";
 type CreateRoutineData = {
   name: string;
   description?: string;
-  daysOfWeek: DayOfWeek[];
 };
 
 type UpdateRoutineData = Partial<CreateRoutineData>;
 
 type AddExerciseData = {
   exerciseId: string;
+  dayOfWeek: DayOfWeek;
   order: number;
   sets: number;
   reps: string;
@@ -48,13 +48,13 @@ function toRoutineDto(routine: RoutineWithRelations) {
     id: routine.id,
     name: routine.name,
     description: routine.description,
-    daysOfWeek: routine.daysOfWeek,
     isGlobal: routine.isGlobal,
     trainerId: routine.trainerId,
     createdAt: routine.createdAt,
     updatedAt: routine.updatedAt,
-    exercises: routine.routineExercises.map((re) => ({
+    routineExercises: routine.routineExercises.map((re) => ({
       id: re.id,
+      dayOfWeek: re.dayOfWeek,
       order: re.order,
       sets: re.sets,
       reps: re.reps,
@@ -91,7 +91,7 @@ export class RoutinesService {
   private static async getOwnedRoutine(trainerId: string, routineId: string) {
     const routine = await prisma.routine.findUnique({ where: { id: routineId } });
     if (!routine) throw new AppError("Rutina no encontrada", 404);
-    if (routine.isGlobal || routine.trainerId !== trainerId) {
+    if (!routine.isGlobal && routine.trainerId !== trainerId) {
       throw new AppError("No tienes permisos para modificar esta rutina", 403);
     }
     return routine;

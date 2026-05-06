@@ -17,18 +17,18 @@ const dayOfWeekEnum = z.enum([
 const createRoutineSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
   description: z.string().optional(),
-  daysOfWeek: z.array(dayOfWeekEnum).min(1, "Debe seleccionar al menos un día"),
 });
 
 const updateRoutineSchema = createRoutineSchema.partial();
 
 const addExerciseSchema = z.object({
   exerciseId: z.string().min(1, "El ejercicio es obligatorio"),
+  dayOfWeek: dayOfWeekEnum,
   order: z.number().int().min(1),
   sets: z.number().int().min(1),
   reps: z.string().min(1),
-  suggestedWeight: z.number().positive().optional(),
-  suggestedRpe: z.number().min(1).max(10).optional(),
+  suggestedWeight: z.number().min(0).optional(),
+  suggestedRpe: z.number().min(0).max(10).optional(),
   restSeconds: z.number().int().min(0).optional(),
   notes: z.string().optional(),
 });

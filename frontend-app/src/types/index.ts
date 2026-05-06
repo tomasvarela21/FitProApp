@@ -202,3 +202,77 @@ export type StudentSubscription = {
   } | null;
   installments: Installment[];
 };
+
+export type MuscleGroup = { id: string; name: string; slug: string };
+export type Equipment = { id: string; name: string };
+
+export type Exercise = {
+  id: string;
+  name: string;
+  description: string | null;
+  muscleGroup: MuscleGroup;
+  difficulty: "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
+  movementType: "PUSH" | "PULL" | "HINGE" | "SQUAT" | "CARRY" | "CORE" | "CARDIO" | "OLYMPIC";
+  equipment: Equipment | null;
+  mediaUrl: string | null;
+  mediaType: "GIF" | "YOUTUBE" | null;
+  isGlobal: boolean;
+  trainerId: string | null;
+  createdAt: string;
+};
+
+export type RoutineExercise = {
+  id: string;
+  dayOfWeek: string;
+  order: number;
+  sets: number;
+  reps: string;
+  suggestedWeight: number | null;
+  suggestedRpe: number | null;
+  restSeconds: number;
+  notes: string | null;
+  exercise: Exercise;
+};
+
+export type Routine = {
+  id: string;
+  name: string;
+  description: string | null;
+  isGlobal: boolean;
+  trainerId: string | null;
+  routineExercises: RoutineExercise[];
+  createdAt: string;
+};
+
+export const getRoutineDays = (routine: Routine): string[] => {
+  const days = new Set(routine.routineExercises.map((re) => re.dayOfWeek));
+  const order = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
+  return order.filter((d) => days.has(d));
+};
+
+export type StudentRoutine = {
+  id: string;
+  studentId: string;
+  routineId: string;
+  isActive: boolean;
+  assignedAt: string;
+  notes: string | null;
+  routine: Routine;
+};
+
+export type WorkoutSet = {
+  id: string;
+  setNumber: number;
+  reps: number;
+  weight: number | null;
+  rpe: number | null;
+  notes: string | null;
+};
+
+export type WorkoutLog = {
+  id: string;
+  date: string;
+  notes: string | null;
+  workoutSets: WorkoutSet[];
+  studentRoutine: { routine: { name: string } };
+};
