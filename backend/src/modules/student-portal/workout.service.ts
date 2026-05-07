@@ -1,12 +1,12 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, DayOfWeek } from "@prisma/client";
 import { prisma } from "../../infrastructure/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
 
 type WorkoutSetInput = {
   setNumber: number;
   reps: number;
-  weight?: number;
-  rpe?: number;
+  weight?: number | null;
+  rpe?: number | null;
   notes?: string;
 };
 
@@ -30,6 +30,20 @@ const DAY_MAP: Record<number, string> = {
   5: "FRIDAY",
   6: "SATURDAY",
 };
+
+function getTodayDayOfWeek(): DayOfWeek {
+  const days: DayOfWeek[] = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+  return days[new Date().getDay()];
+}
+
+const routineExerciseInclude = {
+  exercise: {
+    include: {
+      muscleGroup: true,
+      equipment: true,
+    },
+  },
+} satisfies Prisma.RoutineExerciseInclude;
 
 const studentRoutineInclude = {
   routine: {
@@ -64,8 +78,9 @@ function toRoutineDto(sr: StudentRoutineWithRelations) {
       name: routine.name,
       description: routine.description,
       daysOfWeek: [...new Set(routine.routineExercises.map(re => re.dayOfWeek))],
-      exercises: routine.routineExercises.map((re) => ({
+      routineExercises: routine.routineExercises.map((re) => ({
         id: re.id,
+        dayOfWeek: re.dayOfWeek,
         order: re.order,
         sets: re.sets,
         reps: re.reps,
@@ -118,16 +133,23 @@ export class WorkoutService {
 
     const studentRoutine = await prisma.studentRoutine.findFirst({
       where: { studentId: student.id, isActive: true },
-      include: studentRoutineInclude,
-    });
+      include: {
+        routine: {
+          include: {
+            routineExercises: {
+              where: { dayOfWeek: getTodayDayOfWeek() },
+              include: routineExerciseInclude,
+              orderBy: { order: "asc" },
+            },
+          },
+        },
+      },
+    }) as StudentRoutineWithRelations | null;
 
     if (!studentRoutine) return null;
 
-    const today = DAY_MAP[new Date().getDay()];
-    const routineDays = [...new Set(studentRoutine.routine.routineExercises.map(re => re.dayOfWeek))];
-    const isTrainingDay = routineDays.includes(today as never);
-
-    if (!isTrainingDay) return null;
+    const todayExercises = studentRoutine.routine.routineExercises;
+    if (todayExercises.length === 0) return null;
 
     return toRoutineDto(studentRoutine);
   }
@@ -150,19 +172,17 @@ export class WorkoutService {
       });
 
       for (const exerciseData of data.routineExercises) {
-        for (const setData of exerciseData.sets) {
-          await tx.workoutSet.create({
-            data: {
-              workoutLogId: log.id,
-              routineExerciseId: exerciseData.routineExerciseId,
-              setNumber: setData.setNumber,
-              reps: setData.reps,
-              weight: setData.weight,
-              rpe: setData.rpe,
-              notes: setData.notes,
-            },
-          });
-        }
+        await tx.workoutSet.createMany({
+          data: exerciseData.sets.map((s) => ({
+            workoutLogId: log.id,
+            routineExerciseId: exerciseData.routineExerciseId,
+            setNumber: s.setNumber,
+            reps: s.reps,
+            weight: s.weight ?? null,
+            rpe: s.rpe ?? null,
+            notes: s.notes,
+          })),
+        });
       }
 
       return log;

@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, UserCircle, LogOut, Dumbbell } from "lucide-react";
+import { UserCircle, LogOut, Dumbbell, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,14 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const navItems = [
   {
-    label: "Mi plan",
+    label: "Mi entrenamiento",
     href: "/student/dashboard",
-    icon: LayoutDashboard,
+    icon: Dumbbell,
+  },
+  {
+    label: "Mi progreso",
+    href: "/student/progress",
+    icon: TrendingUp,
   },
   {
     label: "Mi perfil",

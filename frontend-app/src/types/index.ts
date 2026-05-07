@@ -276,3 +276,78 @@ export type WorkoutLog = {
   workoutSets: WorkoutSet[];
   studentRoutine: { routine: { name: string } };
 };
+
+export type StudentRoutineExercise = {
+  id: string;
+  dayOfWeek: string;
+  order: number;
+  sets: number;
+  reps: string;
+  suggestedWeight: number | null;
+  suggestedRpe: number | null;
+  restSeconds: number | null;
+  notes: string | null;
+  exercise: {
+    id: string;
+    name: string;
+    description: string | null;
+    muscleGroup: { id: string; name: string; slug: string } | null;
+    equipment: { id: string; name: string } | null;
+  };
+};
+
+export type StudentWorkoutRoutine = {
+  studentRoutineId: string;
+  assignedAt: string;
+  notes: string | null;
+  routine: {
+    id: string;
+    name: string;
+    description: string | null;
+    daysOfWeek: string[];
+    routineExercises: StudentRoutineExercise[];
+  };
+};
+
+export type StudentWorkoutLog = {
+  id: string;
+  date: string;
+  notes: string | null;
+  createdAt: string;
+  sets: {
+    id: string;
+    setNumber: number;
+    reps: number;
+    weight: number | null;
+    rpe: number | null;
+    notes: string | null;
+    exercise: {
+      id: string;
+      name: string;
+      order: number;
+      muscleGroup: { name: string } | null;
+    };
+  }[];
+};
+
+export type WorkoutLogInput = {
+  date?: string;
+  notes?: string;
+  routineExercises: {
+    routineExerciseId: string;
+    sets: {
+      setNumber: number;
+      reps: number;
+      weight?: number | null;
+      rpe?: number | null;
+      notes?: string;
+    }[];
+  }[];
+};
+
+export type WorkoutProgress = {
+  date: string;
+  maxWeight: number | null;
+  avgRpe: number | null;
+  totalSets: number;
+};

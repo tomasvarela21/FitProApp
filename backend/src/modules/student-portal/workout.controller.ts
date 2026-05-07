@@ -7,8 +7,8 @@ import { WorkoutService } from "./workout.service";
 const workoutSetSchema = z.object({
   setNumber: z.number().int().min(1),
   reps: z.number().int().min(0),
-  weight: z.number().positive().optional(),
-  rpe: z.number().min(1).max(10).optional(),
+  weight: z.number().min(0).nullable().optional(),
+  rpe: z.number().min(0).max(10).nullable().optional(),
   notes: z.string().optional(),
 });
 
