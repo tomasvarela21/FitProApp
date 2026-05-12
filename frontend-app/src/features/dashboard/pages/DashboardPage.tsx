@@ -80,10 +80,10 @@ const AlertRow = ({
   onClick: () => void;
 }) => (
   <div
-    className="flex items-center justify-between py-3 cursor-pointer hover:bg-muted/30 px-2 rounded-md transition-colors"
+    className="flex flex-col gap-2 py-3 cursor-pointer hover:bg-muted/30 px-2 rounded-md transition-colors sm:flex-row sm:items-center sm:justify-between"
     onClick={onClick}
   >
-    <div className="flex items-center gap-3">
+    <div className="flex min-w-0 items-center gap-3">
       <div
         className={`flex items-center justify-center w-8 h-8 rounded-full shrink-0 ${
           type === "expired"
@@ -97,14 +97,14 @@ const AlertRow = ({
           <AlertTriangle className="w-4 h-4" />
         )}
       </div>
-      <div>
-        <p className="text-sm font-medium">{alert.studentName}</p>
-        <p className="text-xs text-muted-foreground">
+      <div className="min-w-0">
+        <p className="text-sm font-medium truncate">{alert.studentName}</p>
+        <p className="text-xs text-muted-foreground truncate">
           {alert.planName} · Cuota {alert.installmentNumber}
         </p>
       </div>
     </div>
-    <div className="text-right">
+    <div className="text-left sm:text-right">
       <p
         className={`text-xs font-medium ${
           type === "expired" ? "text-red-600" : "text-amber-600"
@@ -139,18 +139,18 @@ export const DashboardPage = () => {
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         {isLoading
           ? Array.from({ length: 5 }).map((_, i) => <StatCardSkeleton key={i} />)
           : data &&
             statCards(data.stats).map((stat) => (
               <Card key={stat.label}>
                 <CardContent className="pt-6">
-                  <div className="flex items-center gap-4">
+                  <div className="flex min-w-0 items-center gap-4">
                     <div className={`flex items-center justify-center w-10 h-10 rounded-lg ${stat.bg}`}>
                       <stat.icon className={`w-5 h-5 ${stat.color}`} />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">{stat.label}</p>
                       <p className="text-2xl font-bold">{stat.value}</p>
                     </div>
@@ -230,7 +230,7 @@ export const DashboardPage = () => {
             {isLoading ? (
               <div className="divide-y divide-border">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="flex items-center justify-between py-3">
+                  <div key={i} className="flex items-center justify-between gap-3 py-3">
                     <div className="flex items-center gap-3">
                       <Skeleton className="w-8 h-8 rounded-full" />
                       <div className="space-y-1.5">
@@ -254,24 +254,26 @@ export const DashboardPage = () => {
                 {data?.recentStudents.map((student) => (
                   <div
                     key={student.id}
-                    className="flex items-center justify-between py-3 cursor-pointer hover:bg-muted/30 px-2 rounded-md transition-colors"
+                    className="flex flex-col gap-2 py-3 cursor-pointer hover:bg-muted/30 px-2 rounded-md transition-colors sm:flex-row sm:items-center sm:justify-between"
                     onClick={() => navigate(`/app/students`)}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
                       <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary text-xs font-semibold shrink-0">
                         {student.firstName[0]}
                         {student.lastName[0]}
                       </div>
-                      <div>
-                        <p className="text-sm font-medium">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">
                           {student.firstName} {student.lastName}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground truncate">
                           {student.email}
                         </p>
                       </div>
                     </div>
-                    <StatusBadge status={student.status} />
+                    <div className="sm:shrink-0">
+                      <StatusBadge status={student.status} />
+                    </div>
                   </div>
                 ))}
               </div>

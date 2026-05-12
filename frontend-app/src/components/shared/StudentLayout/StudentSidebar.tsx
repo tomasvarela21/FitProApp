@@ -1,5 +1,12 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { UserCircle, LogOut, Dumbbell, TrendingUp } from "lucide-react";
+import {
+  UserCircle,
+  LogOut,
+  Dumbbell,
+  TrendingUp,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -24,12 +31,23 @@ const navItems = [
   },
 ];
 
-export const StudentSidebar = () => {
+type StudentSidebarProps = {
+  collapsed?: boolean;
+  onToggle?: () => void;
+  onNavigate?: () => void;
+};
+
+export const StudentSidebar = ({
+  collapsed = false,
+  onToggle,
+  onNavigate,
+}: StudentSidebarProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
+    onNavigate?.();
     navigate("/login");
   };
 
@@ -42,24 +60,56 @@ export const StudentSidebar = () => {
     : "Alumno";
 
   return (
-    <aside className="w-64 h-screen bg-card border-r border-border flex flex-col shrink-0">
-      <div className="flex items-center gap-2 px-6 py-5">
+    <aside
+      className={cn(
+        "h-dvh bg-card border-r border-border flex flex-col shrink-0 transition-[width] duration-200",
+        collapsed ? "w-16" : "w-64"
+      )}
+    >
+      <div
+        className={cn(
+          "flex items-center gap-2 py-5",
+          collapsed ? "flex-col justify-center px-2" : "px-6"
+        )}
+      >
         <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary">
           <Dumbbell className="w-4 h-4 text-primary-foreground" />
         </div>
-        <span className="font-bold text-lg tracking-tight">FitPro</span>
+        {!collapsed && (
+          <span className="font-bold text-lg tracking-tight">FitPro</span>
+        )}
+        {onToggle && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className={cn("ml-auto hidden lg:inline-flex", collapsed && "ml-0")}
+            onClick={onToggle}
+            aria-label={collapsed ? "Expandir sidebar" : "Contraer sidebar"}
+            title={collapsed ? "Expandir sidebar" : "Contraer sidebar"}
+          >
+            {collapsed ? (
+              <ChevronRight className="w-4 h-4" />
+            ) : (
+              <ChevronLeft className="w-4 h-4" />
+            )}
+          </Button>
+        )}
       </div>
 
       <Separator />
 
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => (
           <NavLink
             key={item.href}
             to={item.href}
+            onClick={onNavigate}
+            title={collapsed ? item.label : undefined}
             className={({ isActive }) =>
               cn(
                 "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                collapsed && "justify-center px-2",
                 isActive
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
@@ -67,7 +117,7 @@ export const StudentSidebar = () => {
             }
           >
             <item.icon className="w-4 h-4 shrink-0" />
-            {item.label}
+            {!collapsed && <span className="truncate">{item.label}</span>}
           </NavLink>
         ))}
       </nav>
@@ -75,27 +125,38 @@ export const StudentSidebar = () => {
       <Separator />
 
       <div className="px-3 py-4 space-y-2">
-        <div className="flex items-center gap-3 px-3 py-2">
+        <div
+          className={cn(
+            "flex items-center gap-3 px-3 py-2",
+            collapsed && "justify-center px-0"
+          )}
+        >
           <Avatar className="w-8 h-8">
             <AvatarFallback className="text-xs bg-primary/10 text-primary font-semibold">
               {initials}
             </AvatarFallback>
           </Avatar>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{fullName}</p>
-            <p className="text-xs text-muted-foreground truncate">
-              {user?.email}
-            </p>
-          </div>
+          {!collapsed && (
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{fullName}</p>
+              <p className="text-xs text-muted-foreground truncate">
+                {user?.email}
+              </p>
+            </div>
+          )}
         </div>
         <Button
           variant="ghost"
           size="sm"
-          className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive"
+          className={cn(
+            "w-full gap-3 text-muted-foreground hover:text-destructive",
+            collapsed ? "justify-center px-0" : "justify-start"
+          )}
           onClick={handleLogout}
+          title={collapsed ? "Cerrar sesión" : undefined}
         >
           <LogOut className="w-4 h-4" />
-          Cerrar sesión
+          {!collapsed && "Cerrar sesión"}
         </Button>
       </div>
     </aside>

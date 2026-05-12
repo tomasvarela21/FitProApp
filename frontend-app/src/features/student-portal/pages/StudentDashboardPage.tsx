@@ -27,7 +27,11 @@ import { PageHeader } from "@/components/shared/PageHeader/PageHeader";
 import { useStudentSubscription } from "@/features/student-portal/hooks/use-student-subscription";
 import { useStudentProfile } from "@/features/student-portal/hooks/use-student-profile";
 import { studentPortalApi } from "@/api/student-portal.api";
-import type { StudentRoutineExercise, StudentWorkoutLog } from "@/types";
+import type {
+  StudentRoutineExercise,
+  StudentWorkoutLog,
+  WorkoutLogInput,
+} from "@/types";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -143,8 +147,7 @@ const buildExerciseInputs = (exercises: StudentRoutineExercise[]): ExerciseInput
 
 // ─── Workout Form ─────────────────────────────────────────────────────────────
 
-const WorkoutForm = ({ studentRoutineId, exercises, routineName }: {
-  studentRoutineId: string;
+const WorkoutForm = ({ exercises, routineName }: {
   exercises: StudentRoutineExercise[];
   routineName: string;
 }) => {
@@ -245,14 +248,14 @@ const WorkoutForm = ({ studentRoutineId, exercises, routineName }: {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <p className="font-semibold">{routineName}</p>
           <p className="text-xs text-muted-foreground">
             {format(new Date(), "EEEE d 'de' MMMM", { locale: es })}
           </p>
         </div>
-        <Badge variant="outline" className="gap-1 text-xs">
+        <Badge variant="outline" className="w-fit gap-1 text-xs">
           <Dumbbell className="w-3 h-3" />
           Día de entrenamiento
         </Badge>
@@ -262,7 +265,7 @@ const WorkoutForm = ({ studentRoutineId, exercises, routineName }: {
         <Card key={ex.routineExerciseId}>
           <CardHeader className="pb-2">
             <div className="flex items-start justify-between gap-2">
-              <div>
+              <div className="min-w-0">
                 <p className="font-semibold text-sm">{ex.exerciseName}</p>
                 {ex.muscleGroup && (
                   <p className="text-xs text-muted-foreground">{ex.muscleGroup}</p>
@@ -276,8 +279,8 @@ const WorkoutForm = ({ studentRoutineId, exercises, routineName }: {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs" style={{ minWidth: "400px" }}>
+            <div className="overflow-x-auto -mx-2 px-2">
+              <table className="w-full text-xs" style={{ minWidth: "380px" }}>
                 <thead>
                   <tr className="border-b border-border">
                     <th className="pb-1.5 text-left font-medium text-muted-foreground w-12">Set</th>
@@ -337,7 +340,7 @@ const WorkoutForm = ({ studentRoutineId, exercises, routineName }: {
                 </tbody>
               </table>
             </div>
-            <div className="flex gap-2 mt-3">
+            <div className="flex flex-wrap gap-2 mt-3">
               <Button
                 type="button"
                 variant="outline"
@@ -446,7 +449,6 @@ const TodayTab = () => {
 
   return (
     <WorkoutForm
-      studentRoutineId={todayData.studentRoutineId}
       exercises={exercises}
       routineName={todayData.routine.name}
     />
@@ -507,7 +509,7 @@ const AlreadyLogged = ({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 flex items-center gap-3">
+      <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 flex items-start gap-3 sm:items-center">
         <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
         <div>
           <p className="text-sm font-medium text-emerald-700">Ya registraste tu entrenamiento de hoy</p>
@@ -521,7 +523,7 @@ const AlreadyLogged = ({
               <p className="text-sm font-medium mb-2">{name}</p>
               <div className="space-y-1">
                 {sets.map((s) => (
-                  <div key={s.id} className="flex gap-4 text-xs text-muted-foreground">
+                  <div key={s.id} className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                     <span className="w-10 font-medium text-foreground">Set {s.setNumber}</span>
                     <span>{s.reps} reps</span>
                     {s.weight != null && <span>{s.weight} kg</span>}
@@ -585,7 +587,7 @@ const HistorialTab = () => {
           <div key={log.id} className="rounded-md border border-border overflow-hidden">
             <button
               type="button"
-              className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/30 transition-colors"
+              className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors"
               onClick={() => setExpandedId(isExpanded ? null : log.id)}
             >
               <div>
@@ -595,8 +597,8 @@ const HistorialTab = () => {
                 </p>
               </div>
               {isExpanded
-                ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                ? <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" />
+                : <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />}
             </button>
 
             {isExpanded && (
@@ -609,7 +611,7 @@ const HistorialTab = () => {
                     <p className="text-xs font-semibold mb-1.5">{name}</p>
                     <div className="space-y-1">
                       {sets.map((s) => (
-                        <div key={s.id} className="flex gap-4 text-xs text-muted-foreground">
+                        <div key={s.id} className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                           <span className="w-10 font-medium text-foreground">Set {s.setNumber}</span>
                           <span>{s.reps} reps</span>
                           {s.weight != null && <span>{s.weight} kg</span>}
@@ -638,17 +640,23 @@ export const StudentDashboardPage = () => {
   const firstName = profile?.firstName ?? "Alumno";
 
   return (
-    <div className="max-w-2xl">
+    <div className="w-full max-w-3xl">
       <PageHeader
         title={`Hola, ${firstName} 👋`}
         description="Tu entrenamiento y plan en un solo lugar"
       />
 
       <Tabs defaultValue="today" className="space-y-4">
-        <TabsList className="w-full">
-          <TabsTrigger value="today" className="flex-1">Entrenar hoy</TabsTrigger>
-          <TabsTrigger value="plan" className="flex-1">Mi plan</TabsTrigger>
-          <TabsTrigger value="history" className="flex-1">Historial</TabsTrigger>
+        <TabsList className="w-full h-auto overflow-x-auto justify-start">
+          <TabsTrigger value="today" className="min-w-fit flex-1">
+            Entrenar hoy
+          </TabsTrigger>
+          <TabsTrigger value="plan" className="min-w-fit flex-1">
+            Mi plan
+          </TabsTrigger>
+          <TabsTrigger value="history" className="min-w-fit flex-1">
+            Historial
+          </TabsTrigger>
         </TabsList>
 
         {/* Tab: Entrenar hoy */}
@@ -675,8 +683,8 @@ export const StudentDashboardPage = () => {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div>
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0">
                             <p className="font-semibold">{subscription.planName}</p>
                             <p className="text-xs text-muted-foreground">
                               {DURATION_LABELS[subscription.planDuration]} —{" "}
@@ -686,15 +694,15 @@ export const StudentDashboardPage = () => {
                             </p>
                           </div>
                           {subscription.daysUntilExpiry < 0 ? (
-                            <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20 gap-1">
+                            <Badge variant="outline" className="w-fit bg-red-500/10 text-red-600 border-red-500/20 gap-1">
                               <XCircle className="w-3 h-3" /> Vencido
                             </Badge>
                           ) : subscription.daysUntilExpiry <= 7 ? (
-                            <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20 gap-1">
+                            <Badge variant="outline" className="w-fit bg-amber-500/10 text-amber-600 border-amber-500/20 gap-1">
                               <AlertTriangle className="w-3 h-3" /> Por vencer
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 gap-1">
+                            <Badge variant="outline" className="w-fit bg-emerald-500/10 text-emerald-600 border-emerald-500/20 gap-1">
                               <CheckCircle2 className="w-3 h-3" /> Vigente
                             </Badge>
                           )}
@@ -702,7 +710,7 @@ export const StudentDashboardPage = () => {
 
                         <Separator />
 
-                        <div className="grid grid-cols-3 gap-3 text-center">
+                        <div className="grid grid-cols-1 gap-3 text-center sm:grid-cols-3">
                           <div>
                             <p className="text-xs text-muted-foreground">Total</p>
                             <p className="text-sm font-bold">
@@ -725,7 +733,7 @@ export const StudentDashboardPage = () => {
 
                         <Separator />
 
-                        <div className="grid grid-cols-2 gap-3 text-xs">
+                        <div className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2">
                           <div>
                             <p className="text-muted-foreground">Inicio</p>
                             <p className="font-medium">{formatDate(subscription.startDate)}</p>
@@ -746,8 +754,8 @@ export const StudentDashboardPage = () => {
                           <p className="text-xs font-medium text-muted-foreground mb-1">
                             Próxima cuota
                           </p>
-                          <div className="flex items-center justify-between">
-                            <div>
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="min-w-0">
                               <p className="text-sm font-semibold">
                                 Cuota {subscription.nextInstallment.number} —{" "}
                                 ${subscription.nextInstallment.amount.toLocaleString("es-AR")}
@@ -775,13 +783,13 @@ export const StudentDashboardPage = () => {
                         {subscription.installments.map((installment) => (
                           <div
                             key={installment.id}
-                            className="flex items-center justify-between py-2.5 px-3 rounded-md border border-border bg-muted/20"
+                            className="flex flex-col gap-3 py-2.5 px-3 rounded-md border border-border bg-muted/20 sm:flex-row sm:items-center sm:justify-between"
                           >
-                            <div className="flex items-center gap-3">
+                            <div className="flex min-w-0 items-center gap-3">
                               <div className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center shrink-0">
                                 {installment.number}
                               </div>
-                              <div>
+                              <div className="min-w-0">
                                 <p className="text-sm font-medium">
                                   ${installment.amount.toLocaleString("es-AR")}
                                 </p>
@@ -797,7 +805,9 @@ export const StudentDashboardPage = () => {
                                 )}
                               </div>
                             </div>
-                            <InstallmentStatusBadge status={installment.status} />
+                            <div className="pl-9 sm:pl-0">
+                              <InstallmentStatusBadge status={installment.status} />
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -822,18 +832,18 @@ export const StudentDashboardPage = () => {
                     <CardTitle className="text-base">Tu entrenador</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-start gap-4 sm:items-center">
                       <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary text-base font-bold shrink-0">
                         {profile.trainer.firstName[0]}
                         {profile.trainer.lastName[0]}
                       </div>
-                      <div className="space-y-1">
+                      <div className="min-w-0 space-y-1">
                         <p className="font-semibold">
                           {profile.trainer.firstName} {profile.trainer.lastName}
                         </p>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground min-w-0">
                           <Mail className="w-3 h-3" />
-                          {profile.trainer.email}
+                          <span className="truncate">{profile.trainer.email}</span>
                         </div>
                         {profile.trainer.phone && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">

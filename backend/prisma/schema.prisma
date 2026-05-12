@@ -313,9 +313,10 @@ model RoutineExercise {
   restSeconds     Int       @default(90)
   notes           String?
 
-  routine     Routine      @relation(fields: [routineId], references: [id], onDelete: Cascade)
-  exercise    Exercise     @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
-  workoutSets WorkoutSet[]
+  routine         Routine                  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  exercise        Exercise                 @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  workoutSets     WorkoutSet[]
+  weeklyOverrides WeeklyExerciseOverride[]
 
   @@index([routineId])
   @@index([exerciseId])
@@ -323,19 +324,43 @@ model RoutineExercise {
 }
 
 model StudentRoutine {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   studentId  String
   routineId  String
-  isActive   Boolean  @default(true)
-  assignedAt DateTime @default(now())
+  isActive   Boolean   @default(true)
+  assignedAt DateTime  @default(now())
   notes      String?
+  weekNumber Int       @default(1)
+  startDate  DateTime?
+  endDate    DateTime?
 
-  student     Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  routine     Routine      @relation(fields: [routineId], references: [id], onDelete: Cascade)
-  workoutLogs WorkoutLog[]
+  student         Student                  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  routine         Routine                  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  workoutLogs     WorkoutLog[]
+  weeklyOverrides WeeklyExerciseOverride[]
 
   @@index([studentId])
   @@index([routineId])
+}
+
+model WeeklyExerciseOverride {
+  id                String   @id @default(cuid())
+  studentRoutineId  String
+  routineExerciseId String
+  weekNumber        Int
+  suggestedWeight   Float?
+  suggestedReps     String?
+  suggestedRpe      Float?
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  studentRoutine  StudentRoutine  @relation(fields: [studentRoutineId], references: [id], onDelete: Cascade)
+  routineExercise RoutineExercise @relation(fields: [routineExerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([studentRoutineId, routineExerciseId, weekNumber])
+  @@index([studentRoutineId])
+  @@index([weekNumber])
 }
 
 model WorkoutLog {

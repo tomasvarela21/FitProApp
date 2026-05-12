@@ -75,7 +75,7 @@ export const CreateStudentSheet = ({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-[calc(100vw-1rem)] max-w-md max-h-[calc(100dvh-1rem)] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>Nuevo alumno</DialogTitle>
           <DialogDescription>
@@ -98,7 +98,7 @@ export const CreateStudentSheet = ({
           </div>
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 mt-2">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="firstName">Nombre</Label>
                 <Input
@@ -176,7 +176,7 @@ export const CreateStudentSheet = ({
               </div>
             )}
 
-            <div className="flex gap-3 pt-2">
+            <div className="flex flex-col gap-3 pt-2 sm:flex-row">
               <Button
                 type="button"
                 variant="outline"

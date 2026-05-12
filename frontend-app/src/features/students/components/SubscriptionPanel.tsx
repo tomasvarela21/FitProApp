@@ -179,14 +179,14 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
 
   return (
     <>
-      <Card>
+      <Card className="max-w-full overflow-hidden">
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="text-base flex min-w-0 items-center gap-2">
               <CreditCard className="w-4 h-4" />
               Plan y pagos
             </CardTitle>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {!subscription && (
                 <Button
                   size="sm"
@@ -217,8 +217,8 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
             <div className="space-y-4">
               {/* Resumen */}
               <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
                     <p className="font-semibold text-sm">{subscription.planName}</p>
                     <p className="text-xs text-muted-foreground">
                       {DURATION_LABELS[subscription.planDuration]} —{" "}
@@ -227,15 +227,15 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
                     </p>
                   </div>
                   {subscription.daysUntilExpiry < 0 ? (
-                    <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20 gap-1">
+                    <Badge variant="outline" className="w-fit bg-red-500/10 text-red-600 border-red-500/20 gap-1">
                       <XCircle className="w-3 h-3" /> Vencido
                     </Badge>
                   ) : subscription.daysUntilExpiry <= 7 ? (
-                    <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20 gap-1">
+                    <Badge variant="outline" className="w-fit bg-amber-500/10 text-amber-600 border-amber-500/20 gap-1">
                       <AlertTriangle className="w-3 h-3" /> {subscription.daysUntilExpiry}d
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 gap-1">
+                    <Badge variant="outline" className="w-fit bg-emerald-500/10 text-emerald-600 border-emerald-500/20 gap-1">
                       <CheckCircle2 className="w-3 h-3" /> Vigente
                     </Badge>
                   )}
@@ -244,7 +244,7 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
                 <Separator />
 
                 {/* Montos */}
-                <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="grid grid-cols-1 gap-3 text-center sm:grid-cols-3">
                   <div>
                     <p className="text-xs text-muted-foreground">Total</p>
                     <p className="text-sm font-bold">
@@ -275,13 +275,13 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
                   {subscription.installments.map((installment) => (
                     <div
                       key={installment.id}
-                      className="flex items-center justify-between py-2.5 px-3 rounded-md border border-border bg-muted/20"
+                      className="flex flex-col gap-3 py-2.5 px-3 rounded-md border border-border bg-muted/20 sm:flex-row sm:items-center sm:justify-between"
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
                         <div className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center shrink-0">
                           {installment.number}
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <p className="text-sm font-medium">
                             ${installment.amount.toLocaleString("es-AR")}
                           </p>
@@ -297,7 +297,7 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2 pl-9 sm:pl-0">
                         <InstallmentStatusBadge status={installment.status} />
                         {installment.status !== "PAID" && (
                           <Button
@@ -332,7 +332,7 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
 
       {/* Dialog Asignar Plan */}
       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-sm max-h-[calc(100dvh-1rem)] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Asignar plan</DialogTitle>
             <DialogDescription>
@@ -384,7 +384,7 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Cantidad de cuotas</Label>
                 <Input
@@ -446,7 +446,7 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
               </div>
             )}
 
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <Button
                 type="button"
                 variant="outline"
@@ -478,7 +478,7 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
           setError(null);
         }}
       >
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-sm max-h-[calc(100dvh-1rem)] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Registrar pago</DialogTitle>
             <DialogDescription>
@@ -511,7 +511,7 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
               </div>
             )}
 
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <Button
                 type="button"
                 variant="outline"
@@ -541,7 +541,7 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
 
       {/* Dialog Cancelar Plan */}
       <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-sm max-h-[calc(100dvh-1rem)] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>¿Cancelar plan?</DialogTitle>
             <DialogDescription>
@@ -549,7 +549,7 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
               las cuotas pendientes. Esta acción no se puede deshacer.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex gap-3 mt-2">
+          <div className="flex flex-col gap-3 mt-2 sm:flex-row">
             <Button
               variant="outline"
               className="flex-1"

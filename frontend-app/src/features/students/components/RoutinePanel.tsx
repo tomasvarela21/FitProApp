@@ -242,7 +242,7 @@ const AddExerciseDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md overflow-y-auto max-h-[90vh]">
+      <DialogContent className="w-[calc(100vw-1rem)] max-w-md max-h-[calc(100dvh-1rem)] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>Agregar ejercicio</DialogTitle>
           <DialogDescription>Seleccioná un ejercicio y configurá las variables</DialogDescription>
@@ -301,7 +301,7 @@ const AddExerciseDialog = ({
             {errors.exerciseId && <p className="text-xs text-destructive">{errors.exerciseId.message}</p>}
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="space-y-1.5">
               <Label htmlFor="p-sets">Series</Label>
               <Input id="p-sets" type="number" min={1} {...register("sets", { valueAsNumber: true })} />
@@ -318,7 +318,7 @@ const AddExerciseDialog = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="p-weight">Peso sug. (kg) <span className="text-muted-foreground text-xs">(opc.)</span></Label>
               <Input id="p-weight" type="number" min={0} step={0.5} placeholder="—" {...register("suggestedWeight", { setValueAs: (v) => v === "" || v == null ? undefined : Number(v) })} />
@@ -398,7 +398,7 @@ const AssignRoutineDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="w-[calc(100vw-1rem)] max-w-sm max-h-[calc(100dvh-1rem)] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Asignar rutina</DialogTitle>
           <DialogDescription>Seleccioná la rutina que querés asignar a este alumno</DialogDescription>
@@ -532,7 +532,7 @@ export const RoutinePanel = ({ studentId }: Props) => {
         />
       )}
 
-      <Card>
+      <Card className="max-w-full overflow-hidden">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <ClipboardList className="w-4 h-4" />
@@ -542,7 +542,7 @@ export const RoutinePanel = ({ studentId }: Props) => {
 
         <CardContent className="p-0">
           <Tabs defaultValue="routine" className="w-full">
-            <TabsList variant="line" className="w-full rounded-none border-b border-border h-auto p-0 justify-start">
+            <TabsList variant="line" className="w-full rounded-none border-b border-border h-auto p-0 justify-start overflow-x-auto">
               <TabsTrigger value="routine" className="py-2.5">Rutina activa</TabsTrigger>
               <TabsTrigger value="history" className="py-2.5">Historial</TabsTrigger>
             </TabsList>
@@ -556,11 +556,11 @@ export const RoutinePanel = ({ studentId }: Props) => {
               ) : studentRoutine && routine ? (
                 <div className="space-y-4">
                   {/* Header */}
-                  <div className="flex items-center justify-between">
-                    <div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
                       <p className="text-sm font-semibold">{routine.name}</p>
                       {routine.description && (
-                        <p className="text-xs text-muted-foreground mt-0.5">{routine.description}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 break-words">{routine.description}</p>
                       )}
                       <p className="text-xs text-muted-foreground mt-1">
                         Asignada el {formatDate(studentRoutine.assignedAt)}
@@ -569,7 +569,7 @@ export const RoutinePanel = ({ studentId }: Props) => {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-7 gap-1.5 text-xs shrink-0"
+                      className="h-7 w-fit gap-1.5 text-xs shrink-0"
                       onClick={() => setAssignOpen(true)}
                     >
                       <RefreshCw className="w-3 h-3" />
@@ -592,7 +592,7 @@ export const RoutinePanel = ({ studentId }: Props) => {
 
                   {/* Day tabs */}
                   {sortedDays.length > 0 && (
-                    <div className="flex gap-1 border-b border-border -mx-4 px-4">
+                    <div className="flex gap-1 border-b border-border -mx-4 px-4 overflow-x-auto">
                       {sortedDays.map((day) => (
                         <button
                           key={day}
@@ -617,8 +617,130 @@ export const RoutinePanel = ({ studentId }: Props) => {
                   ) : dayExercises.length === 0 ? (
                     <p className="text-xs text-muted-foreground py-2">Sin ejercicios para este día</p>
                   ) : (
-                    <div className="overflow-x-auto -mx-4 px-4">
-                      <table className="w-full text-sm" style={{ minWidth: "600px" }}>
+                    <>
+                    <div className="space-y-3 md:hidden">
+                      {dayExercises.map((re) => {
+                        const isConfirming = confirmingDeleteId === re.id;
+                        const isDeleting = deletingId === re.id;
+
+                        return (
+                          <div
+                            key={re.id}
+                            className="rounded-lg border border-border bg-muted/10 p-3 space-y-3"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold break-words">
+                                  {re.exercise.name}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {re.exercise.muscleGroup?.name ?? "Sin grupo muscular"}
+                                </p>
+                              </div>
+                              <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-primary/10 px-2 text-xs font-semibold text-primary">
+                                {re.order}
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3 text-xs">
+                              <div>
+                                <p className="text-muted-foreground">Series</p>
+                                <InlineCell
+                                  value={re.sets}
+                                  type="number"
+                                  min={1}
+                                  onSave={(v) => handleCellSave(re.id, "sets", v)}
+                                />
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Reps</p>
+                                <InlineCell
+                                  value={re.reps}
+                                  onSave={(v) => handleCellSave(re.id, "reps", v)}
+                                />
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Peso sug.</p>
+                                <InlineCell
+                                  value={re.suggestedWeight}
+                                  type="number"
+                                  min={0}
+                                  step={0.5}
+                                  placeholder="—"
+                                  onSave={(v) => handleCellSave(re.id, "suggestedWeight", v)}
+                                />
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">RPE sug.</p>
+                                <InlineCell
+                                  value={re.suggestedRpe}
+                                  type="number"
+                                  min={1}
+                                  max={10}
+                                  step={0.5}
+                                  placeholder="—"
+                                  onSave={(v) => handleCellSave(re.id, "suggestedRpe", v)}
+                                />
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Descanso</p>
+                                <InlineCell
+                                  value={re.restSeconds}
+                                  type="number"
+                                  min={0}
+                                  onSave={(v) => handleCellSave(re.id, "restSeconds", v)}
+                                />
+                              </div>
+                            </div>
+
+                            {isOwn && (
+                              <div className="flex justify-end border-t border-border pt-2">
+                                {isConfirming ? (
+                                  <div className="flex gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-7 gap-1 text-xs text-green-600"
+                                      onClick={() => handleDelete(re.id)}
+                                      disabled={isDeleting}
+                                    >
+                                      {isDeleting ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                      ) : (
+                                        <Check className="w-3 h-3" />
+                                      )}
+                                      Quitar
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 text-xs"
+                                      onClick={() => setConfirmingDeleteId(null)}
+                                      disabled={isDeleting}
+                                    >
+                                      Cancelar
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 gap-1 text-xs text-muted-foreground hover:text-destructive"
+                                    onClick={() => setConfirmingDeleteId(re.id)}
+                                  >
+                                    <X className="w-3 h-3" />
+                                    Quitar
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="hidden overflow-x-auto -mx-4 px-4 pb-1 md:block">
+                      <table className="w-full text-sm" style={{ minWidth: "680px" }}>
                         <thead>
                           <tr className="border-b border-border bg-muted/40">
                             <th className="px-2 py-2 text-left font-medium text-muted-foreground">#</th>
@@ -639,9 +761,13 @@ export const RoutinePanel = ({ studentId }: Props) => {
                             return (
                               <tr key={re.id} className="hover:bg-muted/20 transition-colors">
                                 <td className="px-2 py-2 text-muted-foreground">{re.order}</td>
-                                <td className="px-2 py-2 font-medium truncate">{re.exercise.name}</td>
+                                <td className="px-2 py-2 font-medium">
+                                  <span className="block max-w-52 truncate">{re.exercise.name}</span>
+                                </td>
                                 <td className="px-2 py-2 text-muted-foreground truncate">
-                                  {re.exercise.muscleGroup?.name ?? "—"}
+                                  <span className="block max-w-40 truncate">
+                                    {re.exercise.muscleGroup?.name ?? "—"}
+                                  </span>
                                 </td>
                                 <td className="px-2 py-2">
                                   <InlineCell
@@ -729,6 +855,7 @@ export const RoutinePanel = ({ studentId }: Props) => {
                         </tbody>
                       </table>
                     </div>
+                    </>
                   )}
 
                   {/* Add exercise button */}
@@ -783,7 +910,7 @@ export const RoutinePanel = ({ studentId }: Props) => {
                       <div key={log.id} className="rounded-md border border-border overflow-hidden">
                         <button
                           type="button"
-                          className="w-full flex items-center justify-between px-3 py-2.5 text-left hover:bg-muted/30 transition-colors"
+                          className="w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left hover:bg-muted/30 transition-colors"
                           onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
                         >
                           <div>
@@ -807,7 +934,7 @@ export const RoutinePanel = ({ studentId }: Props) => {
                                 <p className="text-xs font-medium mb-1.5">{name}</p>
                                 <div className="space-y-1">
                                   {sets.map((s) => (
-                                    <div key={s.id} className="flex items-center gap-3 text-xs text-muted-foreground">
+                                    <div key={s.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                                       <span className="w-12 text-right text-foreground font-medium">Set {s.setNumber}</span>
                                       <span>{s.reps} reps</span>
                                       {s.weight && <span>{s.weight} kg</span>}

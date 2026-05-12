@@ -288,7 +288,7 @@ const RoutineFormDialog = ({ open, onClose, editingRoutine }: RoutineFormDialogP
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="w-[95vw] max-w-md overflow-x-hidden">
+      <DialogContent className="w-[calc(100vw-1rem)] max-w-md max-h-[calc(100dvh-1rem)] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Editar rutina" : "Nueva rutina"}</DialogTitle>
           <DialogDescription>
@@ -403,7 +403,7 @@ const AddExerciseDialog = ({ open, onClose, routineId, nextOrder, defaultDay }: 
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="w-[95vw] max-w-md max-h-[95vh] overflow-y-auto overflow-x-hidden">
+      <DialogContent className="w-[calc(100vw-1rem)] max-w-md max-h-[calc(100dvh-1rem)] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>Agregar ejercicio</DialogTitle>
           <DialogDescription>Seleccioná un ejercicio y configurá las variables</DialogDescription>
@@ -466,7 +466,7 @@ const AddExerciseDialog = ({ open, onClose, routineId, nextOrder, defaultDay }: 
             )}
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="space-y-1.5">
               <Label htmlFor="ae-order">Orden</Label>
               <Input id="ae-order" type="number" min={1} {...register("order", { valueAsNumber: true })} />
@@ -484,7 +484,7 @@ const AddExerciseDialog = ({ open, onClose, routineId, nextOrder, defaultDay }: 
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="space-y-1.5">
               <Label htmlFor="ae-weight">Peso (kg) <span className="text-muted-foreground text-xs">(opc.)</span></Label>
               <Input
@@ -633,7 +633,7 @@ const RoutineDetailDialog = ({ routineId, onClose }: RoutineDetailDialogProps) =
   return (
     <>
       <Dialog open={!!routineId} onOpenChange={onClose}>
-        <DialogContent className="w-[95vw] max-w-5xl max-h-[95vh] overflow-y-auto overflow-x-hidden">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-5xl max-h-[calc(100dvh-1rem)] overflow-y-auto overflow-x-hidden">
           {isLoading || !routine ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -641,8 +641,8 @@ const RoutineDetailDialog = ({ routineId, onClose }: RoutineDetailDialogProps) =
           ) : (
             <>
               <DialogHeader>
-                <div className="flex items-center gap-3 flex-wrap">
-                  <DialogTitle className="text-lg">{routine.name}</DialogTitle>
+                <div className="flex min-w-0 items-center gap-3 flex-wrap pr-8">
+                  <DialogTitle className="min-w-0 break-words text-lg">{routine.name}</DialogTitle>
                   <Badge
                     variant="outline"
                     className={cn(
@@ -660,7 +660,7 @@ const RoutineDetailDialog = ({ routineId, onClose }: RoutineDetailDialogProps) =
                   </Badge>
                 </div>
                 {routine.description && (
-                  <DialogDescription>{routine.description}</DialogDescription>
+                  <DialogDescription className="break-words">{routine.description}</DialogDescription>
                 )}
               </DialogHeader>
 
@@ -675,7 +675,7 @@ const RoutineDetailDialog = ({ routineId, onClose }: RoutineDetailDialogProps) =
 
                 {/* Day tabs */}
                 {sortedDays.length > 0 && (
-                  <div className="flex gap-1 border-b border-border">
+                  <div className="flex gap-1 border-b border-border overflow-x-auto">
                     {sortedDays.map((day) => (
                       <button
                         key={day}
@@ -695,18 +695,147 @@ const RoutineDetailDialog = ({ routineId, onClose }: RoutineDetailDialogProps) =
                 )}
 
                 {/* Exercise table */}
-                <div className="overflow-x-auto">
-                  {exercises.length === 0 ? (
-                    <div className="text-center py-10">
-                      <ClipboardList className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground">Sin ejercicios en esta rutina</p>
+                {exercises.length === 0 ? (
+                  <div className="text-center py-10">
+                    <ClipboardList className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">Sin ejercicios en esta rutina</p>
+                  </div>
+                ) : dayExercises.length === 0 ? (
+                  <div className="text-center py-10">
+                    <p className="text-sm text-muted-foreground">Sin ejercicios para este día</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-3 md:hidden">
+                      {[...dayExercises]
+                        .sort((a, b) => a.order - b.order)
+                        .map((re) => (
+                          <div
+                            key={re.id}
+                            className="rounded-lg border border-border bg-muted/10 p-3 space-y-3"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold break-words">
+                                  {re.exercise.name}
+                                </p>
+                                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                  {isOwn ? (
+                                    <InlineSelectCell
+                                      value={re.dayOfWeek}
+                                      options={DAY_OPTIONS}
+                                      disabled={!isOwn}
+                                      onSave={(v) => handleDaySave(re, v)}
+                                    />
+                                  ) : (
+                                    <span>{DAY_LABELS[re.dayOfWeek]}</span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="shrink-0">
+                                <InlineCell
+                                  value={re.order}
+                                  type="number"
+                                  min={1}
+                                  disabled={!isOwn}
+                                  onSave={(v) => handleCellSave(re, "order", v)}
+                                  width="w-10"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3 text-xs">
+                              <div>
+                                <p className="text-muted-foreground">Series</p>
+                                <InlineCell
+                                  value={re.sets}
+                                  type="number"
+                                  min={1}
+                                  disabled={!isOwn}
+                                  onSave={(v) => handleCellSave(re, "sets", v)}
+                                  width="w-full"
+                                />
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Reps</p>
+                                <InlineCell
+                                  value={re.reps}
+                                  type="text"
+                                  disabled={!isOwn}
+                                  onSave={(v) => handleCellSave(re, "reps", v)}
+                                  width="w-full"
+                                />
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Peso</p>
+                                <InlineCell
+                                  value={re.suggestedWeight}
+                                  type="number"
+                                  min={0}
+                                  step={0.5}
+                                  placeholder="—"
+                                  disabled={!isOwn}
+                                  onSave={(v) => handleCellSave(re, "suggestedWeight", v)}
+                                  width="w-full"
+                                />
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">RPE</p>
+                                <InlineCell
+                                  value={re.suggestedRpe}
+                                  type="number"
+                                  min={1}
+                                  max={10}
+                                  step={0.5}
+                                  placeholder="—"
+                                  disabled={!isOwn}
+                                  onSave={(v) => handleCellSave(re, "suggestedRpe", v)}
+                                  width="w-full"
+                                />
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Descanso</p>
+                                <InlineCell
+                                  value={re.restSeconds}
+                                  type="number"
+                                  min={0}
+                                  disabled={!isOwn}
+                                  onSave={(v) => handleCellSave(re, "restSeconds", v)}
+                                  width="w-full"
+                                />
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Notas</p>
+                                <InlineCell
+                                  value={re.notes}
+                                  type="text"
+                                  placeholder="—"
+                                  disabled={!isOwn}
+                                  onSave={(v) => handleCellSave(re, "notes", v)}
+                                  width="w-full"
+                                />
+                              </div>
+                            </div>
+
+                            {isOwn && (
+                              <div className="flex justify-end border-t border-border pt-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 gap-1 text-xs text-muted-foreground hover:text-destructive"
+                                  onClick={() => setConfirmRemoveId(re.id)}
+                                >
+                                  <X className="w-3 h-3" />
+                                  Quitar
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
                     </div>
-                  ) : dayExercises.length === 0 ? (
-                    <div className="text-center py-10">
-                      <p className="text-sm text-muted-foreground">Sin ejercicios para este día</p>
-                    </div>
-                  ) : (
-                    <table className="w-full text-sm" style={{ minWidth: "600px" }}>
+
+                    <div className="hidden overflow-x-auto -mx-4 px-4 pb-1 md:block">
+                    <table className="w-full text-sm" style={{ minWidth: "760px" }}>
                       <thead>
                         <tr className="border-b border-border bg-muted/40">
                           <th className="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground w-10">#</th>
@@ -744,7 +873,9 @@ const RoutineDetailDialog = ({ routineId, onClose }: RoutineDetailDialogProps) =
                                   onSave={(v) => handleDaySave(re, v)}
                                 />
                               </td>
-                              <td className="px-3 py-2 font-medium text-sm">{re.exercise.name}</td>
+                              <td className="px-3 py-2 font-medium text-sm">
+                                <span className="block max-w-56 truncate">{re.exercise.name}</span>
+                              </td>
                               <td className="px-3 py-2">
                                 <InlineCell
                                   value={re.sets}
@@ -825,8 +956,9 @@ const RoutineDetailDialog = ({ routineId, onClose }: RoutineDetailDialogProps) =
                           ))}
                       </tbody>
                     </table>
-                  )}
-                </div>
+                    </div>
+                  </>
+                )}
 
                 {isOwn && (
                   <Button
@@ -843,7 +975,7 @@ const RoutineDetailDialog = ({ routineId, onClose }: RoutineDetailDialogProps) =
                 {isOwn && (
                   <>
                     <Separator />
-                    <div className="flex gap-3">
+                    <div className="flex flex-col gap-3 sm:flex-row">
                       <Button
                         variant="outline"
                         className="flex-1 gap-2"
@@ -882,7 +1014,7 @@ const RoutineDetailDialog = ({ routineId, onClose }: RoutineDetailDialogProps) =
 
       {/* Confirm remove exercise */}
       <Dialog open={!!confirmRemoveId} onOpenChange={() => setConfirmRemoveId(null)}>
-        <DialogContent className="w-[95vw] max-w-sm">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-sm max-h-[calc(100dvh-1rem)] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>¿Quitar ejercicio?</DialogTitle>
             <DialogDescription>
@@ -911,7 +1043,7 @@ const RoutineDetailDialog = ({ routineId, onClose }: RoutineDetailDialogProps) =
 
       {/* Confirm delete routine */}
       <Dialog open={confirmDeleteOpen} onOpenChange={() => { setConfirmDeleteOpen(false); setDeleteError(null); }}>
-        <DialogContent className="w-[95vw] max-w-sm">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-sm max-h-[calc(100dvh-1rem)] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>¿Eliminar rutina?</DialogTitle>
             <DialogDescription>

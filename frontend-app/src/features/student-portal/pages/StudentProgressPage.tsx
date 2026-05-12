@@ -116,7 +116,7 @@ const ExerciseProgress = ({ exerciseId, exerciseName }: { exerciseId: string; ex
           <CardTitle className="text-sm">Historial de sesiones</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -mx-2 px-2">
             <table className="w-full text-sm" style={{ minWidth: "360px" }}>
               <thead>
                 <tr className="border-b border-border">
@@ -175,7 +175,7 @@ export const StudentProgressPage = () => {
   }, []);
 
   return (
-    <div className="max-w-3xl">
+    <div className="w-full max-w-3xl">
       <PageHeader
         title="Mi progreso"
         description="Evolución de tu rendimiento por ejercicio"
@@ -194,9 +194,9 @@ export const StudentProgressPage = () => {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {/* Exercise list */}
-          <div className="md:col-span-1 space-y-1">
+          <div className="min-w-0 md:col-span-1 space-y-1">
             <p className="text-xs font-medium text-muted-foreground px-1 mb-2 uppercase tracking-wide">
               Ejercicios
             </p>
@@ -229,7 +229,7 @@ export const StudentProgressPage = () => {
           </div>
 
           {/* Progress panel */}
-          <div className="md:col-span-2">
+          <div className="min-w-0 md:col-span-2">
             {selectedExerciseId ? (
               <>
                 <p className="text-base font-semibold mb-4">{selectedExerciseName}</p>

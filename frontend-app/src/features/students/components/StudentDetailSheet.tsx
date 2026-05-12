@@ -51,9 +51,9 @@ const DetailRow = ({
   label: string;
   value: React.ReactNode;
 }) => (
-  <div className="flex items-center justify-between py-3">
+  <div className="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between">
     <span className="text-sm text-muted-foreground">{label}</span>
-    <span className="text-sm font-medium">{value}</span>
+    <span className="min-w-0 text-sm font-medium sm:text-right">{value}</span>
   </div>
 );
 
@@ -191,7 +191,7 @@ export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
     <>
       {/* Detail / Edit Dialog */}
       <Dialog open={open && !isDeleting} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-5xl w-[95vw] max-h-[95vh] overflow-y-auto overflow-x-hidden">
+        <DialogContent className="w-[calc(100vw-1rem)] sm:max-w-5xl max-h-[calc(100dvh-1rem)] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
             <DialogTitle>
               {isEditing ? "Editar alumno" : "Detalle del alumno"}
@@ -200,7 +200,7 @@ export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
 
           {isEditing ? (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 mt-2">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="firstName">Nombre</Label>
                   <Input id="firstName" {...register("firstName")} />
@@ -261,7 +261,7 @@ export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
                 </div>
               )}
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex flex-col gap-3 pt-2 sm:flex-row">
                 <Button
                   type="button"
                   variant="outline"
@@ -289,18 +289,18 @@ export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
               </div>
             </form>
           ) : (
-            <div className="mt-2 space-y-4">
+            <div className="mt-2 min-w-0 space-y-4">
               {/* Avatar + nombre */}
-              <div className="flex items-center gap-4">
+              <div className="flex min-w-0 items-center gap-4">
                 <div className="flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 text-primary text-lg font-bold shrink-0">
                   {student.firstName[0]}
                   {student.lastName[0]}
                 </div>
-                <div>
-                  <p className="text-lg font-semibold">
+                <div className="min-w-0">
+                  <p className="truncate text-lg font-semibold">
                     {student.firstName} {student.lastName}
                   </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="truncate text-sm text-muted-foreground">
                     {student.email}
                   </p>
                 </div>
@@ -400,7 +400,7 @@ export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
               {/* Panel de rutinas */}
               <RoutinePanel studentId={student.id} />
 
-              <div className="flex gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row">
                 <Button
                   variant="outline"
                   className="flex-1 gap-2"
@@ -425,7 +425,7 @@ export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
 
       {/* Confirm Delete */}
       <Dialog open={isDeleting} onOpenChange={() => setIsDeleting(false)}>
-        <DialogContent className="w-[95vw] max-w-sm">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-sm max-h-[calc(100dvh-1rem)] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>¿Eliminar alumno?</DialogTitle>
             <DialogDescription>

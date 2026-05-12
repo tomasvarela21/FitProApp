@@ -13,15 +13,15 @@ import { useStudents } from "@/features/students/hooks/use-students";
 import type { Student } from "@/types";
 
 const StudentRowSkeleton = () => (
-  <div className="flex items-center justify-between py-4 px-6">
-    <div className="flex items-center gap-3 flex-1">
+  <div className="flex flex-col gap-3 py-4 px-4 sm:px-6 md:flex-row md:items-center md:justify-between">
+    <div className="flex items-center gap-3 flex-1 min-w-0">
       <Skeleton className="w-9 h-9 rounded-full shrink-0" />
       <div className="space-y-1.5">
         <Skeleton className="h-3.5 w-36" />
         <Skeleton className="h-3 w-28" />
       </div>
     </div>
-    <div className="flex items-center gap-6">
+    <div className="flex flex-wrap items-center gap-2 md:gap-6">
       <Skeleton className="h-5 w-16 rounded-full" />
       <Skeleton className="h-5 w-20 rounded-full" />
       <Skeleton className="h-3 w-24" />
@@ -110,8 +110,8 @@ export const StudentsPage = () => {
         onClose={() => setSelectedStudent(null)}
       />
 
-      <form onSubmit={handleSearch} className="flex gap-2 mb-6">
-        <div className="relative flex-1 max-w-sm">
+      <form onSubmit={handleSearch} className="flex flex-col gap-2 mb-6 sm:flex-row">
+        <div className="relative flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por nombre o email..."
@@ -141,7 +141,7 @@ export const StudentsPage = () => {
 
       <Card>
         <CardContent className="p-0">
-          <div className="flex items-center px-6 py-3 border-b border-border bg-muted/40 rounded-t-lg">
+          <div className="hidden md:flex items-center px-6 py-3 border-b border-border bg-muted/40 rounded-t-lg">
             <div className="flex-1">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Alumno
@@ -187,7 +187,7 @@ export const StudentsPage = () => {
               {students.map((student) => (
                 <div
                   key={student.id}
-                  className="flex items-center px-6 py-4 hover:bg-muted/30 transition-colors cursor-pointer"
+                  className="flex flex-col gap-3 px-4 py-4 hover:bg-muted/30 transition-colors cursor-pointer sm:px-6 md:flex-row md:items-center"
                   onClick={() => setSelectedStudent(student)}
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -204,13 +204,15 @@ export const StudentsPage = () => {
                       </p>
                     </div>
                   </div>
-                  <div className="w-24 flex justify-end">
-                    <StatusBadge status={student.status} />
+                  <div className="flex flex-wrap items-center gap-2 pl-12 md:contents">
+                    <div className="md:w-24 md:flex md:justify-end">
+                      <StatusBadge status={student.status} />
+                    </div>
+                    <div className="md:w-28 md:flex md:justify-end">
+                      <SubscriptionBadge subscription={student.subscription} />
+                    </div>
                   </div>
-                  <div className="w-28 flex justify-end">
-                    <SubscriptionBadge subscription={student.subscription} />
-                  </div>
-                  <div className="w-32 text-right">
+                  <div className="pl-12 md:w-32 md:pl-0 md:text-right">
                     <span className="text-xs text-muted-foreground whitespace-nowrap">
                       {new Date(student.createdAt).toLocaleDateString("es-AR", {
                         day: "2-digit",
@@ -225,7 +227,7 @@ export const StudentsPage = () => {
           )}
 
           {meta && meta.totalPages > 1 && (
-            <div className="flex items-center justify-between px-6 py-4 border-t border-border">
+            <div className="flex flex-col gap-3 px-4 py-4 border-t border-border sm:px-6 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-muted-foreground">
                 {meta.total} alumnos · página {meta.page} de {meta.totalPages}
               </p>
