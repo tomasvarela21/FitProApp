@@ -60,8 +60,26 @@ export class ExercisesService {
     return trainer;
   }
 
-  static async listExercises(trainerUserId: string, filters: ExerciseFilters) {
-    const trainer = await this.getTrainer(trainerUserId);
+  static async listExercises(
+    userId: string,
+    role: string,
+    filters: { muscleGroupId?: string; difficulty?: string; search?: string; isGlobal?: boolean }
+  ) {
+    if (role === "STUDENT") {
+      const exercises = await prisma.exercise.findMany({
+        where: {
+          isGlobal: true,
+          ...(filters.muscleGroupId ? { muscleGroupId: filters.muscleGroupId } : {}),
+          ...(filters.difficulty ? { difficulty: filters.difficulty as Difficulty } : {}),
+          ...(filters.search ? { name: { contains: filters.search, mode: "insensitive" } } : {}),
+        },
+        include: exerciseInclude,
+        orderBy: { name: "asc" },
+      });
+      return exercises.map(toDto);
+    }
+
+    const trainer = await this.getTrainer(userId);
 
     let scopeFilter: Prisma.ExerciseWhereInput;
     if (filters.isGlobal === true) {
@@ -76,7 +94,7 @@ export class ExercisesService {
       AND: [
         scopeFilter,
         ...(filters.muscleGroupId ? [{ muscleGroupId: filters.muscleGroupId }] : []),
-        ...(filters.difficulty ? [{ difficulty: filters.difficulty }] : []),
+        ...(filters.difficulty ? [{ difficulty: filters.difficulty as Difficulty }] : []),
         ...(filters.search
           ? [{ name: { contains: filters.search, mode: "insensitive" as const } }]
           : []),

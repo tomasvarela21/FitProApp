@@ -64,7 +64,7 @@ const MANUAL_MAP: Record<string, string> = {
   // 🔧 Correcciones de IDs
   "Press de banca inclinado con barra": "Barbell_Incline_Bench_Press_-_Medium_Grip",
   "Press de banca declinado con barra": "Decline_Barbell_Bench_Press",
-  "Press de banca inclinado con mancuernas": "Incline_Dumbbell_Flyes",
+  "Press de banca inclinado con mancuernas": "Incline_Dumbbell_Press",
   "Flexiones de brazos": "Pushups",
   "Press en máquina pecho": "Leverage_Chest_Press",
   "Remo con barra": "Bent_Over_Barbell_Row",

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -15,8 +15,12 @@ import {
   ChevronUp,
   Plus,
   Minus,
+  PlayCircle,
 } from "lucide-react";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
+import { ExerciseTutorialDialog } from "@/features/student-portal/components/ExerciseTutorialDialog";
+import type { TutorialExercise } from "@/features/student-portal/components/ExerciseTutorialDialog";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -96,6 +100,9 @@ type ExerciseInput = {
   routineExerciseId: string;
   exerciseName: string;
   muscleGroup: string | null;
+  description: string | null;
+  mediaUrl: string | null;
+  mediaType: "GIF" | "YOUTUBE" | null;
   suggestedSets: number;
   suggestedReps: string;
   suggestedWeight: number | null;
@@ -132,6 +139,9 @@ const buildExerciseInputs = (exercises: StudentRoutineExercise[]): ExerciseInput
     routineExerciseId: re.id,
     exerciseName: re.exercise.name,
     muscleGroup: re.exercise.muscleGroup?.name ?? null,
+    description: re.exercise.description,
+    mediaUrl: re.exercise.mediaUrl,
+    mediaType: re.exercise.mediaType,
     suggestedSets: re.sets,
     suggestedReps: re.reps,
     suggestedWeight: re.suggestedWeight,
@@ -156,6 +166,7 @@ const WorkoutForm = ({ exercises, routineName }: {
     () => buildExerciseInputs(exercises)
   );
   const [success, setSuccess] = useState(false);
+  const [tutorialExercise, setTutorialExercise] = useState<TutorialExercise | null>(null);
 
   const mutation = useMutation({
     mutationFn: studentPortalApi.logWorkout,
@@ -265,8 +276,24 @@ const WorkoutForm = ({ exercises, routineName }: {
         <Card key={ex.routineExerciseId}>
           <CardHeader className="pb-2">
             <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="font-semibold text-sm">{ex.exerciseName}</p>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <p className="font-semibold text-sm">{ex.exerciseName}</p>
+                  <button
+                    type="button"
+                    onClick={() => setTutorialExercise({
+                      name: ex.exerciseName,
+                      muscleGroup: ex.muscleGroup,
+                      mediaUrl: ex.mediaUrl,
+                      mediaType: ex.mediaType,
+                      description: ex.description,
+                    })}
+                    className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                    title="Ver tutorial"
+                  >
+                    <PlayCircle className="w-4 h-4" />
+                  </button>
+                </div>
                 {ex.muscleGroup && (
                   <p className="text-xs text-muted-foreground">{ex.muscleGroup}</p>
                 )}
@@ -388,25 +415,25 @@ const WorkoutForm = ({ exercises, routineName }: {
           <><Dumbbell className="w-4 h-4" />Registrar entrenamiento</>
         )}
       </Button>
+
+      <ExerciseTutorialDialog
+        exercise={tutorialExercise}
+        open={!!tutorialExercise}
+        onClose={() => setTutorialExercise(null)}
+      />
     </div>
   );
 };
 
 // ─── Tab: Entrenar hoy ────────────────────────────────────────────────────────
 
-const getNextTrainingDay = (todayIdx: number, trainingDays: string[]): string | null => {
-  for (let i = 1; i <= 7; i++) {
-    const candidate = DAY_ORDER[(todayIdx + i) % 7];
-    if (trainingDays.includes(candidate)) return candidate;
-  }
-  return null;
-};
-
 const TodayTab = () => {
   const today = DAY_MAP[new Date().getDay()];
   const todayStr = new Date().toISOString().split("T")[0];
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
-  const { data: todayData, isLoading: loadingToday } = useQuery({
+  // Keep today fetch for cache consistency / background refresh
+  useQuery({
     queryKey: ["student-today"],
     queryFn: () => studentPortalApi.getTodayWorkout().then((r) => r.data.data),
     staleTime: 1000 * 60 * 2,
@@ -415,7 +442,6 @@ const TodayTab = () => {
   const { data: routineData, isLoading: loadingRoutine } = useQuery({
     queryKey: ["student-routine"],
     queryFn: () => studentPortalApi.getRoutine().then((r) => r.data.data),
-    enabled: !todayData,
     staleTime: 1000 * 60 * 2,
   });
 
@@ -425,7 +451,14 @@ const TodayTab = () => {
     staleTime: 1000 * 60 * 2,
   });
 
-  if (loadingToday || (loadingRoutine && !todayData)) {
+  const trainingDays = useMemo(
+    () => DAY_ORDER.filter((d) => routineData?.routine.daysOfWeek.includes(d) ?? false),
+    [routineData]
+  );
+
+  const resolvedDay = selectedDay ?? (trainingDays.includes(today) ? today : trainingDays[0] ?? null);
+
+  if (loadingRoutine) {
     return (
       <div className="flex justify-center py-16">
         <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -433,38 +466,64 @@ const TodayTab = () => {
     );
   }
 
-  if (!todayData) {
-    const todayIdx = DAY_ORDER.indexOf(today);
-    const trainingDays = routineData?.routine.daysOfWeek ?? [];
-    const nextDay = getNextTrainingDay(todayIdx, trainingDays);
-    return <NoTrainingToday nextDay={nextDay} hasRoutine={!!routineData} />;
+  if (!routineData || trainingDays.length === 0) {
+    return <NoTrainingToday hasRoutine={!!routineData} />;
   }
 
-  const alreadyLogged = historyData?.some((log) => log.date.split("T")[0] === todayStr);
-
-  if (alreadyLogged && historyData) {
-    const todayLog = historyData.find((log) => log.date.split("T")[0] === todayStr);
-    return <AlreadyLogged log={todayLog!} routineName={todayData.routine.name} />;
-  }
-
-  const exercises = todayData.routine.routineExercises
+  const exercises = routineData.routine.routineExercises
+    .filter((re) => re.dayOfWeek === resolvedDay)
     .sort((a, b) => a.order - b.order);
 
+  const alreadyLogged = resolvedDay === today && historyData?.some((log) => log.date.split("T")[0] === todayStr);
+  const todayLog = alreadyLogged ? historyData!.find((log) => log.date.split("T")[0] === todayStr) : undefined;
+  const isRecovering = resolvedDay !== today;
+
   return (
-    <WorkoutForm
-      exercises={exercises}
-      routineName={todayData.routine.name}
-    />
+    <div className="space-y-4">
+      {/* Day selector */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex gap-1 flex-wrap border-b border-transparent">
+          {trainingDays.map((day) => (
+            <button
+              key={day}
+              type="button"
+              onClick={() => setSelectedDay(day)}
+              className={cn(
+                "px-3 py-1.5 text-xs rounded-md border transition-colors",
+                resolvedDay === day
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              )}
+            >
+              {DAY_LABELS[day]}
+            </button>
+          ))}
+        </div>
+        {isRecovering ? (
+          <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/20">
+            Recuperando: {DAY_LABELS[resolvedDay!]}
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+            Hoy
+          </Badge>
+        )}
+      </div>
+
+      {alreadyLogged && todayLog ? (
+        <AlreadyLogged log={todayLog} routineName={routineData.routine.name} />
+      ) : (
+        <WorkoutForm
+          key={resolvedDay}
+          exercises={exercises}
+          routineName={routineData.routine.name}
+        />
+      )}
+    </div>
   );
 };
 
-const NoTrainingToday = ({
-  nextDay,
-  hasRoutine,
-}: {
-  nextDay: string | null;
-  hasRoutine: boolean;
-}) => {
+const NoTrainingToday = ({ hasRoutine }: { hasRoutine: boolean }) => {
   if (!hasRoutine) {
     return (
       <div className="text-center py-16">
@@ -479,16 +538,11 @@ const NoTrainingToday = ({
 
   return (
     <div className="text-center py-16">
-      <div className="text-4xl mb-4">💪</div>
-      <p className="font-semibold text-lg">Hoy no entrenás</p>
-      {nextDay ? (
-        <p className="text-sm text-muted-foreground mt-2">
-          Tu próximo día de entrenamiento es el{" "}
-          <span className="font-medium text-foreground">{DAY_LABELS[nextDay]}</span>.
-        </p>
-      ) : (
-        <p className="text-sm text-muted-foreground mt-2">Descansá y recuperate.</p>
-      )}
+      <Dumbbell className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+      <p className="font-semibold">Sin ejercicios configurados</p>
+      <p className="text-sm text-muted-foreground mt-1">
+        Consultá con tu entrenador para configurar los días de tu rutina.
+      </p>
     </div>
   );
 };

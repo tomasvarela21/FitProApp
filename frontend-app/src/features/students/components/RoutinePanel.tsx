@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   Loader2, ClipboardList, Plus, RefreshCw,
-  ChevronDown, ChevronUp, Check, X, Calendar, Copy, CheckCircle2,
+  ChevronDown, ChevronUp, Check, X, Calendar, Copy, CheckCircle2, PlayCircle,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,8 @@ import { exercisesApi } from "@/api/exercises.api";
 import { weeklyPlanApi } from "@/api/weekly-plan.api";
 import { getRoutineDays } from "@/types";
 import type { WeeklyPlan } from "@/types";
+import { ExerciseTutorialDialog } from "@/features/student-portal/components/ExerciseTutorialDialog";
+import type { TutorialExercise } from "@/features/student-portal/components/ExerciseTutorialDialog";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -1039,6 +1041,7 @@ export const RoutinePanel = ({ studentId }: Props) => {
   const [activeDay, setActiveDay] = useState<string | null>(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [tutorialExercise, setTutorialExercise] = useState<TutorialExercise | null>(null);
 
   const { data: studentRoutine, isLoading: loadingRoutine } = useQuery({
     queryKey: ["student-routine", studentId],
@@ -1116,6 +1119,11 @@ export const RoutinePanel = ({ studentId }: Props) => {
   return (
     <>
       <AssignRoutineDialog open={assignOpen} onClose={() => setAssignOpen(false)} studentId={studentId} />
+      <ExerciseTutorialDialog
+        exercise={tutorialExercise}
+        open={!!tutorialExercise}
+        onClose={() => setTutorialExercise(null)}
+      />
 
       {routine && (
         <AddExerciseDialog
@@ -1237,10 +1245,26 @@ export const RoutinePanel = ({ studentId }: Props) => {
                             className="rounded-lg border border-border bg-muted/10 p-3 space-y-3"
                           >
                             <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="text-sm font-semibold break-words">
-                                  {re.exercise.name}
-                                </p>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5">
+                                  <p className="text-sm font-semibold break-words">
+                                    {re.exercise.name}
+                                  </p>
+                                  <button
+                                    type="button"
+                                    onClick={() => setTutorialExercise({
+                                      name: re.exercise.name,
+                                      muscleGroup: re.exercise.muscleGroup?.name ?? null,
+                                      mediaUrl: re.exercise.mediaUrl,
+                                      mediaType: re.exercise.mediaType,
+                                      description: re.exercise.description,
+                                    })}
+                                    className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                                    title="Ver tutorial"
+                                  >
+                                    <PlayCircle className="w-4 h-4" />
+                                  </button>
+                                </div>
                                 <p className="text-xs text-muted-foreground">
                                   {re.exercise.muscleGroup?.name ?? "Sin grupo muscular"}
                                 </p>
@@ -1359,6 +1383,7 @@ export const RoutinePanel = ({ studentId }: Props) => {
                             <th className="px-2 py-2 text-left font-medium text-muted-foreground">Peso sug.</th>
                             <th className="px-2 py-2 text-left font-medium text-muted-foreground">RPE sug.</th>
                             <th className="px-2 py-2 text-left font-medium text-muted-foreground">Descanso</th>
+                            <th className="px-2 py-2" />
                             {isOwn && <th className="px-2 py-2" />}
                           </tr>
                         </thead>
@@ -1419,6 +1444,22 @@ export const RoutinePanel = ({ studentId }: Props) => {
                                     min={0}
                                     onSave={(v) => handleCellSave(re.id, "restSeconds", v)}
                                   />
+                                </td>
+                                <td className="px-2 py-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setTutorialExercise({
+                                      name: re.exercise.name,
+                                      muscleGroup: re.exercise.muscleGroup?.name ?? null,
+                                      mediaUrl: re.exercise.mediaUrl,
+                                      mediaType: re.exercise.mediaType,
+                                      description: re.exercise.description,
+                                    })}
+                                    className="text-muted-foreground hover:text-foreground transition-colors"
+                                    title="Ver tutorial"
+                                  >
+                                    <PlayCircle className="w-4 h-4" />
+                                  </button>
                                 </td>
                                 {isOwn && (
                                   <td className="px-2 py-2">

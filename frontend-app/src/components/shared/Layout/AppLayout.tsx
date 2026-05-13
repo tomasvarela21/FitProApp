@@ -19,7 +19,7 @@ export const AppLayout = () => {
   }, [collapsed]);
 
   return (
-    <div className="flex min-h-dvh bg-background overflow-hidden">
+    <div className="flex h-dvh bg-background overflow-hidden">
       <div className="hidden lg:block">
         <Sidebar
           collapsed={collapsed}

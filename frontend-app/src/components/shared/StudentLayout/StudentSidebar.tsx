@@ -6,6 +6,7 @@ import {
   TrendingUp,
   ChevronLeft,
   ChevronRight,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -18,6 +19,11 @@ const navItems = [
     label: "Mi entrenamiento",
     href: "/student/dashboard",
     icon: Dumbbell,
+  },
+  {
+    label: "Ejercicios",
+    href: "/student/exercises",
+    icon: BookOpen,
   },
   {
     label: "Mi progreso",

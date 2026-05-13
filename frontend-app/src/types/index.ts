@@ -291,6 +291,8 @@ export type StudentRoutineExercise = {
     id: string;
     name: string;
     description: string | null;
+    mediaUrl: string | null;
+    mediaType: "GIF" | "YOUTUBE" | null;
     muscleGroup: { id: string; name: string; slug: string } | null;
     equipment: { id: string; name: string } | null;
   };

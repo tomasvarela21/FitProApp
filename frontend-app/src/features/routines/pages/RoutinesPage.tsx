@@ -13,6 +13,7 @@ import {
   X,
   Pencil,
   Trash2,
+  PlayCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -539,6 +540,18 @@ const AddExerciseDialog = ({ open, onClose, routineId, nextOrder, defaultDay }: 
   );
 };
 
+// ─── Animated Exercise Image ──────────────────────────────────────────────────
+
+const AnimatedExerciseImage = ({ mediaUrl }: { mediaUrl: string }) => {
+  const [frame, setFrame] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setFrame((f) => (f === 0 ? 1 : 0)), 700);
+    return () => clearInterval(interval);
+  }, [mediaUrl]);
+  const src = frame === 0 ? mediaUrl : mediaUrl.replace("/0.jpg", "/1.jpg");
+  return <img src={src} alt="ejercicio" className="w-full max-h-64 object-contain rounded-lg bg-muted" />;
+};
+
 // ─── Routine Detail Dialog ────────────────────────────────────────────────────
 
 type RoutineDetailDialogProps = {
@@ -556,6 +569,7 @@ const RoutineDetailDialog = ({ routineId, onClose }: RoutineDetailDialogProps) =
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [tutorialExercise, setTutorialExercise] = useState<RoutineExercise["exercise"] | null>(null);
 
   const { data: routine, isLoading } = useQuery({
     queryKey: ["routine", routineId],
@@ -715,10 +729,22 @@ const RoutineDetailDialog = ({ routineId, onClose }: RoutineDetailDialogProps) =
                             className="rounded-lg border border-border bg-muted/10 p-3 space-y-3"
                           >
                             <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="text-sm font-semibold break-words">
-                                  {re.exercise.name}
-                                </p>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5">
+                                  <p className="text-sm font-semibold break-words flex-1">
+                                    {re.exercise.name}
+                                  </p>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0 shrink-0 text-muted-foreground hover:text-primary"
+                                    onClick={() => setTutorialExercise(re.exercise)}
+                                    title="Ver tutorial"
+                                  >
+                                    <PlayCircle className="w-4 h-4" />
+                                  </Button>
+                                </div>
                                 <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                                   {isOwn ? (
                                     <InlineSelectCell
@@ -874,7 +900,19 @@ const RoutineDetailDialog = ({ routineId, onClose }: RoutineDetailDialogProps) =
                                 />
                               </td>
                               <td className="px-3 py-2 font-medium text-sm">
-                                <span className="block max-w-56 truncate">{re.exercise.name}</span>
+                                <div className="flex items-center gap-1.5 max-w-56">
+                                  <span className="truncate flex-1">{re.exercise.name}</span>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0 shrink-0 text-muted-foreground hover:text-primary"
+                                    onClick={() => setTutorialExercise(re.exercise)}
+                                    title="Ver tutorial"
+                                  >
+                                    <PlayCircle className="w-3.5 h-3.5" />
+                                  </Button>
+                                </div>
                               </td>
                               <td className="px-3 py-2">
                                 <InlineCell
@@ -1063,6 +1101,42 @@ const RoutineDetailDialog = ({ routineId, onClose }: RoutineDetailDialogProps) =
               {deleteLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Eliminando...</> : "Sí, eliminar"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Tutorial dialog */}
+      <Dialog open={!!tutorialExercise} onOpenChange={() => setTutorialExercise(null)}>
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-sm max-h-[calc(100dvh-1rem)] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{tutorialExercise?.name}</DialogTitle>
+            {tutorialExercise?.muscleGroup && (
+              <p className="text-sm text-muted-foreground">{tutorialExercise.muscleGroup.name}</p>
+            )}
+          </DialogHeader>
+          <div className="space-y-4">
+            {tutorialExercise?.mediaUrl && tutorialExercise.mediaType === "GIF" && (
+              <AnimatedExerciseImage mediaUrl={tutorialExercise.mediaUrl} />
+            )}
+            {tutorialExercise?.mediaUrl && tutorialExercise.mediaType === "YOUTUBE" && (
+              <div className="aspect-video rounded-lg overflow-hidden">
+                <iframe
+                  src={tutorialExercise.mediaUrl}
+                  className="w-full h-full"
+                  allowFullScreen
+                  title={tutorialExercise.name}
+                />
+              </div>
+            )}
+            {!tutorialExercise?.mediaUrl && (
+              <div className="w-full h-40 bg-muted rounded-lg flex flex-col items-center justify-center gap-2">
+                <ClipboardList className="w-8 h-8 text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground">Sin tutorial disponible</p>
+              </div>
+            )}
+            {tutorialExercise?.description && (
+              <p className="text-sm text-muted-foreground">{tutorialExercise.description}</p>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </>

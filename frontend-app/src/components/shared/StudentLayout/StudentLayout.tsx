@@ -19,7 +19,7 @@ export const StudentLayout = () => {
   }, [collapsed]);
 
   return (
-    <div className="flex min-h-dvh bg-background overflow-hidden">
+    <div className="flex h-dvh bg-background overflow-hidden">
       <div className="hidden lg:block">
         <StudentSidebar
           collapsed={collapsed}

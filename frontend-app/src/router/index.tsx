@@ -13,6 +13,7 @@ import { RoutinesPage } from "@/features/routines/pages/RoutinesPage";
 import { StudentDashboardPage } from "@/features/student-portal/pages/StudentDashboardPage";
 import { StudentProfilePage } from "@/features/student-portal/pages/StudentProfilePage";
 import { StudentProgressPage } from "@/features/student-portal/pages/StudentProgressPage";
+import { StudentExercisesPage } from "@/features/student-portal/pages/StudentExercisesPage";
 import { AppLayout } from "@/components/shared/Layout/AppLayout";
 import { StudentLayout } from "@/components/shared/StudentLayout/StudentLayout";
 
@@ -87,6 +88,7 @@ export const AppRouter = () => {
         >
           <Route index element={<Navigate to="/student/dashboard" replace />} />
           <Route path="dashboard" element={<StudentDashboardPage />} />
+          <Route path="exercises" element={<StudentExercisesPage />} />
           <Route path="profile" element={<StudentProfilePage />} />
           <Route path="progress" element={<StudentProgressPage />} />
         </Route>

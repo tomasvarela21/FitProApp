@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -10,6 +10,7 @@ import {
   User,
   Pencil,
   Trash2,
+  PlayCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,6 +56,16 @@ const MOVEMENT_LABELS: Record<string, string> = {
   CORE: "Core",
   CARDIO: "Cardio",
   OLYMPIC: "Olímpico",
+};
+
+const AnimatedExerciseImage = ({ mediaUrl }: { mediaUrl: string }) => {
+  const [frame, setFrame] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setFrame((f) => (f === 0 ? 1 : 0)), 700);
+    return () => clearInterval(interval);
+  }, [mediaUrl]);
+  const src = frame === 0 ? mediaUrl : mediaUrl.replace("/0.jpg", "/1.jpg");
+  return <img src={src} alt="ejercicio" className="w-full rounded-lg" />;
 };
 
 type DeleteDialogProps = {
@@ -138,6 +149,7 @@ export const ExerciseGroupPage = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
   const [deletingExercise, setDeletingExercise] = useState<Exercise | null>(null);
+  const [tutorialExercise, setTutorialExercise] = useState<Exercise | null>(null);
 
   const { data: muscleGroups = [] } = useQuery({
     queryKey: ["muscle-groups"],
@@ -230,6 +242,27 @@ export const ExerciseGroupPage = () => {
         slug={slug ?? ""}
       />
 
+      <Dialog open={!!tutorialExercise} onOpenChange={() => setTutorialExercise(null)}>
+        <DialogContent className="w-[95vw] max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{tutorialExercise?.name}</DialogTitle>
+            {tutorialExercise?.muscleGroup && (
+              <DialogDescription>{tutorialExercise.muscleGroup.name}</DialogDescription>
+            )}
+          </DialogHeader>
+          {tutorialExercise?.mediaUrl ? (
+            <AnimatedExerciseImage mediaUrl={tutorialExercise.mediaUrl} />
+          ) : (
+            <div className="h-40 bg-muted rounded-lg flex items-center justify-center">
+              <p className="text-xs text-muted-foreground">Sin tutorial disponible</p>
+            </div>
+          )}
+          {tutorialExercise?.description && (
+            <p className="text-sm text-muted-foreground">{tutorialExercise.description}</p>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Filtros */}
       <div className="flex flex-wrap gap-3 mb-6">
         <form onSubmit={handleSearch} className="flex gap-2">
@@ -313,13 +346,16 @@ export const ExerciseGroupPage = () => {
           {filtered.map((exercise) => (
             <Card key={exercise.id} className="flex flex-col">
               <CardContent className="p-4 flex-1 flex flex-col gap-3">
-                {/* Thumbnail GIF */}
                 {exercise.mediaUrl && exercise.mediaType === "GIF" && (
-                  <img
-                    src={exercise.mediaUrl}
-                    alt={exercise.name}
-                    className="w-full h-32 object-cover rounded-md bg-muted"
-                  />
+                  <div
+                    className="relative cursor-pointer group"
+                    onClick={() => setTutorialExercise(exercise)}
+                  >
+                    <AnimatedExerciseImage mediaUrl={exercise.mediaUrl} />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-md flex items-center justify-center">
+                      <PlayCircle className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </div>
                 )}
 
                 <div className="flex items-start justify-between gap-2">
@@ -369,6 +405,18 @@ export const ExerciseGroupPage = () => {
                 <p className="text-xs text-muted-foreground">
                   {MOVEMENT_LABELS[exercise.movementType]}
                 </p>
+
+                {exercise.mediaUrl && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full h-7 text-xs gap-1.5"
+                    onClick={() => setTutorialExercise(exercise)}
+                  >
+                    <PlayCircle className="w-3.5 h-3.5" />
+                    Ver tutorial
+                  </Button>
+                )}
 
                 {!exercise.isGlobal && (
                   <div className="flex gap-2 pt-1 border-t border-border">

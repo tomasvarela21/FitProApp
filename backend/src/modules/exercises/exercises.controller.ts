@@ -29,13 +29,17 @@ const listQuerySchema = z.object({
 
 export class ExercisesController {
   static list = asyncHandler(async (req: Request, res: Response) => {
-    const query = listQuerySchema.parse(req.query);
-    const result = await ExercisesService.listExercises(req.user!.userId, {
-      muscleGroupId: query.muscleGroupId,
-      difficulty: query.difficulty,
-      search: query.search,
-      isGlobal: query.isGlobal as boolean | undefined,
-    });
+    const { muscleGroupId, difficulty, search, isGlobal } = req.query;
+    const result = await ExercisesService.listExercises(
+      req.user!.userId,
+      req.user!.role,
+      {
+        muscleGroupId: muscleGroupId as string,
+        difficulty: difficulty as string,
+        search: search as string,
+        isGlobal: isGlobal === "true" ? true : isGlobal === "false" ? false : undefined,
+      }
+    );
     return res.status(200).json(successResponse("Ejercicios obtenidos", result));
   });
 
