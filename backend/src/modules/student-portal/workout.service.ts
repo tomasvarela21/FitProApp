@@ -21,15 +21,6 @@ type LogWorkoutData = {
   date?: string;
 };
 
-const DAY_MAP: Record<number, string> = {
-  0: "SUNDAY",
-  1: "MONDAY",
-  2: "TUESDAY",
-  3: "WEDNESDAY",
-  4: "THURSDAY",
-  5: "FRIDAY",
-  6: "SATURDAY",
-};
 
 function getTodayDayOfWeek(): DayOfWeek {
   const days: DayOfWeek[] = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
@@ -67,43 +58,58 @@ type StudentRoutineWithRelations = Prisma.StudentRoutineGetPayload<{
   include: typeof studentRoutineInclude;
 }>;
 
-function toRoutineDto(sr: StudentRoutineWithRelations) {
+async function applyWeekOverrides(sr: StudentRoutineWithRelations) {
+  const overrides = await prisma.weeklyExerciseOverride.findMany({
+    where: { studentRoutineId: sr.id, weekNumber: sr.weekNumber },
+  });
+  const overrideMap = new Map(overrides.map((o) => [o.routineExerciseId, o]));
+  return overrideMap;
+}
+
+function toRoutineDto(
+  sr: StudentRoutineWithRelations,
+  overrideMap: Map<string, { suggestedWeight: number | null; suggestedReps: string | null; suggestedRpe: number | null }>
+) {
   const routine = sr.routine;
   return {
     studentRoutineId: sr.id,
     assignedAt: sr.assignedAt,
     notes: sr.notes,
+    weekNumber: sr.weekNumber,
     routine: {
       id: routine.id,
       name: routine.name,
       description: routine.description,
       daysOfWeek: [...new Set(routine.routineExercises.map(re => re.dayOfWeek))],
-      routineExercises: routine.routineExercises.map((re) => ({
-        id: re.id,
-        dayOfWeek: re.dayOfWeek,
-        order: re.order,
-        sets: re.sets,
-        reps: re.reps,
-        suggestedWeight: re.suggestedWeight,
-        suggestedRpe: re.suggestedRpe,
-        restSeconds: re.restSeconds,
-        notes: re.notes,
-        exercise: {
-          id: re.exercise.id,
-          name: re.exercise.name,
-          description: re.exercise.description,
-          difficulty: re.exercise.difficulty,
-          movementType: re.exercise.movementType,
-          mediaUrl: re.exercise.mediaUrl,
-          mediaType: re.exercise.mediaType,
-          muscleGroup: re.exercise.muscleGroup
-            ? { id: re.exercise.muscleGroup.id, name: re.exercise.muscleGroup.name, slug: re.exercise.muscleGroup.slug }
-            : null,
-          equipment: re.exercise.equipment
-            ? { id: re.exercise.equipment.id, name: re.exercise.equipment.name }
-            : null,
-        },
-      })),
+      routineExercises: routine.routineExercises.map((re) => {
+        const override = overrideMap.get(re.id);
+        return {
+          id: re.id,
+          dayOfWeek: re.dayOfWeek,
+          order: re.order,
+          sets: re.sets,
+          reps: override?.suggestedReps ?? re.reps,
+          suggestedWeight: override?.suggestedWeight ?? re.suggestedWeight,
+          suggestedRpe: override?.suggestedRpe ?? re.suggestedRpe,
+          restSeconds: re.restSeconds,
+          notes: re.notes,
+          exercise: {
+            id: re.exercise.id,
+            name: re.exercise.name,
+            description: re.exercise.description,
+            difficulty: re.exercise.difficulty,
+            movementType: re.exercise.movementType,
+            mediaUrl: re.exercise.mediaUrl,
+            mediaType: re.exercise.mediaType,
+            muscleGroup: re.exercise.muscleGroup
+              ? { id: re.exercise.muscleGroup.id, name: re.exercise.muscleGroup.name, slug: re.exercise.muscleGroup.slug }
+              : null,
+            equipment: re.exercise.equipment
+              ? { id: re.exercise.equipment.id, name: re.exercise.equipment.name }
+              : null,
+          },
+        };
+      }),
     },
   };
 }
@@ -125,7 +131,8 @@ export class WorkoutService {
 
     if (!studentRoutine) return null;
 
-    return toRoutineDto(studentRoutine);
+    const overrideMap = await applyWeekOverrides(studentRoutine);
+    return toRoutineDto(studentRoutine, overrideMap);
   }
 
   static async getTodayWorkout(userId: string) {
@@ -151,7 +158,8 @@ export class WorkoutService {
     const todayExercises = studentRoutine.routine.routineExercises;
     if (todayExercises.length === 0) return null;
 
-    return toRoutineDto(studentRoutine);
+    const overrideMap = await applyWeekOverrides(studentRoutine);
+    return toRoutineDto(studentRoutine, overrideMap);
   }
 
   static async logWorkout(userId: string, data: LogWorkoutData) {
