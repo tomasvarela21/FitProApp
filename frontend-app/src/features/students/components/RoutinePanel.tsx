@@ -630,8 +630,18 @@ const WeeklyPlanTabContent = ({ studentId }: { studentId: string }) => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-6">
-        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+      <div className="space-y-3 animate-pulse">
+        <div className="flex justify-between items-start">
+          <div className="space-y-1.5">
+            <div className="h-4 bg-muted rounded w-40" />
+            <div className="h-3 bg-muted rounded w-24" />
+          </div>
+          <div className="h-5 bg-muted rounded w-20" />
+        </div>
+        <div className="flex gap-2">
+          {[1, 2, 3, 4].map((i) => <div key={i} className="h-7 bg-muted rounded w-16" />)}
+        </div>
+        <div className="h-32 bg-muted rounded" />
       </div>
     );
   }
@@ -1075,8 +1085,14 @@ export const RoutinePanel = ({ studentId }: Props) => {
         },
       };
     });
-    await routinesApi.updateExercise(routineId, routineExerciseId, { [field]: value });
-    queryClient.invalidateQueries({ queryKey: ["student-routine", studentId] });
+    try {
+      await routinesApi.updateExercise(routineId, routineExerciseId, { [field]: value });
+      queryClient.invalidateQueries({ queryKey: ["student-routine", studentId] });
+      queryClient.invalidateQueries({ queryKey: ["weekly-plan", studentId] });
+    } catch {
+      queryClient.invalidateQueries({ queryKey: ["student-routine", studentId] });
+      queryClient.invalidateQueries({ queryKey: ["weekly-plan", studentId] });
+    }
   };
 
   const handleDelete = async (routineExerciseId: string) => {
@@ -1131,8 +1147,19 @@ export const RoutinePanel = ({ studentId }: Props) => {
             {/* Tab: Rutina activa */}
             <TabsContent value="routine" className="p-4 space-y-4">
               {loadingRoutine ? (
-                <div className="flex items-center justify-center py-6">
-                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                <div className="space-y-3 animate-pulse">
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="space-y-1.5 flex-1">
+                      <div className="h-4 bg-muted rounded w-2/3" />
+                      <div className="h-3 bg-muted rounded w-1/3" />
+                    </div>
+                    <div className="h-7 bg-muted rounded w-20 shrink-0" />
+                  </div>
+                  <div className="flex gap-1.5">
+                    {[1, 2, 3].map((i) => <div key={i} className="h-5 bg-muted rounded w-10" />)}
+                  </div>
+                  <div className="h-px bg-muted" />
+                  <div className="h-40 bg-muted rounded" />
                 </div>
               ) : studentRoutine && routine ? (
                 <div className="space-y-4">
@@ -1467,8 +1494,10 @@ export const RoutinePanel = ({ studentId }: Props) => {
             {/* Tab: Historial */}
             <TabsContent value="history" className="p-4 space-y-3">
               {loadingHistory ? (
-                <div className="flex items-center justify-center py-6">
-                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                <div className="space-y-2 animate-pulse">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-14 bg-muted rounded-md" />
+                  ))}
                 </div>
               ) : workoutHistory.length === 0 ? (
                 <div className="text-center py-6">

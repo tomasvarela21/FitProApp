@@ -60,15 +60,10 @@ export class StudentPortalService {
   }
 
   static async getMySubscription(userId: string) {
-    const student = await prisma.student.findFirst({
-      where: { userId },
-    });
-
-    if (!student) throw new AppError("Alumno no encontrado", 404);
-
+    // Single query — filter subscription through the student relation instead of two sequential lookups
     const subscription = await prisma.subscription.findFirst({
       where: {
-        studentId: student.id,
+        student: { userId },
         status: { in: ["ACTIVE", "EXPIRED"] },
       },
       include: {

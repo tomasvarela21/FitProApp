@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Pencil, X, Trash2, Send, KeyRound } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -60,6 +60,23 @@ const DetailRow = ({
 export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
+
+  const { data: summary } = useQuery({
+    queryKey: ["student-summary", student?.id],
+    queryFn: () => studentsApi.getSummary(student!.id).then((r) => r.data.data),
+    enabled: open && !!student,
+    staleTime: 1000 * 60 * 2,
+  });
+
+  useEffect(() => {
+    if (!summary || !student) return;
+    if (summary.subscription !== undefined) {
+      queryClient.setQueryData(["subscription", student.id], summary.subscription);
+    }
+    if (summary.studentRoutine !== undefined) {
+      queryClient.setQueryData(["student-routine", student.id], summary.studentRoutine);
+    }
+  }, [summary, student?.id]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);

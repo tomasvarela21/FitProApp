@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Search, UserPlus, AlertTriangle, XCircle, CheckCircle2 } from "lucide-react";
+import { studentsApi } from "@/api/students.api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -70,11 +72,20 @@ const SubscriptionBadge = ({
 };
 
 export const StudentsPage = () => {
+  const queryClient = useQueryClient();
   const { students, meta, isLoading, page, setPage, search, setSearch } =
     useStudents();
   const [searchInput, setSearchInput] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+
+  const handleRowHover = (studentId: string) => {
+    queryClient.prefetchQuery({
+      queryKey: ["student-summary", studentId],
+      queryFn: () => studentsApi.getSummary(studentId).then((r) => r.data.data),
+      staleTime: 1000 * 60 * 2,
+    });
+  };
 
   const handleSearch = (e: React.SyntheticEvent) => {
     e.preventDefault();
@@ -189,6 +200,7 @@ export const StudentsPage = () => {
                   key={student.id}
                   className="flex flex-col gap-3 px-4 py-4 hover:bg-muted/30 transition-colors cursor-pointer sm:px-6 md:flex-row md:items-center"
                   onClick={() => setSelectedStudent(student)}
+                  onMouseEnter={() => handleRowHover(student.id)}
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <div className="flex items-center justify-center w-9 h-9 rounded-full bg-primary/10 text-primary text-xs font-semibold shrink-0">

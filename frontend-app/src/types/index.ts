@@ -362,6 +362,45 @@ export type WeeklyExerciseOverride = {
   notes: string | null;
 };
 
+export type StudentSummary = {
+  student: Student;
+  subscription: StudentSubscription | null;
+  studentRoutine: {
+    id: string;
+    assignedAt: string;
+    notes: string | null;
+    weekNumber: number;
+    startDate: string | null;
+    endDate: string | null;
+    routine: Routine;
+  } | null;
+  workoutHistory: {
+    id: string;
+    date: string;
+    notes: string | null;
+    createdAt: string;
+    sets: {
+      id: string;
+      setNumber: number;
+      reps: number;
+      weight: number | null;
+      rpe: number | null;
+      notes: string | null;
+      exercise: { id: string; name: string; order: number };
+    }[];
+  }[];
+  weeklyPlan: {
+    studentRoutineId: string;
+    weekNumber: number;
+    startDate: string | null;
+    endDate: string | null;
+    weeks: {
+      weekNumber: number;
+      overrides: WeeklyExerciseOverride[];
+    }[];
+  } | null;
+};
+
 export type WeeklyPlan = {
   studentRoutine: {
     id: string;

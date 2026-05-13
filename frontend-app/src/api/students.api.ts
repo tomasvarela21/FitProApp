@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { ApiSuccess, PaginatedResponse, Student } from "@/types";
+import type { ApiSuccess, PaginatedResponse, Student, StudentSummary } from "@/types";
 
 type CreateStudentPayload = {
   email: string;
@@ -49,4 +49,7 @@ export const studentsApi = {
     apiClient.post<ApiSuccess<{ sent: boolean }>>(
       `/students/${id}/reset-password`
     ),
+
+  getSummary: (id: string) =>
+    apiClient.get<ApiSuccess<StudentSummary>>(`/students/${id}/summary`),
 };

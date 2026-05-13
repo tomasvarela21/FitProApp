@@ -42,3 +42,5 @@ studentsRouter.delete(
   "/:studentId",
   StudentsController.deleteStudent
 );
+
+studentsRouter.get("/:studentId/summary", StudentsController.getSummary);

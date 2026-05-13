@@ -3,6 +3,7 @@ import { asyncHandler } from "../../shared/errors/async-handler";
 import { successResponse } from "../../shared/responses/api-response";
 import { listStudentsQuerySchema } from "./students.schema";
 import { StudentsService } from "./students.service";
+import { StudentSummaryService } from "./student-summary.service";
 
 export class StudentsController {
   static createStudent = asyncHandler(async (req: Request, res: Response) => {
@@ -100,5 +101,16 @@ export class StudentsController {
     return res
       .status(200)
       .json(successResponse("Contraseña reseteada y email enviado", result));
+  });
+
+  static getSummary = asyncHandler(async (req: Request, res: Response) => {
+    const studentId = req.params.studentId as string;
+    const result = await StudentSummaryService.getStudentSummary(
+      req.user!.userId,
+      studentId
+    );
+    return res
+      .status(200)
+      .json(successResponse("Resumen del alumno obtenido", result));
   });
 }

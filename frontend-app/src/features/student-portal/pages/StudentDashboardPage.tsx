@@ -409,17 +409,20 @@ const TodayTab = () => {
   const { data: todayData, isLoading: loadingToday } = useQuery({
     queryKey: ["student-today"],
     queryFn: () => studentPortalApi.getTodayWorkout().then((r) => r.data.data),
+    staleTime: 1000 * 60 * 2,
   });
 
   const { data: routineData, isLoading: loadingRoutine } = useQuery({
     queryKey: ["student-routine"],
     queryFn: () => studentPortalApi.getRoutine().then((r) => r.data.data),
     enabled: !todayData,
+    staleTime: 1000 * 60 * 2,
   });
 
   const { data: historyData } = useQuery({
     queryKey: ["student-workout-history"],
     queryFn: () => studentPortalApi.getWorkoutHistory().then((r) => r.data.data),
+    staleTime: 1000 * 60 * 2,
   });
 
   if (loadingToday || (loadingRoutine && !todayData)) {
@@ -547,6 +550,7 @@ const HistorialTab = () => {
   const { data: history = [], isLoading } = useQuery({
     queryKey: ["student-workout-history"],
     queryFn: () => studentPortalApi.getWorkoutHistory().then((r) => r.data.data),
+    staleTime: 1000 * 60 * 2,
   });
 
   if (isLoading) {
