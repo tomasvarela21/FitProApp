@@ -351,3 +351,30 @@ export type WorkoutProgress = {
   avgRpe: number | null;
   totalSets: number;
 };
+
+export type WeeklyExerciseOverride = {
+  id: string;
+  routineExerciseId: string;
+  weekNumber: number;
+  suggestedWeight: number | null;
+  suggestedReps: string | null;
+  suggestedRpe: number | null;
+  notes: string | null;
+};
+
+export type WeeklyPlan = {
+  studentRoutine: {
+    id: string;
+    weekNumber: number;
+    startDate: string | null;
+    endDate: string | null;
+    notes: string | null;
+    routine: Routine;
+  };
+  weeks: {
+    weekNumber: number;
+    startDate: string | null;
+    endDate: string | null;
+    overrides: WeeklyExerciseOverride[];
+  }[];
+};
