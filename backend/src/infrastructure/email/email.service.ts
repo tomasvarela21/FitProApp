@@ -2,7 +2,7 @@ import { Resend } from "resend";
 
 const APP_URL = process.env.APP_URL ?? "http://localhost:5173";
 const APP_NAME = "FitPro";
-const FROM = "FitPro <onboarding@resend.dev>";
+const FROM = "FitPro <noreply@varelab.com>";
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
