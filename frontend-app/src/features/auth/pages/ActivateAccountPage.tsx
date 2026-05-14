@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -31,9 +31,12 @@ type ActivateForm = z.infer<typeof activateSchema>;
 type PageState = "loading" | "form" | "success" | "error";
 
 export const ActivateAccountPage = () => {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
+  const handleGoToLogin = () => {
+    localStorage.removeItem("auth-storage");
+    window.location.href = "/login";
+  };
 
   const [pageState, setPageState] = useState<PageState>(
     token ? "form" : "error"
@@ -169,7 +172,7 @@ export const ActivateAccountPage = () => {
               </div>
               <Button
                 className="w-full mt-2"
-                onClick={() => navigate("/login")}
+                onClick={handleGoToLogin}
               >
                 Ir al login
               </Button>

@@ -464,7 +464,7 @@ export class StudentsService {
     });
 
     // Enviar email
-    EmailService.sendInvitation({
+    EmailService.sendPasswordReset({
       to: student.email,
       firstName: student.firstName,
       trainerName: `${trainer.firstName} ${trainer.lastName}`,
