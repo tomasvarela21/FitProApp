@@ -11,6 +11,7 @@ import {
   Pencil,
   Trash2,
   PlayCircle,
+  ImageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,7 +66,11 @@ const AnimatedExerciseImage = ({ mediaUrl }: { mediaUrl: string }) => {
     return () => clearInterval(interval);
   }, [mediaUrl]);
   const src = frame === 0 ? mediaUrl : mediaUrl.replace("/0.jpg", "/1.jpg");
-  return <img src={src} alt="ejercicio" className="w-full rounded-lg" />;
+  return (
+    <div className="w-full h-64 overflow-hidden rounded-lg bg-muted flex items-center justify-center">
+      <img src={src} alt="ejercicio" className="w-full h-full object-contain" />
+    </div>
+  );
 };
 
 type DeleteDialogProps = {
@@ -150,6 +155,10 @@ export const ExerciseGroupPage = () => {
   const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
   const [deletingExercise, setDeletingExercise] = useState<Exercise | null>(null);
   const [tutorialExercise, setTutorialExercise] = useState<Exercise | null>(null);
+  const [editGifExercise, setEditGifExercise] = useState<Exercise | null>(null);
+  const [gifUrl, setGifUrl] = useState("");
+
+  const queryClient = useQueryClient();
 
   const { data: muscleGroups = [] } = useQuery({
     queryKey: ["muscle-groups"],
@@ -263,6 +272,37 @@ export const ExerciseGroupPage = () => {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!editGifExercise} onOpenChange={() => setEditGifExercise(null)}>
+        <DialogContent className="w-[95vw] max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Cambiar GIF — {editGifExercise?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              placeholder="URL del GIF..."
+              value={gifUrl}
+              onChange={(e) => setGifUrl(e.target.value)}
+            />
+            {gifUrl && (
+              <div className="w-full h-40 bg-muted rounded-lg overflow-hidden">
+                <img src={gifUrl} alt="preview" className="w-full h-full object-contain" />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditGifExercise(null)}>Cancelar</Button>
+            <Button onClick={async () => {
+              if (!editGifExercise) return;
+              await exercisesApi.update(editGifExercise.id, { mediaUrl: gifUrl, mediaType: "GIF" });
+              queryClient.invalidateQueries({ queryKey: ["exercises", slug] });
+              setEditGifExercise(null);
+            }}>
+              Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Filtros */}
       <div className="flex flex-wrap gap-3 mb-6">
         <form onSubmit={handleSearch} className="flex gap-2">
@@ -348,11 +388,15 @@ export const ExerciseGroupPage = () => {
               <CardContent className="p-4 flex-1 flex flex-col gap-3">
                 {exercise.mediaUrl && exercise.mediaType === "GIF" && (
                   <div
-                    className="relative cursor-pointer group"
+                    className="w-full h-48 overflow-hidden rounded-t-lg bg-muted flex items-center justify-center relative cursor-pointer group"
                     onClick={() => setTutorialExercise(exercise)}
                   >
-                    <AnimatedExerciseImage mediaUrl={exercise.mediaUrl} />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-md flex items-center justify-center">
+                    <img
+                      src={exercise.mediaUrl}
+                      alt={exercise.name}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                       <PlayCircle className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                   </div>
@@ -417,6 +461,16 @@ export const ExerciseGroupPage = () => {
                     Ver tutorial
                   </Button>
                 )}
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full h-7 text-xs gap-1.5"
+                  onClick={() => { setEditGifExercise(exercise); setGifUrl(exercise.mediaUrl ?? ""); }}
+                >
+                  <ImageIcon className="w-3.5 h-3.5" />
+                  Cambiar GIF
+                </Button>
 
                 {!exercise.isGlobal && (
                   <div className="flex gap-2 pt-1 border-t border-border">

@@ -133,13 +133,20 @@ export class ExercisesService {
   }
 
   static async updateExercise(trainerUserId: string, id: string, data: UpdateExerciseData) {
-    const trainer = await this.getTrainer(trainerUserId);
+    const [trainer, exercise] = await Promise.all([
+      prisma.trainer.findUnique({ where: { userId: trainerUserId } }),
+      prisma.exercise.findUnique({ where: { id } }),
+    ]);
 
-    const exercise = await prisma.exercise.findUnique({ where: { id } });
+    if (!trainer) throw new AppError("Trainer no encontrado", 404);
     if (!exercise) throw new AppError("Ejercicio no encontrado", 404);
 
-    if (exercise.isGlobal || exercise.trainerId !== trainer.id) {
-      throw new AppError("No tienes permisos para editar este ejercicio", 403);
+    const onlyUpdatingMedia = Object.keys(data).every((k) =>
+      ["mediaUrl", "mediaType"].includes(k)
+    );
+
+    if (!onlyUpdatingMedia && exercise.isGlobal) {
+      throw new AppError("No podés editar un ejercicio global", 403);
     }
 
     const updated = await prisma.exercise.update({

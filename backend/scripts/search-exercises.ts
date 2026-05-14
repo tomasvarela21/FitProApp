@@ -16,10 +16,20 @@ async function main() {
   ) as Array<{ id: string; name: string }>;
 
   const searchTerms = [
-    "seated row", "cable row", "chest press", "machine press",
-    "bulgarian", "split squat", "glute bridge",
-    "front raise", "rear delt", "kickback", "tricep kick",
-    "treadmill", "rowing", "stationary", "burpee", "box jump"
+  "cable lateral",
+  "burpee",
+  "dragon",
+  "hollow",
+  "seated row",
+  "machine row",
+  "lever row",
+  "lat pulldown",
+  "pull-up",
+  "hip thrust",
+  "dumbbell hip",
+  "adductor",
+  "hip adduction",
+  "abduction machine"
   ];
 
   for (const term of searchTerms) {

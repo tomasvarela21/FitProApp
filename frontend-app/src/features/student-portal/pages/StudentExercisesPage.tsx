@@ -75,7 +75,11 @@ const AnimatedExerciseImage = ({ mediaUrl }: { mediaUrl: string }) => {
     return () => clearInterval(interval);
   }, [mediaUrl]);
   const src = frame === 0 ? mediaUrl : mediaUrl.replace("/0.jpg", "/1.jpg");
-  return <img src={src} alt="ejercicio" className="w-full max-h-64 object-contain rounded-lg bg-muted" />;
+  return (
+    <div className="w-full h-64 overflow-hidden rounded-lg bg-muted flex items-center justify-center">
+      <img src={src} alt="ejercicio" className="w-full h-full object-contain" />
+    </div>
+  );
 };
 
 // ─── Detail Dialog ────────────────────────────────────────────────────────────
@@ -162,14 +166,16 @@ const ExerciseCard = ({
   onDetail: (ex: Exercise) => void;
 }) => (
   <Card className="overflow-hidden flex flex-col">
-    {exercise.mediaUrl && exercise.mediaType === "GIF" ? (
-      <img
-        src={exercise.mediaUrl}
-        alt={exercise.name}
-        className="h-40 w-full object-cover"
-      />
+    {exercise.mediaUrl ? (
+      <div className="w-full h-48 overflow-hidden rounded-t-lg bg-muted flex items-center justify-center">
+        <img
+          src={exercise.mediaUrl}
+          alt={exercise.name}
+          className="w-full h-full object-cover"
+        />
+      </div>
     ) : (
-      <div className="h-40 w-full bg-muted flex items-center justify-center">
+      <div className="h-48 w-full bg-muted flex items-center justify-center">
         <Dumbbell className="w-10 h-10 text-muted-foreground/30" />
       </div>
     )}
