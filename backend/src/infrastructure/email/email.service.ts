@@ -15,13 +15,18 @@ export class EmailService {
     trainerName: string;
     invitationToken: string;
   }) {
-    const activationUrl = `${APP_URL}/activate-account?token=${params.invitationToken}`;
+    console.log(`[EmailService] Enviando invitación a ${params.to}`);
+    console.log(`[EmailService] RESEND_API_KEY: ${process.env.RESEND_API_KEY ? "✅ configurada" : "❌ no configurada"}`);
 
-    await getResend().emails.send({
-      from: FROM,
-      to: params.to,
-      subject: `${params.trainerName} te invitó a ${APP_NAME}`,
-      html: `
+    const activationUrl = `${APP_URL}/activate-account?token=${params.invitationToken}`;
+    const resend = getResend();
+
+    try {
+      const result = await resend.emails.send({
+        from: FROM,
+        to: params.to,
+        subject: `${params.trainerName} te invitó a ${APP_NAME}`,
+        html: `
         <!DOCTYPE html>
         <html>
           <head>
@@ -88,9 +93,13 @@ export class EmailService {
           </body>
         </html>
       `,
-    });
-
-    return { sent: true };
+      });
+      console.log(`[EmailService] ✅ Email enviado:`, result);
+      return { sent: true };
+    } catch (err) {
+      console.error(`[EmailService] ❌ Error enviando email:`, err);
+      throw err;
+    }
   }
 
   static async sendPaymentAlerts(params: {
