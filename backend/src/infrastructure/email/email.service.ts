@@ -1,16 +1,11 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
 const APP_URL = process.env.APP_URL ?? "http://localhost:5173";
 const APP_NAME = "FitPro";
+const FROM = "FitPro <onboarding@resend.dev>";
 
-function getTransporter() {
-  return nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_APP_PASSWORD,
-    },
-  });
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY);
 }
 
 export class EmailService {
@@ -22,8 +17,8 @@ export class EmailService {
   }) {
     const activationUrl = `${APP_URL}/activate-account?token=${params.invitationToken}`;
 
-    await getTransporter().sendMail({
-      from: `"${APP_NAME}" <${process.env.GMAIL_USER}>`,
+    await getResend().emails.send({
+      from: FROM,
       to: params.to,
       subject: `${params.trainerName} te invitó a ${APP_NAME}`,
       html: `
@@ -149,8 +144,8 @@ export class EmailService {
 
     if (!hasOverdue && !hasExpiringSoon) return { sent: false };
 
-    await getTransporter().sendMail({
-      from: `"${APP_NAME}" <${process.env.GMAIL_USER}>`,
+    await getResend().emails.send({
+      from: FROM,
       to: params.to,
       subject: `💪 ${APP_NAME} — Resumen de pagos pendientes`,
       html: `
@@ -278,8 +273,8 @@ export class EmailService {
       urgencyColor = "#2563eb";
     }
 
-    await getTransporter().sendMail({
-      from: `"${APP_NAME}" <${process.env.GMAIL_USER}>`,
+    await getResend().emails.send({
+      from: FROM,
       to: params.to,
       subject,
       html: `
@@ -376,8 +371,8 @@ export class EmailService {
     dueDate: Date;
     daysOverdue: number;
   }) {
-    await getTransporter().sendMail({
-      from: `"${APP_NAME}" <${process.env.GMAIL_USER}>`,
+    await getResend().emails.send({
+      from: FROM,
       to: params.to,
       subject: `❌ Cuota vencida — ${params.planName}`,
       html: `
