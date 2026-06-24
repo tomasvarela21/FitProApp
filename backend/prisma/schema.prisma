@@ -39,27 +39,51 @@ model User {
 
   trainer Trainer?
   student Student?
+  pushSubscriptions PushSubscription[]
+}
+
+enum TrainerSubscriptionStatus {
+  TRIAL
+  ACTIVE
+  EXPIRED
 }
 
 model Trainer {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  firstName String
-  lastName  String
-  phone     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String                    @id @default(cuid())
+  userId             String                    @unique
+  firstName          String
+  lastName           String
+  phone              String?
+  subscriptionStatus TrainerSubscriptionStatus @default(TRIAL)
+  trialEndsAt        DateTime?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
 
-  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   students        Student[]
-  sentInvitations AccountInvitation[] @relation("TrainerSentInvitations")
+  sentInvitations AccountInvitation[]   @relation("TrainerSentInvitations")
   plans           Plan[]
   subscriptions   Subscription[]
   payments        Payment[]
   installments    Installment[]
   exercises       Exercise[]
   routines        Routine[]
+  verifications   TrainerVerification[]
 }
+
+model TrainerVerification {
+  id        String    @id @default(cuid())
+  trainerId String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  trainer Trainer @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+
+  @@index([trainerId])
+}
+
 
 model Student {
   id          String        @id @default(cuid())
@@ -393,4 +417,19 @@ model WorkoutSet {
 
   @@index([workoutLogId])
   @@index([routineExerciseId])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // "WEB" o "EXPO"
+  endpoint  String?
+  p256dh    String?
+  auth      String?
+  token     String?  @unique
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

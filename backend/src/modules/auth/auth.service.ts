@@ -2,13 +2,16 @@ import { prisma } from "../../infrastructure/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
 import { comparePassword, hashPassword } from "../../shared/utils/hash";
 import { signAccessToken } from "../../shared/utils/jwt";
-import { hashToken } from "../../shared/utils/token";
+import { generateRawToken, hashToken } from "../../shared/utils/token";
+import { EmailService } from "../../infrastructure/email/email.service";
+import { CreateTrainerInput } from "../trainers/trainers.schema";
 import { AuthMapper } from "./auth.mapper";
 import {
   ActivateAccountInput,
   ChangePasswordInput,
   LoginInput,
 } from "./auth.schema";
+
 
 export class AuthService {
   static async activateAccount(data: ActivateAccountInput) {
@@ -170,6 +173,126 @@ export class AuthService {
 
     return {
       changed: true,
+    };
+  }
+
+  static async registerTrainer(data: CreateTrainerInput) {
+    const existingUser = await prisma.user.findUnique({
+      where: { email: data.email },
+    });
+
+    if (existingUser) {
+      throw new AppError("Ya existe un usuario con ese email", 409);
+    }
+
+    const passwordHash = await hashPassword(data.password);
+    const trialDays = 14;
+    const trialEndsAt = new Date();
+    trialEndsAt.setDate(trialEndsAt.getDate() + trialDays);
+
+    const rawToken = generateRawToken();
+    const tokenHash = hashToken(rawToken);
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 1); // 24 horas
+
+    const { user, verification } = await prisma.$transaction(async (tx) => {
+      const newUser = await tx.user.create({
+        data: {
+          email: data.email,
+          passwordHash,
+          role: "TRAINER",
+          status: "INVITED", // bloqueado para login hasta verificar
+        },
+      });
+
+      const trainer = await tx.trainer.create({
+        data: {
+          userId: newUser.id,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone,
+          subscriptionStatus: "TRIAL",
+          trialEndsAt,
+        },
+      });
+
+      const verification = await tx.trainerVerification.create({
+        data: {
+          trainerId: trainer.id,
+          tokenHash,
+          expiresAt,
+        },
+      });
+
+      return { user: newUser, verification };
+    });
+
+    // Enviar email de verificación (no bloqueante)
+    EmailService.sendTrainerVerification({
+      to: user.email,
+      firstName: data.firstName,
+      verificationToken: rawToken,
+    }).catch((err) => {
+      console.error("[AuthService] Error enviando email de verificación:", err);
+    });
+
+    return {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      trialEndsAt,
+      ...(process.env.NODE_ENV === "development" ? { verificationToken: rawToken } : {}),
+    };
+  }
+
+  static async verifyTrainerEmail(token: string) {
+    const tokenHash = hashToken(token);
+
+    const verification = await prisma.trainerVerification.findUnique({
+      where: {
+        tokenHash,
+      },
+      include: {
+        trainer: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
+
+    if (!verification) {
+      throw new AppError("Token de verificación inválido", 404);
+    }
+
+    if (verification.usedAt) {
+      throw new AppError("El email ya fue verificado", 400);
+    }
+
+    if (verification.expiresAt < new Date()) {
+      throw new AppError("El token de verificación expiró", 400);
+    }
+
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: verification.trainer.userId },
+        data: {
+          status: "ACTIVE",
+          emailVerifiedAt: new Date(),
+        },
+      }),
+      prisma.trainerVerification.update({
+        where: { id: verification.id },
+        data: {
+          usedAt: new Date(),
+        },
+      }),
+    ]);
+
+    return {
+      emailVerified: true,
+      email: verification.trainer.user.email,
     };
   }
 }

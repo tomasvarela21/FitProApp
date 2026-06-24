@@ -133,6 +133,13 @@ export const LoginPage = () => {
                 )}
               </Button>
             </form>
+
+            <div className="mt-4 text-center text-sm text-muted-foreground">
+              ¿Sos personal trainer?{" "}
+              <a href="/register" className="font-medium text-primary hover:underline">
+                Registrate gratis
+              </a>
+            </div>
           </CardContent>
         </Card>
       </div>

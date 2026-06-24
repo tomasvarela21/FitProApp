@@ -35,4 +35,21 @@ export class AuthController {
       .status(200)
       .json(successResponse("Contraseña actualizada correctamente", result));
   });
+
+  static registerTrainer = asyncHandler(async (req: Request, res: Response) => {
+    const result = await AuthService.registerTrainer(req.body);
+
+    return res
+      .status(201)
+      .json(successResponse("Entrenador registrado. Verifique su email.", result));
+  });
+
+  static verifyTrainerEmail = asyncHandler(async (req: Request, res: Response) => {
+    const { token } = req.body;
+    const result = await AuthService.verifyTrainerEmail(token);
+
+    return res
+      .status(200)
+      .json(successResponse("Email verificado correctamente.", result));
+  });
 }

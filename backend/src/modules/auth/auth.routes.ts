@@ -6,7 +6,9 @@ import {
   activateAccountSchema,
   changePasswordSchema,
   loginSchema,
+  verifyEmailSchema,
 } from "./auth.schema";
+import { createTrainerSchema } from "../trainers/trainers.schema";
 
 export const authRouter = Router();
 
@@ -26,3 +28,15 @@ authRouter.post(
   validate(changePasswordSchema),
   AuthController.changePassword
 );
+
+authRouter.post(
+  "/register-trainer",
+  validate(createTrainerSchema),
+  AuthController.registerTrainer
+);
+
+authRouter.post(
+  "/verify-email",
+  validate(verifyEmailSchema),
+  AuthController.verifyTrainerEmail
+);

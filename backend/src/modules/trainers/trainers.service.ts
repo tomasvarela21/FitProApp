@@ -140,6 +140,7 @@ export class TrainersService {
         studentName: `${i.subscription.student.firstName} ${i.subscription.student.lastName}`,
         planName: i.subscription.plan.name,
         installmentNumber: i.number,
+        amount: Number(i.amount),
         endDate: i.dueDate,
         daysUntilExpiry: Math.floor(
           (i.dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
@@ -160,6 +161,7 @@ export class TrainersService {
         studentName: `${i.subscription.student.firstName} ${i.subscription.student.lastName}`,
         planName: i.subscription.plan.name,
         installmentNumber: i.number,
+        amount: Number(i.amount),
         endDate: i.dueDate,
         daysUntilExpiry: Math.ceil(
           (i.dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)

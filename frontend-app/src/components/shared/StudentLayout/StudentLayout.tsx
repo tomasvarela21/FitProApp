@@ -4,10 +4,15 @@ import { Dumbbell, Menu } from "lucide-react";
 import { StudentSidebar } from "./StudentSidebar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { useAuth } from "@/hooks/use-auth";
+import { usePushNotifications } from "@/hooks/use-push-notifications";
 
 const STORAGE_KEY = "fitpro:student-sidebar-collapsed";
 
 export const StudentLayout = () => {
+  const { isAuthenticated } = useAuth();
+  usePushNotifications(isAuthenticated);
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === "undefined") return false;

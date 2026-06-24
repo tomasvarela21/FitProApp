@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import { prisma } from "../db/prisma";
 import { EmailService } from "../email/email.service";
+import { NotificationService } from "../../modules/notifications/notifications.service";
 
 export async function sendDailyPaymentAlerts() {
   console.log("[PaymentAlertsJob] Iniciando job de alertas...");
@@ -42,6 +43,13 @@ export async function sendDailyPaymentAlerts() {
         });
 
         for (const i of installmentsDue7Days) {
+          if (i.subscription.student.userId) {
+            NotificationService.sendNotification(i.subscription.student.userId, {
+              title: "Cuota por vencer 📅",
+              body: `Tu cuota del plan ${i.subscription.plan.name} vence en 7 días (${i.dueDate.toLocaleDateString("es-AR")}).`,
+              data: { type: "INSTALLMENT_EXPIRING_SOON", installmentId: i.id },
+            }).catch(console.error);
+          }
           if (!i.subscription.student.user?.email) continue;
           await EmailService.sendInstallmentReminder({
             to: i.subscription.student.user.email,
@@ -77,6 +85,13 @@ export async function sendDailyPaymentAlerts() {
         });
 
         for (const i of installmentsDue1Day) {
+          if (i.subscription.student.userId) {
+            NotificationService.sendNotification(i.subscription.student.userId, {
+              title: "Cuota vence mañana ⚠️",
+              body: `Tu cuota del plan ${i.subscription.plan.name} vence mañana.`,
+              data: { type: "INSTALLMENT_EXPIRING_SOON", installmentId: i.id },
+            }).catch(console.error);
+          }
           if (!i.subscription.student.user?.email) continue;
           await EmailService.sendInstallmentReminder({
             to: i.subscription.student.user.email,
@@ -107,6 +122,13 @@ export async function sendDailyPaymentAlerts() {
         });
 
         for (const i of installmentsDueToday) {
+          if (i.subscription.student.userId) {
+            NotificationService.sendNotification(i.subscription.student.userId, {
+              title: "Cuota vence hoy 💳",
+              body: `Tu cuota del plan ${i.subscription.plan.name} vence hoy.`,
+              data: { type: "INSTALLMENT_EXPIRING_SOON", installmentId: i.id },
+            }).catch(console.error);
+          }
           if (!i.subscription.student.user?.email) continue;
           await EmailService.sendInstallmentReminder({
             to: i.subscription.student.user.email,
@@ -137,12 +159,31 @@ export async function sendDailyPaymentAlerts() {
         });
 
         for (const i of overdueInstallments) {
-          if (!i.subscription.student.user?.email) continue;
           const daysOverdue = Math.abs(
             Math.floor(
               (i.dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
             )
           );
+
+          // Si acaba de vencer hoy (hace 1 día), notificar al entrenador
+          if (daysOverdue === 1) {
+            NotificationService.sendNotification(trainer.userId, {
+              title: "Cuota vencida ❌",
+              body: `La cuota del alumno ${i.subscription.student.firstName} ${i.subscription.student.lastName} venció hoy.`,
+              data: { type: "STUDENT_INSTALLMENT_OVERDUE", installmentId: i.id },
+            }).catch(console.error);
+          }
+
+          // Notificar al alumno cada 3 días
+          if (i.subscription.student.userId && daysOverdue % 3 === 0) {
+            NotificationService.sendNotification(i.subscription.student.userId, {
+              title: "Cuota vencida ❌",
+              body: `Tu cuota del plan ${i.subscription.plan.name} está vencida hace ${daysOverdue} días.`,
+              data: { type: "INSTALLMENT_OVERDUE", installmentId: i.id },
+            }).catch(console.error);
+          }
+
+          if (!i.subscription.student.user?.email) continue;
           // Solo enviar cada 3 días (1, 4, 7, 10...) && daysOverdue % 3 === 0
           if (daysOverdue > 0 && daysOverdue % 3 === 0) {
             await EmailService.sendOverdueReminder({

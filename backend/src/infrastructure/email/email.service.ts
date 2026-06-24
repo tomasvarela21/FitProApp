@@ -102,6 +102,94 @@ export class EmailService {
     }
   }
 
+  static async sendTrainerVerification(params: {
+    to: string;
+    firstName: string;
+    verificationToken: string;
+  }) {
+    console.log(`[EmailService] Enviando verificación de email a ${params.to}`);
+
+    const verificationUrl = `${APP_URL}/verify-email?token=${params.verificationToken}`;
+    const resend = getResend();
+
+    try {
+      const result = await resend.emails.send({
+        from: FROM,
+        to: params.to,
+        subject: `Confirmá tu dirección de email — ${APP_NAME}`,
+        html: `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          </head>
+          <body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 20px;">
+              <tr>
+                <td align="center">
+                  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">
+
+                    <tr>
+                      <td align="center" style="padding-bottom:24px;">
+                        <span style="font-size:22px;font-weight:700;color:#18181b;">💪 ${APP_NAME}</span>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td style="background-color:#ffffff;border-radius:12px;padding:40px;border:1px solid #e4e4e7;">
+                        <h1 style="margin:0 0 8px 0;font-size:22px;font-weight:700;color:#18181b;">
+                          ¡Hola, ${params.firstName}!
+                        </h1>
+                        <p style="margin:0 0 24px 0;font-size:15px;color:#71717a;line-height:1.6;">
+                          Te damos la bienvenida a <strong style="color:#18181b;">${APP_NAME}</strong>. Para activar tu cuenta de entrenador y comenzar tu prueba gratuita de 14 días, confirmá tu dirección de email haciendo click abajo:
+                        </p>
+                        <table width="100%" cellpadding="0" cellspacing="0">
+                          <tr>
+                            <td align="center" style="padding-bottom:24px;">
+                              <a href="${verificationUrl}"
+                                style="display:inline-block;background-color:#18181b;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:12px 32px;border-radius:8px;">
+                                Confirmar mi email
+                              </a>
+                            </td>
+                          </tr>
+                        </table>
+                        <div style="background-color:#fafafa;border:1px solid #e4e4e7;border-radius:8px;padding:16px;">
+                          <p style="margin:0;font-size:13px;color:#71717a;line-height:1.5;">
+                            ⏰ Este enlace expira en <strong>24 horas</strong>.
+                          </p>
+                        </div>
+                        <p style="margin:24px 0 0 0;font-size:12px;color:#a1a1aa;line-height:1.6;">
+                          Si el botón no funciona, copiá este link en tu navegador:<br/>
+                          <a href="${verificationUrl}" style="color:#18181b;word-break:break-all;">${verificationUrl}</a>
+                        </p>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td align="center" style="padding-top:24px;">
+                        <p style="margin:0;font-size:12px;color:#a1a1aa;">
+                          ${APP_NAME} · Tu plataforma de gestión para entrenadores.
+                        </p>
+                      </td>
+                    </tr>
+
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
+        </html>
+      `,
+      });
+      console.log(`[EmailService] ✅ Email enviado:`, result);
+      return { sent: true };
+    } catch (err) {
+      console.error(`[EmailService] ❌ Error enviando email:`, err);
+      throw err;
+    }
+  }
+
   static async sendPasswordReset(params: {
     to: string;
     firstName: string;

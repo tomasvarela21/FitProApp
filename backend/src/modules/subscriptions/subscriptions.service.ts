@@ -1,5 +1,6 @@
 import { prisma } from "../../infrastructure/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
+import { NotificationService } from "../notifications/notifications.service";
 import type {
   CreateSubscriptionInput,
   PayInstallmentInput,
@@ -192,6 +193,14 @@ export class SubscriptionsService {
 
     const installment = await prisma.installment.findFirst({
       where: { id: installmentId, trainerId: trainer.id },
+      include: {
+        subscription: {
+          include: {
+            student: true,
+            plan: true,
+          },
+        },
+      },
     });
     if (!installment) throw new AppError("Cuota no encontrada", 404);
 
@@ -207,6 +216,17 @@ export class SubscriptionsService {
         notes: data.notes,
       },
     });
+
+    // Notify student
+    if (installment.subscription.student.userId) {
+      NotificationService.sendNotification(installment.subscription.student.userId, {
+        title: "Pago registrado 💳",
+        body: `Tu entrenador registró el pago de la cuota Nº ${installment.number} de ${installment.subscription.plan.name}.`,
+        data: { type: "PAYMENT_RECORDED", installmentId: installment.id },
+      }).catch((err) => {
+        console.error("[SubscriptionsService] Error enviando notificación push:", err);
+      });
+    }
 
     return {
       id: updated.id,

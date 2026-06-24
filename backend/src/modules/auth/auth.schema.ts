@@ -22,3 +22,8 @@ export const changePasswordSchema = z.object({
 export type ActivateAccountInput = z.infer<typeof activateAccountSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
+export const verifyEmailSchema = z.object({
+  token: z.string().min(1, "El token es obligatorio"),
+});
+export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;

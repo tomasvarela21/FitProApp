@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import type { ReactNode } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { LoginPage } from "@/features/auth/pages/LoginPage";
+import { RegisterPage } from "@/features/auth/pages/RegisterPage";
+import { VerifyEmailPage } from "@/features/auth/pages/VerifyEmailPage";
 import { ActivateAccountPage } from "@/features/auth/pages/ActivateAccountPage";
 import { ProfilePage } from "@/features/auth/pages/ProfilePage";
 import { DashboardPage } from "@/features/dashboard/pages/DashboardPage";
@@ -55,6 +57,17 @@ export const AppRouter = () => {
             </PublicRoute>
           }
         />
+
+        <Route
+          path="/register"
+          element={
+            <PublicRoute>
+              <RegisterPage />
+            </PublicRoute>
+          }
+        />
+
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
 
         <Route path="/activate-account" element={<ActivateAccountPage />} />
 

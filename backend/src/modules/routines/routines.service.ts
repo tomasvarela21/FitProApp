@@ -1,6 +1,7 @@
 import { DayOfWeek, Prisma } from "@prisma/client";
 import { prisma } from "../../infrastructure/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
+import { NotificationService } from "../notifications/notifications.service";
 
 type CreateRoutineData = {
   name: string;
@@ -253,6 +254,16 @@ export class RoutinesService {
         },
       });
     });
+
+    if (student.userId) {
+      NotificationService.sendNotification(student.userId, {
+        title: "Nueva rutina asignada 🏋️",
+        body: `Tu entrenador te asignó la rutina: ${routine.name}`,
+        data: { type: "ROUTINE_ASSIGNED", routineId: routine.id },
+      }).catch((err) => {
+        console.error("[RoutinesService] Error enviando notificación push:", err);
+      });
+    }
 
     return {
       id: studentRoutine.id,

@@ -1,6 +1,7 @@
 import { Prisma, DayOfWeek } from "@prisma/client";
 import { prisma } from "../../infrastructure/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
+import { NotificationService } from "../notifications/notifications.service";
 
 type WorkoutSetInput = {
   setNumber: number;
@@ -163,7 +164,18 @@ export class WorkoutService {
   }
 
   static async logWorkout(userId: string, data: LogWorkoutData) {
-    const student = await this.getStudent(userId);
+    const student = await prisma.student.findFirst({
+      where: { userId },
+      include: {
+        trainer: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
+
+    if (!student) throw new AppError("Alumno no encontrado", 404);
 
     const studentRoutine = await prisma.studentRoutine.findFirst({
       where: { studentId: student.id, isActive: true },
@@ -195,6 +207,17 @@ export class WorkoutService {
 
       return log;
     });
+
+    // Notify trainer
+    if (student.trainer?.user) {
+      NotificationService.sendNotification(student.trainer.userId, {
+        title: "Rutina completada 🏃‍♂️",
+        body: `${student.firstName} ${student.lastName} completó su entrenamiento de hoy.`,
+        data: { type: "ROUTINE_COMPLETED", studentId: student.id },
+      }).catch((err) => {
+        console.error("[WorkoutService] Error enviando notificación push:", err);
+      });
+    }
 
     return { id: workoutLog.id, date: workoutLog.date };
   }
