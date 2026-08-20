@@ -34,11 +34,13 @@ export class AuthController {
 
     setRefreshCookie(res, refreshToken);
 
-    return res.status(200).json(successResponse("Login correcto", { accessToken, user }));
+    // refreshToken también en el body para clientes mobile que no pueden usar cookies
+    return res.status(200).json(successResponse("Login correcto", { accessToken, refreshToken, user }));
   });
 
   static refresh = asyncHandler(async (req: Request, res: Response) => {
-    const rawRefreshToken = req.cookies?.[REFRESH_COOKIE];
+    // Acepta cookie (web) o body.refreshToken (mobile)
+    const rawRefreshToken = req.cookies?.[REFRESH_COOKIE] ?? req.body?.refreshToken;
     if (!rawRefreshToken) {
       return res.status(401).json({ ok: false, message: "No autenticado" });
     }
@@ -47,11 +49,12 @@ export class AuthController {
 
     setRefreshCookie(res, refreshToken);
 
-    return res.status(200).json(successResponse("Token renovado", { accessToken }));
+    return res.status(200).json(successResponse("Token renovado", { accessToken, refreshToken }));
   });
 
   static logout = asyncHandler(async (req: Request, res: Response) => {
-    const rawRefreshToken = req.cookies?.[REFRESH_COOKIE];
+    // Acepta cookie (web) o body.refreshToken (mobile)
+    const rawRefreshToken = req.cookies?.[REFRESH_COOKIE] ?? req.body?.refreshToken;
 
     if (rawRefreshToken) {
       await AuthService.logout(rawRefreshToken);

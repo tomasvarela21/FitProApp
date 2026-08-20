@@ -42,16 +42,6 @@ const globalLimiter = rateLimit({
   },
 });
 
-export const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  handler: (_req, res) => {
-    res.status(429).json(errorResponse("Demasiados intentos, intentá de nuevo en 15 minutos"));
-  },
-});
-
 app.use(globalLimiter);
 
 app.get("/health", (_req, res) => {

@@ -9,7 +9,7 @@ import {
   verifyEmailSchema,
 } from "./auth.schema";
 import { createTrainerSchema } from "../trainers/trainers.schema";
-import { authLimiter } from "../../app";
+import { authLimiter } from "../../shared/middlewares/rate-limit";
 
 export const authRouter = Router();
 
