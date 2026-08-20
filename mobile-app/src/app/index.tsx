@@ -76,6 +76,8 @@ export default function HomeScreen() {
   const [loggedSets, setLoggedSets] = useState<
     Record<string, Array<{ reps: string; weight: string; completed: boolean }>>
   >({});
+  const [streak, setStreak] = useState(0);
+  const [trainedToday, setTrainedToday] = useState(false);
 
   // Rest timer
   const [restSeconds, setRestSeconds] = useState<number | null>(null);
@@ -104,9 +106,14 @@ export default function HomeScreen() {
         });
         setStudents(res.data.data.items || []);
       } else {
-        const res = await api.get("/student/today");
-        const routineData = res.data.data;
+        const [routineRes, streakRes] = await Promise.all([
+          api.get("/student/today"),
+          api.get("/student/streak", { params: { today: todayLocalString() } }),
+        ]);
+        const routineData = routineRes.data.data;
         setTodayRoutine(routineData);
+        setStreak(streakRes.data.data.streak ?? 0);
+        setTrainedToday(streakRes.data.data.trainedToday ?? false);
 
         if (routineData?.routine?.routineExercises) {
           const initialSets: typeof loggedSets = {};
@@ -291,10 +298,22 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
       >
         <View style={styles.header}>
-          <ThemedText type="title">Rutina del Día</ThemedText>
-          <ThemedText type="small" style={{ color: colors.textSecondary }}>
-            Completa tus ejercicios y registralos
-          </ThemedText>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <View>
+              <ThemedText type="title">Rutina del Día</ThemedText>
+              <ThemedText type="small" style={{ color: colors.textSecondary }}>
+                Completa tus ejercicios y registralos
+              </ThemedText>
+            </View>
+            {streak > 0 && (
+              <View style={[styles.streakBadge, { backgroundColor: trainedToday ? "#f59e0b20" : colors.backgroundElement }]}>
+                <Flame size={16} color="#f59e0b" />
+                <ThemedText type="defaultSemiBold" style={{ color: "#f59e0b", fontSize: 16 }}>
+                  {streak}
+                </ThemedText>
+              </View>
+            )}
+          </View>
         </View>
 
         {loading && !refreshing ? (
@@ -586,6 +605,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginHorizontal: Spacing.four,
     marginTop: Spacing.two,
+  },
+  streakBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.one,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.one,
+    borderRadius: 99,
   },
   // Rest timer
   timerOverlay: {

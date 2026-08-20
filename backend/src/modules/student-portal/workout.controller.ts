@@ -52,4 +52,10 @@ export class WorkoutController {
     const result = await WorkoutService.getMyProgress(req.user!.userId, exerciseId);
     return res.status(200).json(successResponse("Progreso obtenido", result));
   });
+
+  static getMyStreak = asyncHandler(async (req: Request, res: Response) => {
+    const today = typeof req.query.today === "string" ? req.query.today : undefined;
+    const result = await WorkoutService.getMyStreak(req.user!.userId, today);
+    return res.status(200).json(successResponse("Racha obtenida", result));
+  });
 }

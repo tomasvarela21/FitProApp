@@ -17,3 +17,4 @@ studentPortalRouter.get("/today", WorkoutController.getTodayWorkout);
 studentPortalRouter.post("/workout-log", WorkoutController.logWorkout);
 studentPortalRouter.get("/workout-history", WorkoutController.getMyWorkoutHistory);
 studentPortalRouter.get("/progress/:exerciseId", WorkoutController.getMyProgress);
+studentPortalRouter.get("/streak", WorkoutController.getMyStreak);
