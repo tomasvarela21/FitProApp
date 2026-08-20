@@ -9,13 +9,18 @@ import {
   RefreshControl,
   Alert,
   ScrollView,
+  Modal,
 } from "react-native";
-import { Search, Plus, CheckCircle, Flame, Calendar } from "lucide-react-native";
+import { Search, CheckCircle, Flame, Calendar, Timer } from "lucide-react-native";
 import { useAuth } from "@/hooks/useAuth";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Colors, Spacing, BottomTabInset } from "@/constants/theme";
+
+const todayLocalString = () => new Date().toLocaleDateString("sv-SE");
+
+const REST_DURATIONS = [30, 60, 90, 120] as const;
 
 type StudentItem = {
   id: string;
@@ -72,6 +77,23 @@ export default function HomeScreen() {
     Record<string, Array<{ reps: string; weight: string; completed: boolean }>>
   >({});
 
+  // Rest timer
+  const [restSeconds, setRestSeconds] = useState<number | null>(null);
+  const [restDuration, setRestDuration] = useState(60);
+
+  useEffect(() => {
+    if (restSeconds === null) return;
+    if (restSeconds <= 0) {
+      setRestSeconds(null);
+      return;
+    }
+    const id = setTimeout(
+      () => setRestSeconds((prev) => (prev !== null ? prev - 1 : null)),
+      1000
+    );
+    return () => clearTimeout(id);
+  }, [restSeconds]);
+
   const loadData = async () => {
     if (!user) return;
     setLoading(true);
@@ -86,7 +108,6 @@ export default function HomeScreen() {
         const routineData = res.data.data;
         setTodayRoutine(routineData);
 
-        // Inicializar sets para completar
         if (routineData?.routine?.routineExercises) {
           const initialSets: typeof loggedSets = {};
           routineData.routine.routineExercises.forEach((re: RoutineExercise) => {
@@ -119,7 +140,6 @@ export default function HomeScreen() {
   const handleLogWorkout = async () => {
     if (!todayRoutine) return;
 
-    // Formatear payload
     const exercisesPayload = todayRoutine.routine.routineExercises.map((re) => {
       const sets = (loggedSets[re.id] || []).map((s, idx) => ({
         setNumber: idx + 1,
@@ -138,6 +158,7 @@ export default function HomeScreen() {
       setLoading(true);
       await api.post("/student/workout-log", {
         notes: "Completado desde la app móvil",
+        date: `${todayLocalString()}T12:00:00`,
         routineExercises: exercisesPayload,
       });
       setWorkoutLogged(true);
@@ -150,16 +171,17 @@ export default function HomeScreen() {
   };
 
   const toggleSetCompleted = (exerciseId: string, setIndex: number) => {
+    const wasCompleted = loggedSets[exerciseId]?.[setIndex]?.completed ?? false;
     setLoggedSets((prev) => {
       const sets = [...(prev[exerciseId] || [])];
       if (sets[setIndex]) {
-        sets[setIndex] = {
-          ...sets[setIndex],
-          completed: !sets[setIndex].completed,
-        };
+        sets[setIndex] = { ...sets[setIndex], completed: !sets[setIndex].completed };
       }
       return { ...prev, [exerciseId]: sets };
     });
+    if (!wasCompleted) {
+      setRestSeconds(restDuration);
+    }
   };
 
   const updateSetField = (
@@ -171,10 +193,7 @@ export default function HomeScreen() {
     setLoggedSets((prev) => {
       const sets = [...(prev[exerciseId] || [])];
       if (sets[setIndex]) {
-        sets[setIndex] = {
-          ...sets[setIndex],
-          [field]: value,
-        };
+        sets[setIndex] = { ...sets[setIndex], [field]: value };
       }
       return { ...prev, [exerciseId]: sets };
     });
@@ -214,7 +233,7 @@ export default function HomeScreen() {
               <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
             }
             renderItem={({ item }) => {
-              let badgeColor = "#22c55e"; // ACTIVO
+              let badgeColor = "#22c55e";
               let statusText = "Activo";
 
               if (item.subscription?.subscriptionStatus === "OVERDUE") {
@@ -265,128 +284,193 @@ export default function HomeScreen() {
 
   // RENDER STUDENT
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
-    >
-      <View style={styles.header}>
-        <ThemedText type="title">Rutina del Día</ThemedText>
-        <ThemedText type="small" style={{ color: colors.textSecondary }}>
-          Completa tus ejercicios y registralos
-        </ThemedText>
-      </View>
-
-      {loading && !refreshing ? (
-        <ActivityIndicator style={{ marginTop: 20 }} color="#208AEF" />
-      ) : workoutLogged ? (
-        <View style={styles.workoutCompletedCard}>
-          <CheckCircle size={64} color="#22c55e" />
-          <ThemedText type="title" style={{ marginTop: Spacing.two }}>
-            ¡Rutina Registrada!
-          </ThemedText>
-          <ThemedText style={{ color: colors.textSecondary, textAlign: "center" }}>
-            Ya guardamos tu entrenamiento de hoy. ¡A seguir sumando!
+    <>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+      >
+        <View style={styles.header}>
+          <ThemedText type="title">Rutina del Día</ThemedText>
+          <ThemedText type="small" style={{ color: colors.textSecondary }}>
+            Completa tus ejercicios y registralos
           </ThemedText>
         </View>
-      ) : todayRoutine ? (
-        <View style={{ gap: Spacing.four }}>
-          <View style={[styles.routineHeaderCard, { backgroundColor: colors.backgroundElement }]}>
-            <Flame size={24} color="#f59e0b" />
-            <View>
-              <ThemedText type="defaultSemiBold">
-                {todayRoutine.routine.name}
-              </ThemedText>
-              <ThemedText type="small" style={{ color: colors.textSecondary }}>
-                {todayRoutine.routine.description || "Sin descripción"}
-              </ThemedText>
-            </View>
-          </View>
 
-          {todayRoutine.routine.routineExercises.map((re) => (
-            <View key={re.id} style={[styles.exerciseCard, { borderColor: colors.backgroundElement }]}>
-              <View style={styles.exerciseInfo}>
-                <ThemedText type="defaultSemiBold">{re.exercise.name}</ThemedText>
+        {loading && !refreshing ? (
+          <ActivityIndicator style={{ marginTop: 20 }} color="#208AEF" />
+        ) : workoutLogged ? (
+          <View style={styles.workoutCompletedCard}>
+            <CheckCircle size={64} color="#22c55e" />
+            <ThemedText type="title" style={{ marginTop: Spacing.two }}>
+              ¡Rutina Registrada!
+            </ThemedText>
+            <ThemedText style={{ color: colors.textSecondary, textAlign: "center" }}>
+              Ya guardamos tu entrenamiento de hoy. ¡A seguir sumando!
+            </ThemedText>
+          </View>
+        ) : todayRoutine ? (
+          <View style={{ gap: Spacing.four }}>
+            <View style={[styles.routineHeaderCard, { backgroundColor: colors.backgroundElement }]}>
+              <Flame size={24} color="#f59e0b" />
+              <View>
+                <ThemedText type="defaultSemiBold">
+                  {todayRoutine.routine.name}
+                </ThemedText>
                 <ThemedText type="small" style={{ color: colors.textSecondary }}>
-                  {re.sets} series x {re.reps} repeticiones
-                  {re.suggestedWeight ? ` · Sugerido: ${re.suggestedWeight}kg` : ""}
+                  {todayRoutine.routine.description || "Sin descripción"}
                 </ThemedText>
               </View>
-
-              <View style={styles.setsList}>
-                {Array.from({ length: re.sets }).map((_, idx) => {
-                  const setInfo = loggedSets[re.id]?.[idx] || {
-                    reps: "10",
-                    weight: "",
-                    completed: false,
-                  };
-
-                  return (
-                    <View key={idx} style={styles.setRow}>
-                      <ThemedText type="small" style={styles.setNumber}>
-                        Serie {idx + 1}
-                      </ThemedText>
-                      <TextInput
-                        style={[
-                          styles.setInput,
-                          {
-                            color: colors.text,
-                            backgroundColor: colors.backgroundElement,
-                            borderColor: colors.backgroundSelected,
-                          },
-                        ]}
-                        keyboardType="numeric"
-                        value={setInfo.reps}
-                        onChangeText={(val) => updateSetField(re.id, idx, "reps", val)}
-                        placeholder="Reps"
-                      />
-                      <TextInput
-                        style={[
-                          styles.setInput,
-                          {
-                            color: colors.text,
-                            backgroundColor: colors.backgroundElement,
-                            borderColor: colors.backgroundSelected,
-                          },
-                        ]}
-                        keyboardType="numeric"
-                        value={setInfo.weight}
-                        onChangeText={(val) => updateSetField(re.id, idx, "weight", val)}
-                        placeholder="Kg"
-                      />
-                      <TouchableOpacity
-                        style={[
-                          styles.checkBtn,
-                          {
-                            backgroundColor: setInfo.completed
-                              ? "#22c55e"
-                              : colors.backgroundSelected,
-                          },
-                        ]}
-                        onPress={() => toggleSetCompleted(re.id, idx)}
-                      >
-                        <CheckCircle size={16} color={setInfo.completed ? "#ffffff" : colors.textSecondary} />
-                      </TouchableOpacity>
-                    </View>
-                  );
-                })}
-              </View>
             </View>
-          ))}
 
-          <TouchableOpacity style={styles.completeButton} onPress={handleLogWorkout}>
-            <ThemedText style={{ color: "#ffffff", fontWeight: "bold" }}>
-              Completar Entrenamiento
+            {todayRoutine.routine.routineExercises.map((re) => (
+              <View key={re.id} style={[styles.exerciseCard, { borderColor: colors.backgroundElement }]}>
+                <View style={styles.exerciseInfo}>
+                  <ThemedText type="defaultSemiBold">{re.exercise.name}</ThemedText>
+                  <ThemedText type="small" style={{ color: colors.textSecondary }}>
+                    {re.sets} series x {re.reps} repeticiones
+                    {re.suggestedWeight ? ` · Sugerido: ${re.suggestedWeight}kg` : ""}
+                  </ThemedText>
+                </View>
+
+                <View style={styles.setsList}>
+                  {Array.from({ length: re.sets }).map((_, idx) => {
+                    const setInfo = loggedSets[re.id]?.[idx] || {
+                      reps: "10",
+                      weight: "",
+                      completed: false,
+                    };
+
+                    return (
+                      <View key={idx} style={styles.setRow}>
+                        <ThemedText type="small" style={styles.setNumber}>
+                          Serie {idx + 1}
+                        </ThemedText>
+                        <TextInput
+                          style={[
+                            styles.setInput,
+                            {
+                              color: colors.text,
+                              backgroundColor: colors.backgroundElement,
+                              borderColor: setInfo.completed ? "#22c55e" : colors.backgroundSelected,
+                            },
+                          ]}
+                          keyboardType="numeric"
+                          value={setInfo.reps}
+                          onChangeText={(val) => updateSetField(re.id, idx, "reps", val)}
+                          placeholder="Reps"
+                          placeholderTextColor={colors.textSecondary}
+                        />
+                        <TextInput
+                          style={[
+                            styles.setInput,
+                            {
+                              color: colors.text,
+                              backgroundColor: colors.backgroundElement,
+                              borderColor: setInfo.completed ? "#22c55e" : colors.backgroundSelected,
+                            },
+                          ]}
+                          keyboardType="numeric"
+                          value={setInfo.weight}
+                          onChangeText={(val) => updateSetField(re.id, idx, "weight", val)}
+                          placeholder="Kg"
+                          placeholderTextColor={colors.textSecondary}
+                        />
+                        <TouchableOpacity
+                          style={[
+                            styles.checkBtn,
+                            {
+                              backgroundColor: setInfo.completed
+                                ? "#22c55e"
+                                : colors.backgroundSelected,
+                            },
+                          ]}
+                          onPress={() => toggleSetCompleted(re.id, idx)}
+                        >
+                          <CheckCircle size={16} color={setInfo.completed ? "#ffffff" : colors.textSecondary} />
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            ))}
+
+            <TouchableOpacity style={styles.completeButton} onPress={handleLogWorkout}>
+              <ThemedText style={{ color: "#ffffff", fontWeight: "bold" }}>
+                Completar Entrenamiento
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Calendar size={48} color={colors.textSecondary} />
+            <ThemedText style={{ marginTop: Spacing.two }}>No tenés rutinas asignadas para hoy</ThemedText>
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Rest Timer Modal */}
+      <Modal
+        visible={restSeconds !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRestSeconds(null)}
+      >
+        <View style={styles.timerOverlay}>
+          <View style={[styles.timerCard, { backgroundColor: colors.backgroundElement }]}>
+            <Timer size={22} color="#208AEF" />
+            <ThemedText type="defaultSemiBold" style={{ marginTop: Spacing.one }}>
+              Tiempo de descanso
             </ThemedText>
-          </TouchableOpacity>
+
+            <View style={styles.timerCircle}>
+              <ThemedText style={[styles.timerNumber, { color: "#208AEF" }]}>
+                {restSeconds ?? 0}
+              </ThemedText>
+              <ThemedText type="small" style={{ color: colors.textSecondary }}>
+                seg
+              </ThemedText>
+            </View>
+
+            <View style={styles.durationRow}>
+              {REST_DURATIONS.map((d) => (
+                <TouchableOpacity
+                  key={d}
+                  style={[
+                    styles.durationPill,
+                    {
+                      backgroundColor:
+                        restDuration === d ? "#208AEF" : colors.backgroundSelected,
+                    },
+                  ]}
+                  onPress={() => {
+                    setRestDuration(d);
+                    setRestSeconds(d);
+                  }}
+                >
+                  <ThemedText
+                    type="small"
+                    style={{ color: restDuration === d ? "#fff" : colors.textSecondary }}
+                  >
+                    {d}s
+                  </ThemedText>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              style={[styles.skipButton, { borderColor: colors.backgroundSelected }]}
+              onPress={() => setRestSeconds(null)}
+            >
+              <ThemedText type="small" style={{ color: colors.textSecondary }}>
+                Saltar descanso
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
         </View>
-      ) : (
-        <View style={styles.emptyContainer}>
-          <Calendar size={48} color={colors.textSecondary} />
-          <ThemedText style={{ marginTop: Spacing.two }}>No tenés rutinas asignadas para hoy</ThemedText>
-        </View>
-      )}
-    </ScrollView>
+      </Modal>
+    </>
   );
 }
 
@@ -502,5 +586,50 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginHorizontal: Spacing.four,
     marginTop: Spacing.two,
+  },
+  // Rest timer
+  timerOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.65)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: Spacing.four,
+  },
+  timerCard: {
+    borderRadius: Spacing.three,
+    padding: Spacing.four,
+    alignItems: "center",
+    width: "100%",
+    gap: Spacing.two,
+  },
+  timerCircle: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    borderWidth: 4,
+    borderColor: "#208AEF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginVertical: Spacing.three,
+  },
+  timerNumber: {
+    fontSize: 52,
+    fontWeight: "bold",
+  },
+  durationRow: {
+    flexDirection: "row",
+    gap: Spacing.two,
+  },
+  durationPill: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one,
+    borderRadius: 99,
+  },
+  skipButton: {
+    marginTop: Spacing.two,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    borderWidth: 1,
+    borderRadius: Spacing.two,
   },
 });
