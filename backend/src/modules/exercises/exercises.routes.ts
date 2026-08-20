@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../../shared/middlewares/require-auth";
 import { requireRole } from "../../shared/middlewares/require-role";
+import { requireActiveTrial } from "../../shared/middlewares/require-active-trial";
 import { ExercisesController } from "./exercises.controller";
 
 export const exercisesRouter = Router();
@@ -12,6 +13,6 @@ exercisesRouter.get("/equipment", requireAuth, requireRole("TRAINER", "STUDENT")
 exercisesRouter.get("/:id", requireAuth, requireRole("TRAINER", "STUDENT"), ExercisesController.getOne);
 
 // Rutas de escritura — solo TRAINER
-exercisesRouter.post("/", requireAuth, requireRole("TRAINER"), ExercisesController.create);
-exercisesRouter.patch("/:id", requireAuth, requireRole("TRAINER"), ExercisesController.update);
-exercisesRouter.delete("/:id", requireAuth, requireRole("TRAINER"), ExercisesController.delete);
+exercisesRouter.post("/", requireAuth, requireRole("TRAINER"), requireActiveTrial, ExercisesController.create);
+exercisesRouter.patch("/:id", requireAuth, requireRole("TRAINER"), requireActiveTrial, ExercisesController.update);
+exercisesRouter.delete("/:id", requireAuth, requireRole("TRAINER"), requireActiveTrial, ExercisesController.delete);

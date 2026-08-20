@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../../shared/middlewares/require-auth";
 import { requireRole } from "../../shared/middlewares/require-role";
+import { requireActiveTrial } from "../../shared/middlewares/require-active-trial";
 import { validate } from "../../shared/middlewares/validate";
 import { SubscriptionsController } from "./subscriptions.controller";
 import {
@@ -10,7 +11,7 @@ import {
 
 export const subscriptionsRouter = Router();
 
-subscriptionsRouter.use(requireAuth, requireRole("TRAINER"));
+subscriptionsRouter.use(requireAuth, requireRole("TRAINER"), requireActiveTrial);
 
 subscriptionsRouter.get("/student/:studentId", SubscriptionsController.getStudentSubscription);
 subscriptionsRouter.get("/expiring", SubscriptionsController.getExpiring);

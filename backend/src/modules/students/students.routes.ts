@@ -2,6 +2,7 @@ import { Router } from "express";
 import { validate } from "../../shared/middlewares/validate";
 import { requireAuth } from "../../shared/middlewares/require-auth";
 import { requireRole } from "../../shared/middlewares/require-role";
+import { requireActiveTrial } from "../../shared/middlewares/require-active-trial";
 import { StudentsController } from "./students.controller";
 import {
   createStudentSchema,
@@ -10,7 +11,7 @@ import {
 
 export const studentsRouter = Router();
 
-studentsRouter.use(requireAuth, requireRole("TRAINER"));
+studentsRouter.use(requireAuth, requireRole("TRAINER"), requireActiveTrial);
 
 studentsRouter.get("/", StudentsController.listStudents);
 
