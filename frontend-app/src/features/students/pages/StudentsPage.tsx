@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Search, UserPlus, AlertTriangle, XCircle, CheckCircle2 } from "lucide-react";
 import { studentsApi } from "@/api/students.api";
@@ -78,6 +79,26 @@ export const StudentsPage = () => {
   const [searchInput, setSearchInput] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    const highlightId = searchParams.get("highlight");
+    if (!highlightId) return;
+
+    studentsApi
+      .getById(highlightId)
+      .then((res) => setSelectedStudent(res.data.data))
+      .catch(() => {});
+
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("highlight");
+        return next;
+      },
+      { replace: true }
+    );
+  }, [searchParams]);
 
   const handleRowHover = (studentId: string) => {
     queryClient.prefetchQuery({

@@ -15,13 +15,14 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/PageHeader/PageHeader";
 import { studentPortalApi } from "@/api/student-portal.api";
+import { parseLocalDate } from "@/lib/utils";
 import type { WorkoutProgress } from "@/types";
 
 const formatDate = (d: string) =>
-  format(new Date(d), "d MMM", { locale: es });
+  format(parseLocalDate(d), "d MMM", { locale: es });
 
 const formatDateLong = (d: string) =>
-  format(new Date(d), "d 'de' MMMM yyyy", { locale: es });
+  format(parseLocalDate(d), "d 'de' MMMM yyyy", { locale: es });
 
 // ─── Progress chart + table ───────────────────────────────────────────────────
 

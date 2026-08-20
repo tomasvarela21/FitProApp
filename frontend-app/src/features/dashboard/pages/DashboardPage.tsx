@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/use-auth";
 import type { DashboardStats, ExpiringAlert } from "@/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { parseLocalDate } from "@/lib/utils";
 
 const statCards = (stats: DashboardStats) => [
   {
@@ -115,7 +116,7 @@ const AlertRow = ({
           : `Vence en ${alert.daysUntilExpiry} día${alert.daysUntilExpiry !== 1 ? "s" : ""}`}
       </p>
       <p className="text-xs text-muted-foreground">
-        {format(new Date(alert.endDate), "dd/MM/yyyy", { locale: es })}
+        {format(parseLocalDate(alert.endDate), "dd/MM/yyyy", { locale: es })}
       </p>
     </div>
   </div>

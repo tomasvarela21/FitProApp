@@ -20,7 +20,7 @@ import {
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { ExerciseTutorialDialog } from "@/features/student-portal/components/ExerciseTutorialDialog";
 import type { TutorialExercise } from "@/features/student-portal/components/ExerciseTutorialDialog";
-import { cn } from "@/lib/utils";
+import { cn, parseLocalDate, todayLocalString } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -76,10 +76,10 @@ const DAY_ORDER = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATU
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const formatDate = (date: string) =>
-  format(new Date(date), "dd 'de' MMMM yyyy", { locale: es });
+  format(parseLocalDate(date), "dd 'de' MMMM yyyy", { locale: es });
 
 const formatDateShort = (date: string) =>
-  format(new Date(date), "d MMM yyyy", { locale: es });
+  format(parseLocalDate(date), "d MMM yyyy", { locale: es });
 
 const parseInitialReps = (reps: string): string => {
   const match = reps.match(/^(\d+)/);
@@ -228,7 +228,7 @@ const WorkoutForm = ({ exercises, routineName }: {
 
   const handleSubmit = () => {
     const payload: WorkoutLogInput = {
-      date: new Date().toISOString(),
+      date: `${todayLocalString()}T12:00:00`,
       routineExercises: exerciseInputs.map((ex) => ({
         routineExerciseId: ex.routineExerciseId,
         sets: ex.sets.map((s) => {
@@ -429,7 +429,7 @@ const WorkoutForm = ({ exercises, routineName }: {
 
 const TodayTab = () => {
   const today = DAY_MAP[new Date().getDay()];
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = todayLocalString();
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   // Keep today fetch for cache consistency / background refresh

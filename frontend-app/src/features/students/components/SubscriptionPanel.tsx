@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { parseLocalDate } from "@/lib/utils";
 import {
   CreditCard,
   Plus,
@@ -13,6 +14,7 @@ import {
   XCircle,
   Clock,
   Trash2,
+  RefreshCw,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,6 +52,13 @@ const FREQUENCY_LABELS: Record<string, string> = {
   MONTHLY: "Mensual",
 };
 
+const DURATION_DAYS: Record<string, number> = {
+  MONTHLY: 30,
+  QUARTERLY: 90,
+  SEMIANNUAL: 180,
+  ANNUAL: 365,
+};
+
 const assignSchema = z.object({
   planId: z.string().min(1, "Seleccioná un plan"),
   startDate: z.string().min(1, "Seleccioná una fecha"),
@@ -70,7 +79,7 @@ type SubscriptionPanelProps = {
 };
 
 const formatDate = (date: string) =>
-  format(new Date(date), "dd/MM/yyyy", { locale: es });
+  format(parseLocalDate(date), "dd/MM/yyyy", { locale: es });
 
 const InstallmentStatusBadge = ({ status }: { status: string }) => {
   if (status === "PAID")
@@ -127,6 +136,43 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
 
   const selectedPlanId = assignForm.watch("planId");
   const selectedPlan = activePlans.find((p: Plan) => p.id === selectedPlanId);
+  const watchedStartDate = assignForm.watch("startDate");
+
+  const previewEndDate =
+    selectedPlan && watchedStartDate
+      ? (() => {
+          const start = parseLocalDate(watchedStartDate);
+          if (Number.isNaN(start.getTime())) return null;
+          const days = DURATION_DAYS[selectedPlan.duration] ?? 30;
+          const end = new Date(start);
+          end.setDate(end.getDate() + days);
+          return end;
+        })()
+      : null;
+
+  const openAssignDialog = () => {
+    assignForm.reset({
+      startDate: new Date().toISOString().split("T")[0],
+      installmentCount: 1,
+      frequency: "MONTHLY",
+    });
+    setError(null);
+    setAssignOpen(true);
+  };
+
+  const openRenewDialog = () => {
+    if (subscription) {
+      assignForm.reset({
+        planId: subscription.planId,
+        startDate: new Date().toISOString().split("T")[0],
+        totalAmount: subscription.totalAmount,
+        installmentCount: subscription.installmentCount,
+        frequency: subscription.frequency,
+      });
+    }
+    setError(null);
+    setAssignOpen(true);
+  };
 
   const handleAssign = async (data: AssignForm) => {
     setError(null);
@@ -134,7 +180,7 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
       await createSubscription({
         studentId,
         planId: data.planId,
-        startDate: new Date(data.startDate).toISOString(),
+        startDate: `${data.startDate}T12:00:00`,
         totalAmount: data.totalAmount,
         installmentCount: data.installmentCount,
         frequency: data.frequency,
@@ -188,25 +234,34 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
             </CardTitle>
             <div className="flex flex-wrap gap-2">
               {!subscription && (
-                <Button
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => setAssignOpen(true)}
-                >
+                <Button size="sm" className="gap-2" onClick={openAssignDialog}>
                   <Plus className="w-3.5 h-3.5" />
                   Asignar plan
                 </Button>
               )}
               {subscription && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
-                  onClick={() => setCancelOpen(true)}
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Cancelar plan
-                </Button>
+                <>
+                  <Button
+                    size="sm"
+                    variant={subscription.daysUntilExpiry < 0 ? "default" : "outline"}
+                    className="gap-1.5"
+                    onClick={openRenewDialog}
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    {subscription.daysUntilExpiry < 0
+                      ? "Renovar plan"
+                      : "Reasignar plan"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
+                    onClick={() => setCancelOpen(true)}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Cancelar plan
+                  </Button>
+                </>
               )}
             </div>
           </div>
@@ -215,6 +270,21 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
         <CardContent>
           {subscription ? (
             <div className="space-y-4">
+              {subscription.daysUntilExpiry < 0 && (
+                <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-2 text-red-600 dark:text-red-400 min-w-0">
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    <p className="text-sm font-medium">
+                      El plan venció el {formatDate(subscription.endDate)}
+                    </p>
+                  </div>
+                  <Button size="sm" className="gap-1.5 shrink-0" onClick={openRenewDialog}>
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    Renovar plan
+                  </Button>
+                </div>
+              )}
+
               {/* Resumen */}
               <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -224,6 +294,13 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
                       {DURATION_LABELS[subscription.planDuration]} —{" "}
                       {subscription.installmentCount} cuota{subscription.installmentCount > 1 ? "s" : ""}{" "}
                       {FREQUENCY_LABELS[subscription.frequency].toLowerCase()}s
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {subscription.daysUntilExpiry < 0 ? "Venció" : "Vigente"} desde el{" "}
+                      {formatDate(subscription.startDate)} hasta el{" "}
+                      <strong className="font-medium text-foreground">
+                        {formatDate(subscription.endDate)}
+                      </strong>
                     </p>
                   </div>
                   {subscription.daysUntilExpiry < 0 ? (
@@ -334,9 +411,11 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
         <DialogContent className="w-[calc(100vw-1rem)] max-w-sm max-h-[calc(100dvh-1rem)] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Asignar plan</DialogTitle>
+            <DialogTitle>{subscription ? "Renovar / reasignar plan" : "Asignar plan"}</DialogTitle>
             <DialogDescription>
-              Configurá el plan y las cuotas para este alumno
+              {subscription
+                ? "El plan actual se cancelará y se creará uno nuevo con estos datos"
+                : "Configurá el plan y las cuotas para este alumno"}
             </DialogDescription>
           </DialogHeader>
           <form
@@ -346,6 +425,7 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
             <div className="space-y-1.5">
               <Label>Plan</Label>
               <Select
+                value={selectedPlanId || undefined}
                 onValueChange={(val) => {
                   assignForm.setValue("planId", val);
                   const plan = activePlans.find((p: Plan) => p.id === val);
@@ -397,7 +477,7 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
               <div className="space-y-1.5">
                 <Label>Frecuencia</Label>
                 <Select
-                  defaultValue="MONTHLY"
+                  value={assignForm.watch("frequency")}
                   onValueChange={(val) =>
                     assignForm.setValue("frequency", val as "BIWEEKLY" | "MONTHLY")
                   }
@@ -440,6 +520,17 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
               <Input type="date" {...assignForm.register("startDate")} />
             </div>
 
+            {selectedPlan && previewEndDate && (
+              <div className="rounded-md bg-muted/40 border border-border px-3 py-2">
+                <p className="text-xs text-muted-foreground">
+                  Plan {DURATION_LABELS[selectedPlan.duration].toLowerCase()} — vigente hasta el{" "}
+                  <strong className="text-foreground">
+                    {format(previewEndDate, "dd/MM/yyyy", { locale: es })}
+                  </strong>
+                </p>
+              </div>
+            )}
+
             {error && (
               <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2">
                 <p className="text-xs text-destructive">{error}</p>
@@ -461,6 +552,8 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
               <Button type="submit" className="flex-1" disabled={isCreating}>
                 {isCreating ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
+                ) : subscription ? (
+                  "Renovar"
                 ) : (
                   "Asignar"
                 )}
