@@ -239,6 +239,7 @@ model Installment {
   @@index([subscriptionId])
   @@index([trainerId])
   @@index([dueDate])
+  @@index([trainerId, status, dueDate])
 }
 
 enum Difficulty {
@@ -373,6 +374,7 @@ model StudentRoutine {
 
   @@index([studentId])
   @@index([routineId])
+  @@index([studentId, isActive])
 }
 
 model WeeklyExerciseOverride {
@@ -407,6 +409,7 @@ model WorkoutLog {
 
   @@index([studentRoutineId])
   @@index([date])
+  @@index([studentRoutineId, date])
 }
 
 model WorkoutSet {
