@@ -445,6 +445,18 @@ model WorkoutSet {
   @@index([routineExerciseId])
 }
 
+model AlertLog {
+  id            String   @id @default(cuid())
+  installmentId String
+  alertType     String   // "7d" | "1d" | "today" | "overdue_Nd" | "trainer_weekly"
+  sentDate      String   // YYYY-MM-DD — un registro por cuota+tipo+día garantiza idempotencia
+  createdAt     DateTime @default(now())
+
+  @@unique([installmentId, alertType, sentDate])
+  @@index([installmentId])
+  @@index([sentDate])
+}
+
 model RefreshToken {
   id        String    @id @default(cuid())
   userId    String

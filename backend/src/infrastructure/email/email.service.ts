@@ -1,12 +1,8 @@
-import { Resend } from "resend";
+import { resend } from "./resend";
 
 const APP_URL = process.env.APP_URL ?? "http://localhost:5173";
 const APP_NAME = "FitPro";
 const FROM = "FitPro <noreply@varelab.com>";
-
-function getResend() {
-  return new Resend(process.env.RESEND_API_KEY);
-}
 
 export class EmailService {
   static async sendInvitation(params: {
@@ -15,11 +11,7 @@ export class EmailService {
     trainerName: string;
     invitationToken: string;
   }) {
-    console.log(`[EmailService] Enviando invitación a ${params.to}`);
-    console.log(`[EmailService] RESEND_API_KEY: ${process.env.RESEND_API_KEY ? "✅ configurada" : "❌ no configurada"}`);
-
     const activationUrl = `${APP_URL}/activate-account?token=${params.invitationToken}`;
-    const resend = getResend();
 
     try {
       const result = await resend.emails.send({
@@ -110,7 +102,6 @@ export class EmailService {
     console.log(`[EmailService] Enviando verificación de email a ${params.to}`);
 
     const verificationUrl = `${APP_URL}/verify-email?token=${params.verificationToken}`;
-    const resend = getResend();
 
     try {
       const result = await resend.emails.send({
@@ -197,7 +188,6 @@ export class EmailService {
     invitationToken: string;
   }) {
     const resetUrl = `${APP_URL}/activate-account?token=${params.invitationToken}`;
-    const resend = getResend();
 
     const result = await resend.emails.send({
       from: FROM,
@@ -319,7 +309,7 @@ export class EmailService {
 
     if (!hasOverdue && !hasExpiringSoon) return { sent: false };
 
-    await getResend().emails.send({
+    await resend.emails.send({
       from: FROM,
       to: params.to,
       subject: `💪 ${APP_NAME} — Resumen de pagos pendientes`,
@@ -448,7 +438,7 @@ export class EmailService {
       urgencyColor = "#2563eb";
     }
 
-    await getResend().emails.send({
+    await resend.emails.send({
       from: FROM,
       to: params.to,
       subject,
@@ -546,7 +536,7 @@ export class EmailService {
     dueDate: Date;
     daysOverdue: number;
   }) {
-    await getResend().emails.send({
+    await resend.emails.send({
       from: FROM,
       to: params.to,
       subject: `❌ Cuota vencida — ${params.planName}`,

@@ -347,7 +347,7 @@ export class StudentsService {
         take: limit,
         include: {
           subscriptions: {
-            where: { status: { in: ["ACTIVE", "EXPIRED"] } },
+            where: { status: { in: ["ACTIVE", "EXPIRED", "CANCELLED"] } },
             orderBy: { createdAt: "desc" },
             take: 1,
             include: {
