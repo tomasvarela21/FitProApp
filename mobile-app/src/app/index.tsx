@@ -35,12 +35,15 @@ type StudentItem = {
   } | null;
 };
 
+type LastSet = { setNumber: number; reps: number; weight: number | null; rpe: number | null };
+
 type RoutineExercise = {
   id: string;
   sets: number;
   reps: string;
   suggestedWeight: number | null;
   suggestedRpe: number | null;
+  lastSets: LastSet[] | null;
   exercise: {
     id: string;
     name: string;
@@ -118,9 +121,14 @@ export default function HomeScreen() {
         if (routineData?.routine?.routineExercises) {
           const initialSets: typeof loggedSets = {};
           routineData.routine.routineExercises.forEach((re: RoutineExercise) => {
-            initialSets[re.id] = Array.from({ length: re.sets }, () => ({
-              reps: re.reps.split("x")[1] || re.reps || "10",
-              weight: re.suggestedWeight?.toString() || "",
+            initialSets[re.id] = Array.from({ length: re.sets }, (_, i) => ({
+              reps: re.lastSets?.[i]?.reps?.toString()
+                ?? re.reps.split("x")[1]
+                ?? re.reps
+                ?? "10",
+              weight: re.lastSets?.[i]?.weight?.toString()
+                ?? re.suggestedWeight?.toString()
+                ?? "",
               completed: false,
             }));
           });
@@ -350,6 +358,17 @@ export default function HomeScreen() {
                     {re.sets} series x {re.reps} repeticiones
                     {re.suggestedWeight ? ` · Sugerido: ${re.suggestedWeight}kg` : ""}
                   </ThemedText>
+                  {re.lastSets && re.lastSets.length > 0 && (() => {
+                    const maxW = Math.max(...re.lastSets.filter(s => s.weight !== null).map(s => s.weight!));
+                    const hint = isFinite(maxW)
+                      ? `Última sesión: ${re.lastSets.length} × ${re.lastSets[0].reps} reps @ ${maxW}kg`
+                      : `Última sesión: ${re.lastSets.length} × ${re.lastSets[0].reps} reps`;
+                    return (
+                      <ThemedText type="small" style={{ color: "#208AEF", marginTop: 2 }}>
+                        {hint}
+                      </ThemedText>
+                    );
+                  })()}
                 </View>
 
                 <View style={styles.setsList}>
