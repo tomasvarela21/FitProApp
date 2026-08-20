@@ -1,0 +1,11 @@
+<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>KOREX</title>
+  <!-- Left bar: tall K stem -->
+  <rect x="2"  y="5"  width="30" height="90" rx="9.5" fill="#00D4A8"/>
+  <!-- Right bar: ascending shorter bar -->
+  <rect x="38" y="27" width="14" height="68" rx="5.5" fill="#00D4A8"/>
+  <!-- Upper K arm -->
+  <line x1="33" y1="43" x2="97" y2="5"  stroke="#F9FAFB" stroke-width="13" stroke-linecap="round"/>
+  <!-- Lower K arm -->
+  <line x1="33" y1="52" x2="97" y2="95" stroke="#F9FAFB" stroke-width="13" stroke-linecap="round"/>
+</svg>
