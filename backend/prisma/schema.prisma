@@ -65,7 +65,6 @@ model Trainer {
   sentInvitations AccountInvitation[]   @relation("TrainerSentInvitations")
   plans           Plan[]
   subscriptions   Subscription[]
-  payments        Payment[]
   installments    Installment[]
   exercises       Exercise[]
   routines        Routine[]
@@ -122,6 +121,7 @@ model Student {
   status      StudentStatus @default(INVITED)
   invitedAt   DateTime?
   activatedAt DateTime?
+  deletedAt   DateTime?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -200,30 +200,12 @@ model Subscription {
   student      Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
   plan         Plan          @relation(fields: [planId], references: [id], onDelete: Cascade)
   trainer      Trainer       @relation(fields: [trainerId], references: [id], onDelete: Cascade)
-  payments     Payment[]
   installments Installment[]
 
   @@index([studentId])
   @@index([planId])
   @@index([trainerId])
   @@index([endDate])
-}
-
-model Payment {
-  id             String       @id @default(cuid())
-  subscriptionId String
-  trainerId      String
-  amount         Decimal      @db.Decimal(10, 2)
-  paidAt         DateTime     @default(now())
-  periodLabel    String
-  notes          String?
-  createdAt      DateTime     @default(now())
-
-  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  trainer      Trainer      @relation(fields: [trainerId], references: [id], onDelete: Cascade)
-
-  @@index([subscriptionId])
-  @@index([trainerId])
 }
 
 enum InstallmentStatus {

@@ -155,14 +155,6 @@ export type Subscription = {
   installments: Installment[];
 };
 
-export type Payment = {
-  id: string;
-  amount: number;
-  paidAt: string;
-  periodLabel: string;
-  notes: string | null;
-  createdAt: string;
-};
 
 export type StudentProfile = {
   id: string;

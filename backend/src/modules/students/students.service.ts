@@ -109,6 +109,7 @@ export class StudentsService {
 
     const where: Prisma.StudentWhereInput = {
       trainerId: trainer.id,
+      deletedAt: null,
       ...(search
         ? {
             OR: [
@@ -154,6 +155,7 @@ export class StudentsService {
       where: {
         id: studentId,
         trainerId: trainer.id,
+        deletedAt: null,
       },
     });
 
@@ -181,6 +183,7 @@ export class StudentsService {
       where: {
         id: studentId,
         trainerId: trainer.id,
+        deletedAt: null,
       },
     });
 
@@ -214,6 +217,7 @@ export class StudentsService {
       where: {
         id: studentId,
         trainerId: trainer.id,
+        deletedAt: null,
       },
     });
 
@@ -221,16 +225,9 @@ export class StudentsService {
       throw new AppError("Alumno no encontrado", 404);
     }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.student.delete({
-        where: { id: studentId },
-      });
-
-      if (student.userId) {
-        await tx.user.delete({
-          where: { id: student.userId },
-        });
-      }
+    await prisma.student.update({
+      where: { id: studentId },
+      data: { deletedAt: new Date() },
     });
 
     return { deleted: true };
@@ -249,6 +246,7 @@ export class StudentsService {
       where: {
         id: studentId,
         trainerId: trainer.id,
+        deletedAt: null,
       },
     });
 
@@ -325,6 +323,7 @@ export class StudentsService {
 
     const where: Prisma.StudentWhereInput = {
       trainerId: trainer.id,
+      deletedAt: null,
       ...(search
         ? {
             OR: [
@@ -417,7 +416,7 @@ export class StudentsService {
     if (!trainer) throw new AppError("Entrenador no encontrado", 404);
 
     const student = await prisma.student.findFirst({
-      where: { id: studentId, trainerId: trainer.id },
+      where: { id: studentId, trainerId: trainer.id, deletedAt: null },
       include: { user: true },
     });
     if (!student) throw new AppError("Alumno no encontrado", 404);
