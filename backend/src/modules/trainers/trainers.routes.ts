@@ -36,24 +36,3 @@ trainersRouter.patch(
   validate(updateProfileSchema),
   TrainersController.updateProfile
 );
-
-trainersRouter.post(
-  "/telegram-link-code",
-  requireAuth,
-  requireRole("TRAINER"),
-  TrainersController.generateTelegramLinkCode
-);
-
-trainersRouter.get(
-  "/telegram-link",
-  requireAuth,
-  requireRole("TRAINER"),
-  TrainersController.getTelegramLinkStatus
-);
-
-trainersRouter.delete(
-  "/telegram-link",
-  requireAuth,
-  requireRole("TRAINER"),
-  TrainersController.unlinkTelegram
-);

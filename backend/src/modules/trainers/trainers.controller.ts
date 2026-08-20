@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { asyncHandler } from "../../shared/errors/async-handler";
 import { successResponse } from "../../shared/responses/api-response";
 import { TrainersService } from "./trainers.service";
-import { TelegramLinkService } from "../agent/telegram-link.service";
 
 export class TrainersController {
   static createTrainer = asyncHandler(async (req: Request, res: Response) => {
@@ -42,35 +41,5 @@ export class TrainersController {
     return res
       .status(200)
       .json(successResponse("Perfil actualizado correctamente", result));
-  });
-
-  static generateTelegramLinkCode = asyncHandler(
-    async (req: Request, res: Response) => {
-      const result = await TelegramLinkService.generateLinkCode(
-        req.user!.userId
-      );
-
-      return res
-        .status(200)
-        .json(successResponse("Código generado correctamente", result));
-    }
-  );
-
-  static getTelegramLinkStatus = asyncHandler(
-    async (req: Request, res: Response) => {
-      const result = await TelegramLinkService.getLinkStatus(req.user!.userId);
-
-      return res
-        .status(200)
-        .json(successResponse("Estado de vinculación obtenido", result));
-    }
-  );
-
-  static unlinkTelegram = asyncHandler(async (req: Request, res: Response) => {
-    const result = await TelegramLinkService.unlink(req.user!.userId);
-
-    return res
-      .status(200)
-      .json(successResponse("Telegram desvinculado correctamente", result));
   });
 }

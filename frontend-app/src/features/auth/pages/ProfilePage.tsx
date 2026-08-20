@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Send, CheckCircle2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { PageHeader } from "@/components/shared/PageHeader/PageHeader";
 import { useProfile } from "@/features/auth/hooks/use-profile";
-import { useTelegramLink } from "@/features/auth/hooks/use-telegram-link";
 
 const profileSchema = z.object({
   firstName: z.string().min(2, "El nombre es obligatorio"),
@@ -19,133 +18,6 @@ const profileSchema = z.object({
 });
 
 type ProfileForm = z.infer<typeof profileSchema>;
-
-const TelegramCard = () => {
-  const {
-    status,
-    isLoading,
-    generateCode,
-    generatedCode,
-    isGenerating,
-    unlink,
-    isUnlinking,
-  } = useTelegramLink();
-  const [error, setError] = useState<string | null>(null);
-
-  const handleGenerate = async () => {
-    setError(null);
-    try {
-      await generateCode();
-    } catch {
-      setError("No se pudo generar el código, probá de nuevo");
-    }
-  };
-
-  const handleUnlink = async () => {
-    setError(null);
-    try {
-      await unlink();
-    } catch {
-      setError("No se pudo desvincular, probá de nuevo");
-    }
-  };
-
-  return (
-    <Card className="mt-6">
-      <CardHeader className="pb-4">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-sky-500/10 text-sky-500 shrink-0">
-            <Send className="w-5 h-5" />
-          </div>
-          <div>
-            <CardTitle className="text-base">Asistente de Telegram</CardTitle>
-            <CardDescription>
-              Gestioná tus alumnos, pagos y rutinas chateando con el bot
-            </CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-
-      <Separator />
-
-      <CardContent className="pt-6 space-y-4">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-4">
-            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-          </div>
-        ) : status?.linked ? (
-          <>
-            <div className="flex items-center gap-2 text-sm text-emerald-600">
-              <CheckCircle2 className="w-4 h-4" />
-              Cuenta vinculada a Telegram
-            </div>
-            <Button
-              variant="outline"
-              onClick={handleUnlink}
-              disabled={isUnlinking}
-            >
-              {isUnlinking ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : null}
-              Desvincular
-            </Button>
-          </>
-        ) : generatedCode ? (
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Mandale este código al bot con el comando{" "}
-              <span className="font-mono">/vincular</span>, o tocá el botón
-              para abrirlo directo:
-            </p>
-            <div className="rounded-md bg-muted px-4 py-3 text-center">
-              <span className="font-mono text-2xl tracking-widest">
-                {generatedCode.code}
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground text-center">
-              Vence a las{" "}
-              {new Date(generatedCode.expiresAt).toLocaleTimeString("es-AR", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </p>
-            {generatedCode.deepLink && (
-              <Button asChild className="w-full">
-                <a
-                  href={generatedCode.deepLink}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <Send className="w-4 h-4 mr-2" />
-                  Abrir en Telegram
-                </a>
-              </Button>
-            )}
-          </div>
-        ) : (
-          <>
-            <p className="text-sm text-muted-foreground">
-              Vinculá tu cuenta para consultar cuotas, registrar pagos y
-              asignar rutinas desde Telegram.
-            </p>
-            <Button onClick={handleGenerate} disabled={isGenerating}>
-              {isGenerating ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : null}
-              Generar código de vinculación
-            </Button>
-          </>
-        )}
-
-        {error && (
-          <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2">
-            <p className="text-xs text-destructive">{error}</p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
 
 export const ProfilePage = () => {
   const { profile, isLoading, updateProfile, isUpdating } = useProfile();
@@ -300,8 +172,6 @@ export const ProfilePage = () => {
           </form>
         </CardContent>
       </Card>
-
-      <TelegramCard />
     </div>
   );
 };

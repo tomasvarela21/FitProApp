@@ -9,7 +9,6 @@ import { exercisesRouter } from "../modules/exercises/exercises.routes";
 import { routinesRouter, studentRoutinesRouter } from "../modules/routines/routines.routes";
 import { weeklyPlanRouter } from "../modules/routines/weekly-plan.routes";
 import { notificationsRouter } from "../modules/notifications/notifications.routes";
-import { telegramRouter } from "../modules/agent/telegram.routes";
 import { sendDailyPaymentAlerts } from "../infrastructure/jobs/payment-alerts.job";
 
 export const router = Router();
@@ -25,7 +24,6 @@ router.get("/health", (_req, res) => {
 router.use("/auth", authRouter);
 router.use("/trainers", trainersRouter);
 router.use("/students", studentsRouter);
-router.use("/telegram", telegramRouter);
 router.use("/students", studentRoutinesRouter);
 router.use("/plans", plansRouter);
 router.use("/subscriptions", subscriptionsRouter);

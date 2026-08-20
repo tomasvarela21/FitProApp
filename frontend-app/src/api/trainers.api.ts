@@ -16,18 +16,6 @@ type UpdateProfilePayload = {
   phone?: string;
 };
 
-export type TelegramLinkCode = {
-  code: string;
-  expiresAt: string;
-  botUsername: string | null;
-  deepLink: string | null;
-};
-
-export type TelegramLinkStatus = {
-  linked: boolean;
-  linkedAt: string | null;
-};
-
 export const trainersApi = {
   getDashboardSummary: () =>
     apiClient.get<ApiSuccess<DashboardSummary>>("/trainers/dashboard-summary"),
@@ -37,13 +25,4 @@ export const trainersApi = {
 
   updateProfile: (payload: UpdateProfilePayload) =>
     apiClient.patch<ApiSuccess<TrainerProfile>>("/trainers/profile", payload),
-
-  generateTelegramLinkCode: () =>
-    apiClient.post<ApiSuccess<TelegramLinkCode>>("/trainers/telegram-link-code"),
-
-  getTelegramLinkStatus: () =>
-    apiClient.get<ApiSuccess<TelegramLinkStatus>>("/trainers/telegram-link"),
-
-  unlinkTelegram: () =>
-    apiClient.delete<ApiSuccess<TelegramLinkStatus>>("/trainers/telegram-link"),
 };
