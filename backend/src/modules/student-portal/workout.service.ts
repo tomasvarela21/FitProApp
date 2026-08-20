@@ -67,9 +67,12 @@ async function applyWeekOverrides(sr: StudentRoutineWithRelations) {
   return overrideMap;
 }
 
+type LastSet = { setNumber: number; reps: number; weight: number | null; rpe: number | null };
+
 function toRoutineDto(
   sr: StudentRoutineWithRelations,
-  overrideMap: Map<string, { suggestedWeight: number | null; suggestedReps: string | null; suggestedRpe: number | null }>
+  overrideMap: Map<string, { suggestedWeight: number | null; suggestedReps: string | null; suggestedRpe: number | null }>,
+  lastSetsMap?: Map<string, LastSet[]>
 ) {
   const routine = sr.routine;
   return {
@@ -94,6 +97,7 @@ function toRoutineDto(
           suggestedRpe: override?.suggestedRpe ?? re.suggestedRpe,
           restSeconds: re.restSeconds,
           notes: re.notes,
+          lastSets: lastSetsMap?.get(re.id) ?? null,
           exercise: {
             id: re.exercise.id,
             name: re.exercise.name,
@@ -159,8 +163,39 @@ export class WorkoutService {
     const todayExercises = studentRoutine.routine.routineExercises;
     if (todayExercises.length === 0) return null;
 
+    const todayExerciseIds = todayExercises.map((re) => re.id);
+    const lastLog = await prisma.workoutLog.findFirst({
+      where: {
+        studentRoutine: { studentId: student.id },
+        workoutSets: { some: { routineExerciseId: { in: todayExerciseIds } } },
+      },
+      orderBy: { date: "desc" },
+      include: {
+        workoutSets: {
+          where: { routineExerciseId: { in: todayExerciseIds } },
+          orderBy: { setNumber: "asc" },
+          select: { routineExerciseId: true, setNumber: true, reps: true, weight: true, rpe: true },
+        },
+      },
+    });
+
+    const lastSetsMap = new Map<string, LastSet[]>();
+    if (lastLog) {
+      for (const set of lastLog.workoutSets) {
+        if (!lastSetsMap.has(set.routineExerciseId)) {
+          lastSetsMap.set(set.routineExerciseId, []);
+        }
+        lastSetsMap.get(set.routineExerciseId)!.push({
+          setNumber: set.setNumber,
+          reps: set.reps,
+          weight: set.weight,
+          rpe: set.rpe,
+        });
+      }
+    }
+
     const overrideMap = await applyWeekOverrides(studentRoutine);
-    return toRoutineDto(studentRoutine, overrideMap);
+    return toRoutineDto(studentRoutine, overrideMap, lastSetsMap);
   }
 
   static async logWorkout(userId: string, data: LogWorkoutData) {
