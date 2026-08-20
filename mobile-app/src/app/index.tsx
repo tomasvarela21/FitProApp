@@ -77,7 +77,7 @@ export default function HomeScreen() {
   const [todayRoutine, setTodayRoutine] = useState<TodayRoutine>(null);
   const [workoutLogged, setWorkoutLogged] = useState(false);
   const [loggedSets, setLoggedSets] = useState<
-    Record<string, Array<{ reps: string; weight: string; completed: boolean }>>
+    Record<string, Array<{ reps: string; weight: string; rpe: string; completed: boolean }>>
   >({});
   const [streak, setStreak] = useState(0);
   const [trainedToday, setTrainedToday] = useState(false);
@@ -129,6 +129,7 @@ export default function HomeScreen() {
               weight: re.lastSets?.[i]?.weight?.toString()
                 ?? re.suggestedWeight?.toString()
                 ?? "",
+              rpe: re.lastSets?.[i]?.rpe?.toString() ?? "",
               completed: false,
             }));
           });
@@ -160,7 +161,7 @@ export default function HomeScreen() {
         setNumber: idx + 1,
         reps: parseInt(s.reps) || 10,
         weight: parseFloat(s.weight) || null,
-        rpe: re.suggestedRpe || null,
+        rpe: parseFloat(s.rpe) || re.suggestedRpe || null,
       }));
 
       return {
@@ -202,7 +203,7 @@ export default function HomeScreen() {
   const updateSetField = (
     exerciseId: string,
     setIndex: number,
-    field: "reps" | "weight",
+    field: "reps" | "weight" | "rpe",
     value: string
   ) => {
     setLoggedSets((prev) => {
@@ -372,27 +373,29 @@ export default function HomeScreen() {
                 </View>
 
                 <View style={styles.setsList}>
+                  <View style={[styles.setRow, { paddingBottom: 2 }]}>
+                    <ThemedText type="small" style={[styles.setNumber, { color: colors.textSecondary }]}>#</ThemedText>
+                    <ThemedText type="small" style={[{ width: 62, textAlign: "center", color: colors.textSecondary }]}>Reps</ThemedText>
+                    <ThemedText type="small" style={[{ width: 62, textAlign: "center", color: colors.textSecondary }]}>Kg</ThemedText>
+                    <ThemedText type="small" style={[{ width: 44, textAlign: "center", color: colors.textSecondary }]}>RPE</ThemedText>
+                    <View style={{ width: 36 }} />
+                  </View>
                   {Array.from({ length: re.sets }).map((_, idx) => {
                     const setInfo = loggedSets[re.id]?.[idx] || {
                       reps: "10",
                       weight: "",
+                      rpe: "",
                       completed: false,
                     };
 
+                    const activeBorder = setInfo.completed ? "#22c55e" : colors.backgroundSelected;
                     return (
                       <View key={idx} style={styles.setRow}>
                         <ThemedText type="small" style={styles.setNumber}>
-                          Serie {idx + 1}
+                          {idx + 1}
                         </ThemedText>
                         <TextInput
-                          style={[
-                            styles.setInput,
-                            {
-                              color: colors.text,
-                              backgroundColor: colors.backgroundElement,
-                              borderColor: setInfo.completed ? "#22c55e" : colors.backgroundSelected,
-                            },
-                          ]}
+                          style={[styles.setInput, { color: colors.text, backgroundColor: colors.backgroundElement, borderColor: activeBorder }]}
                           keyboardType="numeric"
                           value={setInfo.reps}
                           onChangeText={(val) => updateSetField(re.id, idx, "reps", val)}
@@ -400,29 +403,24 @@ export default function HomeScreen() {
                           placeholderTextColor={colors.textSecondary}
                         />
                         <TextInput
-                          style={[
-                            styles.setInput,
-                            {
-                              color: colors.text,
-                              backgroundColor: colors.backgroundElement,
-                              borderColor: setInfo.completed ? "#22c55e" : colors.backgroundSelected,
-                            },
-                          ]}
+                          style={[styles.setInput, { color: colors.text, backgroundColor: colors.backgroundElement, borderColor: activeBorder }]}
                           keyboardType="numeric"
                           value={setInfo.weight}
                           onChangeText={(val) => updateSetField(re.id, idx, "weight", val)}
                           placeholder="Kg"
                           placeholderTextColor={colors.textSecondary}
                         />
+                        <TextInput
+                          style={[styles.setInputSmall, { color: colors.text, backgroundColor: colors.backgroundElement, borderColor: activeBorder }]}
+                          keyboardType="numeric"
+                          value={setInfo.rpe}
+                          onChangeText={(val) => updateSetField(re.id, idx, "rpe", val)}
+                          placeholder="RPE"
+                          placeholderTextColor={colors.textSecondary}
+                          maxLength={2}
+                        />
                         <TouchableOpacity
-                          style={[
-                            styles.checkBtn,
-                            {
-                              backgroundColor: setInfo.completed
-                                ? "#22c55e"
-                                : colors.backgroundSelected,
-                            },
-                          ]}
+                          style={[styles.checkBtn, { backgroundColor: setInfo.completed ? "#22c55e" : colors.backgroundSelected }]}
                           onPress={() => toggleSetCompleted(re.id, idx)}
                         >
                           <CheckCircle size={16} color={setInfo.completed ? "#ffffff" : colors.textSecondary} />
@@ -599,15 +597,24 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   setNumber: {
-    width: 60,
+    width: 20,
+    textAlign: "center" as const,
   },
   setInput: {
     height: 36,
-    width: 70,
+    width: 62,
     borderWidth: 1,
     borderRadius: 6,
-    textAlign: "center",
+    textAlign: "center" as const,
     fontSize: 13,
+  },
+  setInputSmall: {
+    height: 36,
+    width: 44,
+    borderWidth: 1,
+    borderRadius: 6,
+    textAlign: "center" as const,
+    fontSize: 12,
   },
   checkBtn: {
     width: 36,
