@@ -63,10 +63,17 @@ export const Sidebar = ({
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-    onNavigate?.();
-    navigate("/login");
+  const handleLogout = async () => {
+    try {
+      const { authApi } = await import("@/api/auth.api");
+      await authApi.logout();
+    } catch {
+      // Si falla el logout en el server, igual limpiamos localmente
+    } finally {
+      logout();
+      onNavigate?.();
+      navigate("/login");
+    }
   };
 
   const initials = user?.profile

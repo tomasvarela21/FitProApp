@@ -40,6 +40,7 @@ model User {
   trainer Trainer?
   student Student?
   pushSubscriptions PushSubscription[]
+  refreshTokens     RefreshToken[]
 }
 
 enum TrainerSubscriptionStatus {
@@ -69,6 +70,30 @@ model Trainer {
   exercises       Exercise[]
   routines        Routine[]
   verifications   TrainerVerification[]
+  telegramLink      TelegramLink?
+  telegramLinkCodes TelegramLinkCode[]
+}
+
+model TelegramLink {
+  id        String   @id @default(cuid())
+  trainerId String   @unique
+  chatId    BigInt   @unique
+  createdAt DateTime @default(now())
+
+  trainer Trainer @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+}
+
+model TelegramLinkCode {
+  id        String    @id @default(cuid())
+  trainerId String
+  code      String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  trainer Trainer @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+
+  @@index([trainerId])
 }
 
 model TrainerVerification {
@@ -205,6 +230,7 @@ enum InstallmentStatus {
   PENDING
   PAID
   OVERDUE
+  CANCELLED
 }
 
 enum PaymentFrequency {
@@ -417,6 +443,19 @@ model WorkoutSet {
 
   @@index([workoutLogId])
   @@index([routineExerciseId])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model PushSubscription {

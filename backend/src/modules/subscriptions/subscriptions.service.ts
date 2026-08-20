@@ -141,8 +141,13 @@ export class SubscriptionsService {
     const startDate = new Date(data.startDate);
     const days = DURATION_DAYS[plan.duration] ?? 30;
     const endDate = addDays(startDate, days);
-    const amountPerInstallment = data.totalAmount / data.installmentCount;
     const freqDays = FREQUENCY_DAYS[data.frequency] ?? 30;
+
+    // Aritmética entera en centavos para evitar errores de punto flotante.
+    // La última cuota absorbe el centavo de diferencia si el total no es divisible exactamente.
+    const totalCents = Math.round(data.totalAmount * 100);
+    const baseCents = Math.floor(totalCents / data.installmentCount);
+    const remainderCents = totalCents - baseCents * data.installmentCount;
 
     const subscription = await prisma.$transaction(async (tx) => {
       const sub = await tx.subscription.create({
@@ -160,17 +165,21 @@ export class SubscriptionsService {
         include: { plan: true, student: true },
       });
 
-      // Generar cuotas
+      // Generar cuotas con montos exactos que suman al total
       const installments = Array.from(
         { length: data.installmentCount },
-        (_, i) => ({
-          subscriptionId: sub.id,
-          trainerId: trainer.id,
-          number: i + 1,
-          amount: amountPerInstallment,
-          dueDate: addDays(startDate, freqDays * i),
-          status: "PENDING" as const,
-        })
+        (_, i) => {
+          const isLast = i === data.installmentCount - 1;
+          const amountCents = isLast ? baseCents + remainderCents : baseCents;
+          return {
+            subscriptionId: sub.id,
+            trainerId: trainer.id,
+            number: i + 1,
+            amount: amountCents / 100,
+            dueDate: addDays(startDate, freqDays * i),
+            status: "PENDING" as const,
+          };
+        }
       );
 
       await tx.installment.createMany({ data: installments });
@@ -206,6 +215,13 @@ export class SubscriptionsService {
 
     if (installment.status === "PAID") {
       throw new AppError("Esta cuota ya fue pagada", 400);
+    }
+
+    if (installment.subscription.status !== "ACTIVE") {
+      throw new AppError(
+        "No se puede registrar un pago en una suscripción inactiva",
+        400
+      );
     }
 
     const updated = await prisma.installment.update({
@@ -317,7 +333,7 @@ export class SubscriptionsService {
           subscriptionId,
           status: { in: ["PENDING", "OVERDUE"] },
         },
-        data: { status: "OVERDUE" },
+        data: { status: "CANCELLED" },
       }),
       prisma.subscription.update({
         where: { id: subscriptionId },

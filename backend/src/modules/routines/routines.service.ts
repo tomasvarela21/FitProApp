@@ -92,7 +92,10 @@ export class RoutinesService {
   private static async getOwnedRoutine(trainerId: string, routineId: string) {
     const routine = await prisma.routine.findUnique({ where: { id: routineId } });
     if (!routine) throw new AppError("Rutina no encontrada", 404);
-    if (!routine.isGlobal && routine.trainerId !== trainerId) {
+    if (routine.isGlobal) {
+      throw new AppError("Las rutinas globales no pueden ser modificadas", 403);
+    }
+    if (routine.trainerId !== trainerId) {
       throw new AppError("No tienes permisos para modificar esta rutina", 403);
     }
     return routine;

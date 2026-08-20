@@ -78,11 +78,11 @@ export class PlansService {
     if (!existing) throw new AppError("Plan no encontrado", 404);
 
     const hasSubscriptions = await prisma.subscription.count({
-      where: { planId },
+      where: { planId, status: { in: ["ACTIVE", "EXPIRED"] } },
     });
     if (hasSubscriptions > 0) {
       throw new AppError(
-        "No se puede eliminar un plan con suscripciones activas",
+        "No se puede eliminar un plan con suscripciones activas o vencidas",
         400
       );
     }

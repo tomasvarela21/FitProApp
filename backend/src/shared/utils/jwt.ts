@@ -15,7 +15,7 @@ if (!ACCESS_SECRET) {
 
 export const signAccessToken = (payload: JwtPayload) => {
   return jwt.sign(payload, ACCESS_SECRET, {
-    expiresIn: "1d",
+    expiresIn: "15m",
   });
 };
 

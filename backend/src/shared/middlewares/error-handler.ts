@@ -15,7 +15,10 @@ export const errorHandler = (
   }
 
   if (error instanceof Error) {
-    return res.status(500).json(errorResponse(error.message));
+    if (process.env.NODE_ENV !== "production") {
+      return res.status(500).json(errorResponse(error.message));
+    }
+    return res.status(500).json(errorResponse("Error interno del servidor"));
   }
 
   return res.status(500).json(errorResponse("Error interno del servidor"));

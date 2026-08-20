@@ -11,6 +11,10 @@ type LoginResponse = {
   user: AuthUser;
 };
 
+type RefreshResponse = {
+  accessToken: string;
+};
+
 type ActivateAccountPayload = {
   token: string;
   password: string;
@@ -56,6 +60,13 @@ export const authApi = {
   me: () =>
     apiClient.get<ApiSuccess<AuthUser>>("/auth/me"),
 
+  // Usa la cookie HttpOnly — no necesita body, la cookie se manda automáticamente
+  refresh: () =>
+    apiClient.post<ApiSuccess<RefreshResponse>>("/auth/refresh"),
+
+  logout: () =>
+    apiClient.post<ApiSuccess<{ loggedOut: boolean }>>("/auth/logout"),
+
   activateAccount: (payload: ActivateAccountPayload) =>
     apiClient.post<ApiSuccess<ActivateAccountResponse>>(
       "/auth/activate-account",
@@ -74,4 +85,3 @@ export const authApi = {
       payload
     ),
 };
-

@@ -3,6 +3,23 @@ import { asyncHandler } from "../../shared/errors/async-handler";
 import { successResponse } from "../../shared/responses/api-response";
 import { AuthService } from "./auth.service";
 
+const REFRESH_COOKIE = "refreshToken";
+const IS_PROD = process.env.NODE_ENV === "production";
+
+const setRefreshCookie = (res: Response, token: string) => {
+  res.cookie(REFRESH_COOKIE, token, {
+    httpOnly: true,
+    secure: IS_PROD,
+    sameSite: IS_PROD ? "strict" : "lax",
+    path: "/api/auth",
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+  });
+};
+
+const clearRefreshCookie = (res: Response) => {
+  res.clearCookie(REFRESH_COOKIE, { path: "/api/auth" });
+};
+
 export class AuthController {
   static activateAccount = asyncHandler(async (req: Request, res: Response) => {
     const result = await AuthService.activateAccount(req.body);
@@ -13,11 +30,36 @@ export class AuthController {
   });
 
   static login = asyncHandler(async (req: Request, res: Response) => {
-    const result = await AuthService.login(req.body);
+    const { accessToken, refreshToken, user } = await AuthService.login(req.body);
 
-    return res
-      .status(200)
-      .json(successResponse("Login correcto", result));
+    setRefreshCookie(res, refreshToken);
+
+    return res.status(200).json(successResponse("Login correcto", { accessToken, user }));
+  });
+
+  static refresh = asyncHandler(async (req: Request, res: Response) => {
+    const rawRefreshToken = req.cookies?.[REFRESH_COOKIE];
+    if (!rawRefreshToken) {
+      return res.status(401).json({ ok: false, message: "No autenticado" });
+    }
+
+    const { accessToken, refreshToken } = await AuthService.refreshAccessToken(rawRefreshToken);
+
+    setRefreshCookie(res, refreshToken);
+
+    return res.status(200).json(successResponse("Token renovado", { accessToken }));
+  });
+
+  static logout = asyncHandler(async (req: Request, res: Response) => {
+    const rawRefreshToken = req.cookies?.[REFRESH_COOKIE];
+
+    if (rawRefreshToken) {
+      await AuthService.logout(rawRefreshToken);
+    }
+
+    clearRefreshCookie(res);
+
+    return res.status(200).json(successResponse("Sesión cerrada", { loggedOut: true }));
   });
 
   static me = asyncHandler(async (req: Request, res: Response) => {

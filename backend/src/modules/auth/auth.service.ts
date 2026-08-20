@@ -117,10 +117,78 @@ export class AuthService {
       role: user.role,
     });
 
+    const rawRefreshToken = generateRawToken(48);
+    const refreshTokenHash = hashToken(rawRefreshToken);
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+
+    await prisma.refreshToken.create({
+      data: { userId: user.id, tokenHash: refreshTokenHash, expiresAt },
+    });
+
     return {
       accessToken,
+      refreshToken: rawRefreshToken,
       user: AuthMapper.toAuthProfile(user),
     };
+  }
+
+  static async refreshAccessToken(rawRefreshToken: string) {
+    const tokenHash = hashToken(rawRefreshToken);
+
+    const stored = await prisma.refreshToken.findUnique({
+      where: { tokenHash },
+      include: { user: { include: { trainer: true, student: true } } },
+    });
+
+    if (!stored || stored.revokedAt || stored.expiresAt < new Date()) {
+      throw new AppError("Refresh token inválido o expirado", 401);
+    }
+
+    if (stored.user.status !== "ACTIVE") {
+      throw new AppError("La cuenta no está activa", 403);
+    }
+
+    // Rotación: revoca el token actual y emite uno nuevo
+    const newRawToken = generateRawToken(48);
+    const newTokenHash = hashToken(newRawToken);
+    const newExpiresAt = new Date();
+    newExpiresAt.setDate(newExpiresAt.getDate() + 30);
+
+    await prisma.$transaction([
+      prisma.refreshToken.update({
+        where: { id: stored.id },
+        data: { revokedAt: new Date() },
+      }),
+      prisma.refreshToken.create({
+        data: { userId: stored.userId, tokenHash: newTokenHash, expiresAt: newExpiresAt },
+      }),
+    ]);
+
+    const accessToken = signAccessToken({
+      userId: stored.user.id,
+      email: stored.user.email,
+      role: stored.user.role,
+    });
+
+    return {
+      accessToken,
+      refreshToken: newRawToken,
+    };
+  }
+
+  static async logout(rawRefreshToken: string) {
+    const tokenHash = hashToken(rawRefreshToken);
+
+    const stored = await prisma.refreshToken.findUnique({ where: { tokenHash } });
+    if (stored && !stored.revokedAt) {
+      await prisma.refreshToken.update({
+        where: { id: stored.id },
+        data: { revokedAt: new Date() },
+      });
+    }
+
+    return { loggedOut: true };
   }
 
   static async getMe(userId: string) {

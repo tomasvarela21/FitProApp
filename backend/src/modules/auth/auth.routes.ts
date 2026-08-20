@@ -9,18 +9,24 @@ import {
   verifyEmailSchema,
 } from "./auth.schema";
 import { createTrainerSchema } from "../trainers/trainers.schema";
+import { authLimiter } from "../../app";
 
 export const authRouter = Router();
 
 authRouter.post(
   "/activate-account",
+  authLimiter,
   validate(activateAccountSchema),
   AuthController.activateAccount
 );
 
-authRouter.post("/login", validate(loginSchema), AuthController.login);
+authRouter.post("/login", authLimiter, validate(loginSchema), AuthController.login);
 
 authRouter.get("/me", requireAuth, AuthController.me);
+
+authRouter.post("/refresh", AuthController.refresh);
+
+authRouter.post("/logout", AuthController.logout);
 
 authRouter.post(
   "/change-password",
@@ -31,12 +37,14 @@ authRouter.post(
 
 authRouter.post(
   "/register-trainer",
+  authLimiter,
   validate(createTrainerSchema),
   AuthController.registerTrainer
 );
 
 authRouter.post(
   "/verify-email",
+  authLimiter,
   validate(verifyEmailSchema),
   AuthController.verifyTrainerEmail
 );

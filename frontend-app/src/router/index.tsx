@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useAuthStore } from "@/store/auth.store";
+import { authApi } from "@/api/auth.api";
 import { LoginPage } from "@/features/auth/pages/LoginPage";
 import { RegisterPage } from "@/features/auth/pages/RegisterPage";
 import { VerifyEmailPage } from "@/features/auth/pages/VerifyEmailPage";
@@ -18,6 +20,45 @@ import { StudentProgressPage } from "@/features/student-portal/pages/StudentProg
 import { StudentExercisesPage } from "@/features/student-portal/pages/StudentExercisesPage";
 import { AppLayout } from "@/components/shared/Layout/AppLayout";
 import { StudentLayout } from "@/components/shared/StudentLayout/StudentLayout";
+
+// Intenta renovar el access token desde la cookie HttpOnly al cargar la app.
+// Si no hay cookie válida, limpia el estado de auth.
+const AuthInitializer = ({ children }: { children: ReactNode }) => {
+  const { isAuthenticated, isInitialized } = useAuth();
+  const { setToken, setInitialized, logout } = useAuthStore.getState();
+
+  useEffect(() => {
+    if (isInitialized) return;
+
+    if (!isAuthenticated) {
+      setInitialized();
+      return;
+    }
+
+    authApi
+      .refresh()
+      .then((res) => {
+        setToken(res.data.data.accessToken);
+      })
+      .catch(() => {
+        // Cookie expirada o revocada — limpiar estado persistido
+        logout();
+      })
+      .finally(() => {
+        setInitialized();
+      });
+  }, []);
+
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+};
 
 type RouteProps = { children: ReactNode };
 
@@ -46,68 +87,70 @@ const StudentRoute = ({ children }: RouteProps) => {
 export const AppRouter = () => {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
+      <AuthInitializer>
+        <Routes>
+          <Route path="/" element={<Navigate to="/login" replace />} />
 
-        <Route
-          path="/login"
-          element={
-            <PublicRoute>
-              <LoginPage />
-            </PublicRoute>
-          }
-        />
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
+                <LoginPage />
+              </PublicRoute>
+            }
+          />
 
-        <Route
-          path="/register"
-          element={
-            <PublicRoute>
-              <RegisterPage />
-            </PublicRoute>
-          }
-        />
+          <Route
+            path="/register"
+            element={
+              <PublicRoute>
+                <RegisterPage />
+              </PublicRoute>
+            }
+          />
 
-        <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
 
-        <Route path="/activate-account" element={<ActivateAccountPage />} />
+          <Route path="/activate-account" element={<ActivateAccountPage />} />
 
-        {/* Trainer routes */}
-        <Route
-          path="/app"
-          element={
-            <TrainerRoute>
-              <AppLayout />
-            </TrainerRoute>
-          }
-        >
-          <Route index element={<Navigate to="/app/dashboard" replace />} />
-          <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="students" element={<StudentsPage />} />
-          <Route path="plans" element={<PlansPage />} />
-          <Route path="exercises" element={<ExercisesPage />} />
-          <Route path="exercises/:slug" element={<ExerciseGroupPage />} />
-          <Route path="routines" element={<RoutinesPage />} />
-          <Route path="profile" element={<ProfilePage />} />
-        </Route>
+          {/* Trainer routes */}
+          <Route
+            path="/app"
+            element={
+              <TrainerRoute>
+                <AppLayout />
+              </TrainerRoute>
+            }
+          >
+            <Route index element={<Navigate to="/app/dashboard" replace />} />
+            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="students" element={<StudentsPage />} />
+            <Route path="plans" element={<PlansPage />} />
+            <Route path="exercises" element={<ExercisesPage />} />
+            <Route path="exercises/:slug" element={<ExerciseGroupPage />} />
+            <Route path="routines" element={<RoutinesPage />} />
+            <Route path="profile" element={<ProfilePage />} />
+          </Route>
 
-        {/* Student routes */}
-        <Route
-          path="/student"
-          element={
-            <StudentRoute>
-              <StudentLayout />
-            </StudentRoute>
-          }
-        >
-          <Route index element={<Navigate to="/student/dashboard" replace />} />
-          <Route path="dashboard" element={<StudentDashboardPage />} />
-          <Route path="exercises" element={<StudentExercisesPage />} />
-          <Route path="profile" element={<StudentProfilePage />} />
-          <Route path="progress" element={<StudentProgressPage />} />
-        </Route>
+          {/* Student routes */}
+          <Route
+            path="/student"
+            element={
+              <StudentRoute>
+                <StudentLayout />
+              </StudentRoute>
+            }
+          >
+            <Route index element={<Navigate to="/student/dashboard" replace />} />
+            <Route path="dashboard" element={<StudentDashboardPage />} />
+            <Route path="exercises" element={<StudentExercisesPage />} />
+            <Route path="profile" element={<StudentProfilePage />} />
+            <Route path="progress" element={<StudentProgressPage />} />
+          </Route>
 
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </AuthInitializer>
     </BrowserRouter>
   );
 };
