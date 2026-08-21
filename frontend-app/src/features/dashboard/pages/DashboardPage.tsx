@@ -1,10 +1,5 @@
 import { useNavigate } from "react-router-dom";
 import {
-  Users,
-  UserCheck,
-  UserX,
-  Clock,
-  PauseCircle,
   AlertTriangle,
   XCircle,
 } from "lucide-react";
@@ -13,58 +8,59 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/shared/StatusBadge/StatusBadge";
 import { PageHeader } from "@/components/shared/PageHeader/PageHeader";
 import { useDashboard } from "@/features/dashboard/hooks/use-dashboard";
-import { useAuth } from "@/hooks/use-auth";
 import type { DashboardStats, ExpiringAlert } from "@/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+
+const AVATAR_COLORS = [
+  "bg-emerald-500/20 text-emerald-600",
+  "bg-violet-500/20 text-violet-600",
+  "bg-sky-500/20 text-sky-600",
+  "bg-amber-500/20 text-amber-600",
+  "bg-rose-500/20 text-rose-600",
+  "bg-indigo-500/20 text-indigo-600",
+];
+
+function avatarColor(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
 
 const statCards = (stats: DashboardStats) => [
   {
     label: "Total alumnos",
     value: stats.total,
-    icon: Users,
-    color: "text-primary",
-    bg: "bg-primary/10",
+    valueColor: "text-foreground",
   },
   {
     label: "Activos",
     value: stats.active,
-    icon: UserCheck,
-    color: "text-emerald-600",
-    bg: "bg-emerald-500/10",
+    valueColor: "text-primary",
   },
   {
     label: "Invitados",
     value: stats.invited,
-    icon: Clock,
-    color: "text-amber-600",
-    bg: "bg-amber-500/10",
+    valueColor: "text-amber-500",
   },
   {
     label: "Pausados",
     value: stats.paused,
-    icon: PauseCircle,
-    color: "text-blue-600",
-    bg: "bg-blue-500/10",
+    valueColor: "text-blue-500",
   },
   {
     label: "Inactivos",
     value: stats.inactive,
-    icon: UserX,
-    color: "text-zinc-500",
-    bg: "bg-zinc-500/10",
+    valueColor: "text-muted-foreground",
   },
 ];
 
 const StatCardSkeleton = () => (
   <Card>
-    <CardContent className="pt-6">
-      <div className="flex items-center gap-4">
-        <Skeleton className="w-10 h-10 rounded-lg" />
-        <div className="space-y-2">
-          <Skeleton className="h-3 w-20" />
-          <Skeleton className="h-6 w-10" />
-        </div>
+    <CardContent className="pt-5 pb-5">
+      <div className="space-y-2">
+        <Skeleton className="h-3 w-24" />
+        <Skeleton className="h-9 w-16" />
       </div>
     </CardContent>
   </Card>
@@ -122,11 +118,12 @@ const AlertRow = ({
 );
 
 export const DashboardPage = () => {
-  const { user } = useAuth();
   const { data, isLoading } = useDashboard();
   const navigate = useNavigate();
 
-  const firstName = user?.profile?.firstName ?? "Entrenador";
+  const todayRaw = format(new Date(), "EEEE, d 'de' MMMM yyyy", { locale: es });
+  const todayLabel = todayRaw.charAt(0).toUpperCase() + todayRaw.slice(1);
+
   const hasAlerts =
     (data?.alerts?.expired?.length ?? 0) > 0 ||
     (data?.alerts?.expiringSoon?.length ?? 0) > 0;
@@ -134,27 +131,24 @@ export const DashboardPage = () => {
   return (
     <div>
       <PageHeader
-        title={`Hola, ${firstName} 👋`}
-        description="Resumen de tu actividad reciente"
+        title="Panel del Entrenador"
+        description={todayLabel}
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
         {isLoading
           ? Array.from({ length: 5 }).map((_, i) => <StatCardSkeleton key={i} />)
           : data &&
             statCards(data.stats).map((stat) => (
               <Card key={stat.label}>
-                <CardContent className="pt-6">
-                  <div className="flex min-w-0 items-center gap-4">
-                    <div className={`flex items-center justify-center w-10 h-10 rounded-lg ${stat.bg}`}>
-                      <stat.icon className={`w-5 h-5 ${stat.color}`} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs text-muted-foreground">{stat.label}</p>
-                      <p className="text-2xl font-bold">{stat.value}</p>
-                    </div>
-                  </div>
+                <CardContent className="pt-5 pb-5">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+                    {stat.label}
+                  </p>
+                  <p className={`text-4xl font-bold tabular-nums ${stat.valueColor}`}>
+                    {stat.value}
+                  </p>
                 </CardContent>
               </Card>
             ))}
@@ -258,7 +252,7 @@ export const DashboardPage = () => {
                     onClick={() => navigate(`/app/students`)}
                   >
                     <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary text-xs font-semibold shrink-0">
+                      <div className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-semibold shrink-0 ${avatarColor(student.firstName + student.lastName)}`}>
                         {student.firstName[0]}
                         {student.lastName[0]}
                       </div>

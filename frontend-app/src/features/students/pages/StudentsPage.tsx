@@ -1,6 +1,21 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Search, UserPlus, AlertTriangle, XCircle, CheckCircle2 } from "lucide-react";
+
+const AVATAR_COLORS = [
+  "bg-emerald-500/20 text-emerald-600",
+  "bg-violet-500/20 text-violet-600",
+  "bg-sky-500/20 text-sky-600",
+  "bg-amber-500/20 text-amber-600",
+  "bg-rose-500/20 text-rose-600",
+  "bg-indigo-500/20 text-indigo-600",
+];
+
+function avatarColor(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
 import { studentsApi } from "@/api/students.api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -203,7 +218,7 @@ export const StudentsPage = () => {
                   onMouseEnter={() => handleRowHover(student.id)}
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="flex items-center justify-center w-9 h-9 rounded-full bg-primary/10 text-primary text-xs font-semibold shrink-0">
+                    <div className={`flex items-center justify-center w-9 h-9 rounded-full text-xs font-semibold shrink-0 ${avatarColor(student.firstName + student.lastName)}`}>
                       {student.firstName[0]}
                       {student.lastName[0]}
                     </div>
