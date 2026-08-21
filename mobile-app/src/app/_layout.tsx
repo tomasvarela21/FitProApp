@@ -1,11 +1,14 @@
 import React from "react";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "expo-router";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, LogBox, View } from "react-native";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { useMobileNotifications } from "@/hooks/useMobileNotifications";
 import { LoginScreen } from "@/components/LoginScreen";
 import AppTabs from "@/components/app-tabs";
 import { ThemePreferenceProvider, useColorScheme } from "@/hooks/use-color-scheme";
+
+// expo-notifications quitó el soporte de Expo Go en SDK 53+. Silenciar el error en dev.
+LogBox.ignoreLogs(["expo-notifications: Android Push"]);
 
 function MainApp() {
   const { token, isLoading, api } = useAuth();
