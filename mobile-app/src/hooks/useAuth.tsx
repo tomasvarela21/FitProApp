@@ -25,7 +25,7 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const DEFAULT_API_URL = "http://10.0.2.2:4000/api";
+const DEFAULT_API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://10.0.2.2:4000/api";
 
 function buildApi(
   baseURL: string,
