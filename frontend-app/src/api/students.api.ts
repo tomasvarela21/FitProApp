@@ -20,6 +20,7 @@ type ListStudentsQuery = {
   page?: number;
   limit?: number;
   search?: string;
+  status?: "INVITED" | "ACTIVE" | "PAUSED" | "INACTIVE";
 };
 
 export const studentsApi = {

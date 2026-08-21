@@ -6,6 +6,7 @@ import { ActivateAccountPage } from "@/features/auth/pages/ActivateAccountPage";
 import { ProfilePage } from "@/features/auth/pages/ProfilePage";
 import { DashboardPage } from "@/features/dashboard/pages/DashboardPage";
 import { StudentsPage } from "@/features/students/pages/StudentsPage";
+import { StudentDetailPage } from "@/features/students/pages/StudentDetailPage";
 import { PlansPage } from "@/features/students/pages/PlansPage";
 import { ExercisesPage } from "@/features/exercises/pages/ExercisesPage";
 import { ExerciseGroupPage } from "@/features/exercises/pages/ExerciseGroupPage";
@@ -70,6 +71,7 @@ export const AppRouter = () => {
           <Route index element={<Navigate to="/app/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="students" element={<StudentsPage />} />
+          <Route path="students/:id" element={<StudentDetailPage />} />
           <Route path="plans" element={<PlansPage />} />
           <Route path="exercises" element={<ExercisesPage />} />
           <Route path="exercises/:slug" element={<ExerciseGroupPage />} />

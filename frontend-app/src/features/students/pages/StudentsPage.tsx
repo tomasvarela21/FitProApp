@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Search, UserPlus, AlertTriangle, XCircle, CheckCircle2 } from "lucide-react";
 
@@ -25,9 +26,8 @@ import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/shared/StatusBadge/StatusBadge";
 import { PageHeader } from "@/components/shared/PageHeader/PageHeader";
 import { CreateStudentSheet } from "@/features/students/components/CreateStudentSheet";
-import { StudentDetailSheet } from "@/features/students/components/StudentDetailSheet";
 import { useStudents } from "@/features/students/hooks/use-students";
-import type { Student } from "@/types";
+import type { Student, StudentStatus } from "@/types";
 
 const StudentRowSkeleton = () => (
   <div className="flex flex-col gap-3 py-4 px-4 sm:px-6 md:flex-row md:items-center md:justify-between">
@@ -86,13 +86,21 @@ const SubscriptionBadge = ({
   );
 };
 
+const STATUS_TABS: { label: string; value: StudentStatus | undefined }[] = [
+  { label: "Todos", value: undefined },
+  { label: "Activos", value: "ACTIVE" },
+  { label: "Invitados", value: "INVITED" },
+  { label: "Pausados", value: "PAUSED" },
+  { label: "Inactivos", value: "INACTIVE" },
+];
+
 export const StudentsPage = () => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { students, meta, isLoading, page, setPage, search, setSearch } =
+  const { students, meta, isLoading, page, setPage, search, setSearch, status, setStatus } =
     useStudents();
   const [searchInput, setSearchInput] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
   const handleRowHover = (studentId: string) => {
     queryClient.prefetchQuery({
@@ -130,11 +138,23 @@ export const StudentsPage = () => {
         onClose={() => setCreateOpen(false)}
       />
 
-      <StudentDetailSheet
-        student={selectedStudent}
-        open={!!selectedStudent}
-        onClose={() => setSelectedStudent(null)}
-      />
+      {/* Status tabs */}
+      <div className="flex gap-1 mb-4 border-b border-border overflow-x-auto pb-px">
+        {STATUS_TABS.map((tab) => (
+          <button
+            key={tab.label}
+            type="button"
+            onClick={() => { setStatus(tab.value); setPage(1); }}
+            className={`px-3 py-2 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors ${
+              status === tab.value
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
       <form onSubmit={handleSearch} className="flex flex-col gap-2 mb-6 sm:flex-row">
         <div className="relative flex-1 sm:max-w-sm">
@@ -214,7 +234,7 @@ export const StudentsPage = () => {
                 <div
                   key={student.id}
                   className="flex flex-col gap-3 px-4 py-4 hover:bg-muted/30 transition-colors cursor-pointer sm:px-6 md:flex-row md:items-center"
-                  onClick={() => setSelectedStudent(student)}
+                  onClick={() => navigate(`/app/students/${student.id}`)}
                   onMouseEnter={() => handleRowHover(student.id)}
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
