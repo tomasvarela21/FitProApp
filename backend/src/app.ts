@@ -28,7 +28,7 @@ app.use(
     contentSecurityPolicy: false,
   })
 );
-app.use(morgan("dev"));
+app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(express.json());
 app.use(cookieParser());
 
