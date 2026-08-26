@@ -118,6 +118,7 @@ export class StudentsService {
             ],
           }
         : {}),
+      ...(query.status ? { status: query.status } : {}),
     };
 
     const [students, total] = await Promise.all([
