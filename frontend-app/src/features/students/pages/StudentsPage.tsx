@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
 import { Search, UserPlus, Eye, Pencil, MoreHorizontal, AlertTriangle, XCircle, CheckCircle2 } from "lucide-react";
 import { studentsApi } from "@/api/students.api";
 import { Input } from "@/components/ui/input";
@@ -51,7 +50,6 @@ const RowSkeleton = () => (
 
 export const StudentsPage = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const { students, meta, isLoading, page, setPage, search, setSearch, statusFilter, setStatusFilter } = useStudents();
   const { data: dashboardData } = useDashboard();
@@ -88,13 +86,6 @@ export const StudentsPage = () => {
     ? `${stats.total} alumnos · ${stats.active} activos · ${stats.invited} invitados · ${stats.paused} pausados`
     : "Gestioná tus alumnos";
 
-  const handleRowHover = (studentId: string) => {
-    queryClient.prefetchQuery({
-      queryKey: ["student-summary", studentId],
-      queryFn: () => studentsApi.getSummary(studentId).then((r) => r.data.data),
-      staleTime: 1000 * 60 * 2,
-    });
-  };
 
   const handleSearch = (e: React.SyntheticEvent) => {
     e.preventDefault();
@@ -193,7 +184,6 @@ export const StudentsPage = () => {
                   key={student.id}
                   className={`grid grid-cols-1 ${COLS} gap-2 md:gap-4 items-center px-4 md:px-6 py-3 hover:bg-muted/20 transition-colors cursor-pointer`}
                   onClick={() => navigate(`/app/students/${student.id}`)}
-                  onMouseEnter={() => handleRowHover(student.id)}
                 >
                   {/* Alumno */}
                   <div className="flex items-center gap-3 min-w-0">

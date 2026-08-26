@@ -163,59 +163,55 @@ export class StudentSummaryService {
     const now = new Date();
     const eightMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 7, 1);
 
-    const [student, subscription] = await Promise.all([
-      prisma.student.findFirst({
-        where: { id: studentId, trainer: { userId: trainerUserId } },
-      }),
-      prisma.subscription.findFirst({
-        where: { studentId, status: { in: ["ACTIVE", "EXPIRED"] } },
-        include: {
-          plan: true,
-          installments: { orderBy: { number: "asc" } },
-        },
-        orderBy: { createdAt: "desc" },
-      }),
-    ]);
+    const student = await prisma.student.findFirst({
+      where: { id: studentId, trainer: { userId: trainerUserId } },
+    });
 
-    const [studentRoutine, workoutHistory, routineWithOverrides] = await Promise.all([
-      prisma.studentRoutine.findFirst({
-        where: { studentId, isActive: true },
-        include: studentRoutineInclude,
-      }),
-      prisma.workoutLog.findMany({
-        where: { studentRoutine: { studentId } },
-        include: workoutLogInclude,
-        orderBy: { date: "desc" },
-        take: 10,
-      }),
-      prisma.studentRoutine.findFirst({
-        where: { studentId, isActive: true },
-        include: { weeklyOverrides: { orderBy: [{ weekNumber: "asc" }] } },
-      }),
-    ]);
+    const subscription = await prisma.subscription.findFirst({
+      where: { studentId, status: { in: ["ACTIVE", "EXPIRED"] } },
+      include: { plan: true, installments: { orderBy: { number: "asc" } } },
+      orderBy: { createdAt: "desc" },
+    });
 
-    const [allRecentLogs, totalSessionsCount] = await Promise.all([
-      prisma.workoutLog.findMany({
-        where: { studentRoutine: { studentId }, date: { gte: eightMonthsAgo } },
-        select: { date: true },
-        orderBy: { date: "asc" },
-      }),
-      prisma.workoutLog.count({ where: { studentRoutine: { studentId } } }),
-    ]);
+    const studentRoutine = await prisma.studentRoutine.findFirst({
+      where: { studentId, isActive: true },
+      include: studentRoutineInclude,
+    });
 
-    const [firstWeightSet, latestWeightSets] = await Promise.all([
-      prisma.workoutSet.findFirst({
-        where: { workoutLog: { studentRoutine: { studentId } }, weight: { not: null } },
-        orderBy: { workoutLog: { date: "asc" } },
-        select: { weight: true },
-      }),
-      prisma.workoutSet.findMany({
-        where: { workoutLog: { studentRoutine: { studentId } }, weight: { not: null } },
-        orderBy: { workoutLog: { date: "desc" } },
-        take: 30,
-        select: { weight: true },
-      }),
-    ]);
+    const workoutHistory = await prisma.workoutLog.findMany({
+      where: { studentRoutine: { studentId } },
+      include: workoutLogInclude,
+      orderBy: { date: "desc" },
+      take: 10,
+    });
+
+    const routineWithOverrides = await prisma.studentRoutine.findFirst({
+      where: { studentId, isActive: true },
+      include: { weeklyOverrides: { orderBy: [{ weekNumber: "asc" }] } },
+    });
+
+    const allRecentLogs = await prisma.workoutLog.findMany({
+      where: { studentRoutine: { studentId }, date: { gte: eightMonthsAgo } },
+      select: { date: true },
+      orderBy: { date: "asc" },
+    });
+
+    const totalSessionsCount = await prisma.workoutLog.count({
+      where: { studentRoutine: { studentId } },
+    });
+
+    const firstWeightSet = await prisma.workoutSet.findFirst({
+      where: { workoutLog: { studentRoutine: { studentId } }, weight: { not: null } },
+      orderBy: { workoutLog: { date: "asc" } },
+      select: { weight: true },
+    });
+
+    const latestWeightSets = await prisma.workoutSet.findMany({
+      where: { workoutLog: { studentRoutine: { studentId } }, weight: { not: null } },
+      orderBy: { workoutLog: { date: "desc" } },
+      take: 30,
+      select: { weight: true },
+    });
 
     if (!student) throw new AppError("Alumno no encontrado", 404);
 

@@ -66,32 +66,25 @@ export class TrainersService {
     const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const [total, active, invited] = await Promise.all([
-      prisma.student.count({ where: baseWhere }),
-      prisma.student.count({ where: { ...baseWhere, status: "ACTIVE" } }),
-      prisma.student.count({ where: { ...baseWhere, status: "INVITED" } }),
-    ]);
-
-    const [paused, inactive, recentStudents] = await Promise.all([
-      prisma.student.count({ where: { ...baseWhere, status: "PAUSED" } }),
-      prisma.student.count({ where: { ...baseWhere, status: "INACTIVE" } }),
-      prisma.student.findMany({
-        where: baseWhere,
-        orderBy: { createdAt: "desc" },
-        take: DASHBOARD_RECENT_LIMIT,
-      }),
-    ]);
-
-    const [weeklySessionsCount, prevWeekSessionsCount, newStudentsThisMonth] =
-      await Promise.all([
-        prisma.workoutLog.count({
-          where: { date: { gte: weekAgo }, studentRoutine: { student: { trainerId: trainer.id } } },
-        }),
-        prisma.workoutLog.count({
-          where: { date: { gte: twoWeeksAgo, lt: weekAgo }, studentRoutine: { student: { trainerId: trainer.id } } },
-        }),
-        prisma.student.count({ where: { ...baseWhere, createdAt: { gte: monthStart } } }),
-      ]);
+    const total = await prisma.student.count({ where: baseWhere });
+    const active = await prisma.student.count({ where: { ...baseWhere, status: "ACTIVE" } });
+    const invited = await prisma.student.count({ where: { ...baseWhere, status: "INVITED" } });
+    const paused = await prisma.student.count({ where: { ...baseWhere, status: "PAUSED" } });
+    const inactive = await prisma.student.count({ where: { ...baseWhere, status: "INACTIVE" } });
+    const recentStudents = await prisma.student.findMany({
+      where: baseWhere,
+      orderBy: { createdAt: "desc" },
+      take: DASHBOARD_RECENT_LIMIT,
+    });
+    const weeklySessionsCount = await prisma.workoutLog.count({
+      where: { date: { gte: weekAgo }, studentRoutine: { student: { trainerId: trainer.id } } },
+    });
+    const prevWeekSessionsCount = await prisma.workoutLog.count({
+      where: { date: { gte: twoWeeksAgo, lt: weekAgo }, studentRoutine: { student: { trainerId: trainer.id } } },
+    });
+    const newStudentsThisMonth = await prisma.student.count({
+      where: { ...baseWhere, createdAt: { gte: monthStart } },
+    });
 
     // Cuotas vencidas
     const overdueInstallments = await prisma.installment.findMany({
