@@ -160,34 +160,62 @@ function mapWorkoutLog(log: WorkoutLogWithSets) {
 
 export class StudentSummaryService {
   static async getStudentSummary(trainerUserId: string, studentId: string) {
-    const [student, subscription, studentRoutine, workoutHistory, routineWithOverrides] =
-      await Promise.all([
-        prisma.student.findFirst({
-          where: { id: studentId, trainer: { userId: trainerUserId } },
-        }),
-        prisma.subscription.findFirst({
-          where: { studentId, status: { in: ["ACTIVE", "EXPIRED"] } },
-          include: {
-            plan: true,
-            installments: { orderBy: { number: "asc" } },
-          },
-          orderBy: { createdAt: "desc" },
-        }),
-        prisma.studentRoutine.findFirst({
-          where: { studentId, isActive: true },
-          include: studentRoutineInclude,
-        }),
-        prisma.workoutLog.findMany({
-          where: { studentRoutine: { studentId } },
-          include: workoutLogInclude,
-          orderBy: { date: "desc" },
-          take: 10,
-        }),
-        prisma.studentRoutine.findFirst({
-          where: { studentId, isActive: true },
-          include: { weeklyOverrides: { orderBy: [{ weekNumber: "asc" }] } },
-        }),
-      ]);
+    const now = new Date();
+    const eightMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 7, 1);
+
+    const [student, subscription] = await Promise.all([
+      prisma.student.findFirst({
+        where: { id: studentId, trainer: { userId: trainerUserId } },
+      }),
+      prisma.subscription.findFirst({
+        where: { studentId, status: { in: ["ACTIVE", "EXPIRED"] } },
+        include: {
+          plan: true,
+          installments: { orderBy: { number: "asc" } },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
+
+    const [studentRoutine, workoutHistory, routineWithOverrides] = await Promise.all([
+      prisma.studentRoutine.findFirst({
+        where: { studentId, isActive: true },
+        include: studentRoutineInclude,
+      }),
+      prisma.workoutLog.findMany({
+        where: { studentRoutine: { studentId } },
+        include: workoutLogInclude,
+        orderBy: { date: "desc" },
+        take: 10,
+      }),
+      prisma.studentRoutine.findFirst({
+        where: { studentId, isActive: true },
+        include: { weeklyOverrides: { orderBy: [{ weekNumber: "asc" }] } },
+      }),
+    ]);
+
+    const [allRecentLogs, totalSessionsCount] = await Promise.all([
+      prisma.workoutLog.findMany({
+        where: { studentRoutine: { studentId }, date: { gte: eightMonthsAgo } },
+        select: { date: true },
+        orderBy: { date: "asc" },
+      }),
+      prisma.workoutLog.count({ where: { studentRoutine: { studentId } } }),
+    ]);
+
+    const [firstWeightSet, latestWeightSets] = await Promise.all([
+      prisma.workoutSet.findFirst({
+        where: { workoutLog: { studentRoutine: { studentId } }, weight: { not: null } },
+        orderBy: { workoutLog: { date: "asc" } },
+        select: { weight: true },
+      }),
+      prisma.workoutSet.findMany({
+        where: { workoutLog: { studentRoutine: { studentId } }, weight: { not: null } },
+        orderBy: { workoutLog: { date: "desc" } },
+        take: 30,
+        select: { weight: true },
+      }),
+    ]);
 
     if (!student) throw new AppError("Alumno no encontrado", 404);
 
@@ -240,6 +268,38 @@ export class StudentSummaryService {
         })()
       : null;
 
+    // Sessions by month
+    const sessionsByMonth: Record<string, number> = {};
+    for (let i = 7; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      sessionsByMonth[key] = 0;
+    }
+    for (const log of allRecentLogs) {
+      const key = `${log.date.getFullYear()}-${String(log.date.getMonth() + 1).padStart(2, "0")}`;
+      if (key in sessionsByMonth) sessionsByMonth[key]++;
+    }
+
+    // Strength progress
+    const firstWeight = firstWeightSet?.weight ?? null;
+    const latestMaxWeight = latestWeightSets.length > 0
+      ? Math.max(...latestWeightSets.map((s) => Number(s.weight)))
+      : null;
+    const strengthProgressPct =
+      firstWeight && latestMaxWeight && firstWeight > 0
+        ? Math.round(((latestMaxWeight - Number(firstWeight)) / Number(firstWeight)) * 100)
+        : null;
+
+    // Months active
+    const activatedDate = student.activatedAt;
+    const monthsActive = activatedDate
+      ? Math.max(
+          1,
+          (now.getFullYear() - activatedDate.getFullYear()) * 12 +
+            now.getMonth() - activatedDate.getMonth()
+        )
+      : null;
+
     return {
       student: {
         id: student.id,
@@ -256,6 +316,10 @@ export class StudentSummaryService {
       studentRoutine: studentRoutine ? mapStudentRoutine(studentRoutine) : null,
       workoutHistory: workoutHistory.map(mapWorkoutLog),
       weeklyPlan,
+      totalSessionsCount,
+      sessionsByMonth,
+      strengthProgressPct,
+      monthsActive,
     };
   }
 }

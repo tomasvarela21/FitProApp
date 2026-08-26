@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Search, UserPlus, Eye, Pencil, MoreHorizontal, AlertTriangle, XCircle, CheckCircle2 } from "lucide-react";
 import { studentsApi } from "@/api/students.api";
@@ -50,6 +50,7 @@ const RowSkeleton = () => (
 );
 
 export const StudentsPage = () => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const { students, meta, isLoading, page, setPage, search, setSearch, statusFilter, setStatusFilter } = useStudents();
@@ -191,7 +192,7 @@ export const StudentsPage = () => {
                 <div
                   key={student.id}
                   className={`grid grid-cols-1 ${COLS} gap-2 md:gap-4 items-center px-4 md:px-6 py-3 hover:bg-muted/20 transition-colors cursor-pointer`}
-                  onClick={() => setSelectedStudent(student)}
+                  onClick={() => navigate(`/app/students/${student.id}`)}
                   onMouseEnter={() => handleRowHover(student.id)}
                 >
                   {/* Alumno */}
@@ -236,8 +237,8 @@ export const StudentsPage = () => {
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      title="Ver detalle"
-                      onClick={() => setSelectedStudent(student)}
+                      title="Ver perfil"
+                      onClick={() => navigate(`/app/students/${student.id}`)}
                     >
                       <Eye className="w-3.5 h-3.5" />
                     </Button>

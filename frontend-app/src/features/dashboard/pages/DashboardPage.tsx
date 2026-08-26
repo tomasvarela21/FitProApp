@@ -3,7 +3,7 @@ import {
   Users,
   UserCheck,
   Clock,
-  PauseCircle,
+  Zap,
   AlertTriangle,
   XCircle,
   TrendingUp,
@@ -30,6 +30,8 @@ const statCards = (stats: DashboardStats) => [
     color: "text-primary",
     bg: "bg-primary/10",
     gradient: false,
+    sub: stats.newStudentsThisMonth > 0 ? `+${stats.newStudentsThisMonth} este mes` : null,
+    subColor: "text-primary",
   },
   {
     label: "Activos",
@@ -38,6 +40,20 @@ const statCards = (stats: DashboardStats) => [
     color: "text-primary",
     bg: "bg-primary/10",
     gradient: false,
+    sub: stats.total > 0 ? `${stats.activePercentage}% del total` : null,
+    subColor: "text-muted-foreground",
+  },
+  {
+    label: "Sesiones/semana",
+    value: stats.weeklySessionsCount,
+    icon: Zap,
+    color: "text-blue-400",
+    bg: "bg-blue-500/10",
+    gradient: false,
+    sub: stats.weeklySessionsDelta !== 0
+      ? `${stats.weeklySessionsDelta > 0 ? "+" : ""}${stats.weeklySessionsDelta} vs anterior`
+      : "igual que semana anterior",
+    subColor: stats.weeklySessionsDelta >= 0 ? "text-primary" : "text-red-400",
   },
   {
     label: "Invitados",
@@ -46,14 +62,8 @@ const statCards = (stats: DashboardStats) => [
     color: "text-amber-400",
     bg: "bg-amber-500/10",
     gradient: false,
-  },
-  {
-    label: "Pausados",
-    value: stats.paused,
-    icon: PauseCircle,
-    color: "text-blue-400",
-    bg: "bg-blue-500/10",
-    gradient: false,
+    sub: stats.invited > 0 ? "Pendientes de acceso" : "Sin pendientes",
+    subColor: "text-amber-400",
   },
   {
     label: "Retención",
@@ -63,6 +73,7 @@ const statCards = (stats: DashboardStats) => [
     bg: "",
     gradient: true,
     sub: "Últimos 30 días",
+    subColor: "text-white/70",
   },
 ];
 
@@ -160,7 +171,7 @@ export const DashboardPage = () => {
                       <stat.icon className="w-4 h-4 text-white" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs text-white/70 font-medium">{stat.label}</p>
+                      <p className="text-xs text-white/70 font-medium uppercase tracking-wide">{stat.label}</p>
                       <p className="text-2xl font-bold text-white font-[family-name:var(--font-heading)]" style={{ fontVariantNumeric: "tabular-nums" }}>{stat.value}</p>
                     </div>
                   </div>
@@ -174,18 +185,19 @@ export const DashboardPage = () => {
                         <stat.icon className={`w-4 h-4 ${stat.color}`} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs text-muted-foreground">{stat.label}</p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">{stat.label}</p>
                         <p className="text-2xl font-bold font-[family-name:var(--font-heading)]" style={{ fontVariantNumeric: "tabular-nums" }}>{stat.value}</p>
                       </div>
                     </div>
+                    {stat.sub && <p className={`text-xs mt-2 ${stat.subColor}`}>{stat.sub}</p>}
                   </CardContent>
                 </Card>
               )
             )}
       </div>
 
-      {/* Bottom grid: always 2 columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
+      {/* Bottom grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
 
         {/* Últimos alumnos */}
         <Card>
@@ -238,7 +250,7 @@ export const DashboardPage = () => {
                     <div
                       key={student.id}
                       className="grid grid-cols-[1fr_80px_90px] gap-2 items-center px-6 py-3 cursor-pointer hover:bg-muted/20 transition-colors"
-                      onClick={() => navigate("/app/students")}
+                      onClick={() => navigate(`/app/students/${student.id}`)}
                     >
                       <div className="flex min-w-0 items-center gap-3">
                         <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">

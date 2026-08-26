@@ -62,19 +62,35 @@ export class TrainersService {
     const baseWhere = { trainerId: trainer.id };
     const now = new Date();
     const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const [total, active, invited, paused, inactive, recentStudents] =
+    const [total, active, invited] = await Promise.all([
+      prisma.student.count({ where: baseWhere }),
+      prisma.student.count({ where: { ...baseWhere, status: "ACTIVE" } }),
+      prisma.student.count({ where: { ...baseWhere, status: "INVITED" } }),
+    ]);
+
+    const [paused, inactive, recentStudents] = await Promise.all([
+      prisma.student.count({ where: { ...baseWhere, status: "PAUSED" } }),
+      prisma.student.count({ where: { ...baseWhere, status: "INACTIVE" } }),
+      prisma.student.findMany({
+        where: baseWhere,
+        orderBy: { createdAt: "desc" },
+        take: DASHBOARD_RECENT_LIMIT,
+      }),
+    ]);
+
+    const [weeklySessionsCount, prevWeekSessionsCount, newStudentsThisMonth] =
       await Promise.all([
-        prisma.student.count({ where: baseWhere }),
-        prisma.student.count({ where: { ...baseWhere, status: "ACTIVE" } }),
-        prisma.student.count({ where: { ...baseWhere, status: "INVITED" } }),
-        prisma.student.count({ where: { ...baseWhere, status: "PAUSED" } }),
-        prisma.student.count({ where: { ...baseWhere, status: "INACTIVE" } }),
-        prisma.student.findMany({
-          where: baseWhere,
-          orderBy: { createdAt: "desc" },
-          take: DASHBOARD_RECENT_LIMIT,
+        prisma.workoutLog.count({
+          where: { date: { gte: weekAgo }, studentRoutine: { student: { trainerId: trainer.id } } },
         }),
+        prisma.workoutLog.count({
+          where: { date: { gte: twoWeeksAgo, lt: weekAgo }, studentRoutine: { student: { trainerId: trainer.id } } },
+        }),
+        prisma.student.count({ where: { ...baseWhere, createdAt: { gte: monthStart } } }),
       ]);
 
     // Cuotas vencidas
@@ -167,9 +183,17 @@ export class TrainersService {
       }));
 
     const retentionRate = total > 0 ? Math.round((active / total) * 100) : 0;
+    const activePercentage = total > 0 ? Math.round((active / total) * 100) : 0;
+    const weeklySessionsDelta = weeklySessionsCount - prevWeekSessionsCount;
 
     return {
-      stats: { total, active, invited, paused, inactive, retentionRate },
+      stats: {
+        total, active, invited, paused, inactive, retentionRate,
+        activePercentage,
+        weeklySessionsCount,
+        weeklySessionsDelta,
+        newStudentsThisMonth,
+      },
       recentStudents: recentStudents.map(TrainersMapper.toDashboardStudent),
       alerts: {
         expired: expiredAlerts,
