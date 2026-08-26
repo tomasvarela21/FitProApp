@@ -354,6 +354,14 @@ export const TrainerStudentProfilePage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  const [activeTab, setActiveTab] = useState("progreso");
+  const [mountedTabs, setMountedTabs] = useState<Set<string>>(new Set(["progreso"]));
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setMountedTabs((prev) => new Set([...prev, tab]));
+  };
+
   const { data: summary, isLoading } = useQuery({
     queryKey: ["student-summary", id],
     queryFn: () => studentsApi.getSummary(id!).then((r) => r.data.data),
@@ -463,7 +471,7 @@ export const TrainerStudentProfilePage = () => {
 
         {/* Right panel with tabs */}
         <div className="min-w-0">
-          <Tabs defaultValue="progreso" className="w-full">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList variant="line" className="w-full rounded-none border-b border-border h-auto p-0 justify-start overflow-x-auto mb-6">
               <TabsTrigger value="progreso" className="py-2.5">Progreso</TabsTrigger>
               <TabsTrigger value="rutina" className="py-2.5">Rutina</TabsTrigger>
@@ -526,17 +534,17 @@ export const TrainerStudentProfilePage = () => {
 
             {/* Tab: Rutina */}
             <TabsContent value="rutina" className="mt-0">
-              {id && <RoutinePanel studentId={id} />}
+              {mountedTabs.has("rutina") && id && <RoutinePanel studentId={id} />}
             </TabsContent>
 
             {/* Tab: Plan / Pagos */}
             <TabsContent value="plan" className="mt-0">
-              {id && <SubscriptionPanel studentId={id} />}
+              {mountedTabs.has("plan") && id && <SubscriptionPanel studentId={id} />}
             </TabsContent>
 
             {/* Tab: Info / Editar */}
             <TabsContent value="info" className="mt-0">
-              {id && (
+              {mountedTabs.has("info") && id && (
                 <InfoTab
                   student={student}
                   onUpdated={() => queryClient.invalidateQueries({ queryKey: ["student-summary", id] })}

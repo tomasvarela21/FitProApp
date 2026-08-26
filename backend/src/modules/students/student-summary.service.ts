@@ -54,68 +54,6 @@ function mapSubscription(sub: SubscriptionWithRelations) {
   };
 }
 
-const studentRoutineInclude = {
-  routine: {
-    include: {
-      routineExercises: {
-        include: {
-          exercise: {
-            include: { muscleGroup: true, equipment: true },
-          },
-        },
-        orderBy: { order: "asc" as const },
-      },
-    },
-  },
-} satisfies Prisma.StudentRoutineInclude;
-
-type StudentRoutineWithRoutine = Prisma.StudentRoutineGetPayload<{
-  include: typeof studentRoutineInclude;
-}>;
-
-function mapStudentRoutine(sr: StudentRoutineWithRoutine) {
-  return {
-    id: sr.id,
-    assignedAt: sr.assignedAt,
-    notes: sr.notes,
-    weekNumber: sr.weekNumber,
-    startDate: sr.startDate,
-    endDate: sr.endDate,
-    routine: {
-      id: sr.routine.id,
-      name: sr.routine.name,
-      description: sr.routine.description,
-      isGlobal: sr.routine.isGlobal,
-      routineExercises: sr.routine.routineExercises.map((re) => ({
-        id: re.id,
-        dayOfWeek: re.dayOfWeek,
-        order: re.order,
-        sets: re.sets,
-        reps: re.reps,
-        suggestedWeight: re.suggestedWeight,
-        suggestedRpe: re.suggestedRpe,
-        restSeconds: re.restSeconds,
-        notes: re.notes,
-        exercise: {
-          id: re.exercise.id,
-          name: re.exercise.name,
-          description: re.exercise.description,
-          difficulty: re.exercise.difficulty,
-          movementType: re.exercise.movementType,
-          mediaUrl: re.exercise.mediaUrl,
-          mediaType: re.exercise.mediaType,
-          muscleGroup: re.exercise.muscleGroup
-            ? { id: re.exercise.muscleGroup.id, name: re.exercise.muscleGroup.name, slug: re.exercise.muscleGroup.slug }
-            : null,
-          equipment: re.exercise.equipment
-            ? { id: re.exercise.equipment.id, name: re.exercise.equipment.name }
-            : null,
-        },
-      })),
-    },
-  };
-}
-
 const workoutLogInclude = {
   workoutSets: {
     include: {
@@ -173,21 +111,11 @@ export class StudentSummaryService {
       orderBy: { createdAt: "desc" },
     });
 
-    const studentRoutine = await prisma.studentRoutine.findFirst({
-      where: { studentId, isActive: true },
-      include: studentRoutineInclude,
-    });
-
     const workoutHistory = await prisma.workoutLog.findMany({
       where: { studentRoutine: { studentId } },
       include: workoutLogInclude,
       orderBy: { date: "desc" },
       take: 10,
-    });
-
-    const routineWithOverrides = await prisma.studentRoutine.findFirst({
-      where: { studentId, isActive: true },
-      include: { weeklyOverrides: { orderBy: [{ weekNumber: "asc" }] } },
     });
 
     const allRecentLogs = await prisma.workoutLog.findMany({
@@ -234,36 +162,6 @@ export class StudentSummaryService {
       }
     }
 
-    // Map weekly plan from the overrides query
-    const weeklyPlan = routineWithOverrides
-      ? (() => {
-          const overrides = routineWithOverrides.weeklyOverrides;
-          const weekNumbers = [...new Set(overrides.map((o) => o.weekNumber))].sort(
-            (a, b) => a - b
-          );
-          return {
-            studentRoutineId: routineWithOverrides.id,
-            weekNumber: routineWithOverrides.weekNumber,
-            startDate: routineWithOverrides.startDate,
-            endDate: routineWithOverrides.endDate,
-            weeks: weekNumbers.map((wn) => ({
-              weekNumber: wn,
-              overrides: overrides
-                .filter((o) => o.weekNumber === wn)
-                .map((o) => ({
-                  id: o.id,
-                  routineExerciseId: o.routineExerciseId,
-                  weekNumber: o.weekNumber,
-                  suggestedWeight: o.suggestedWeight,
-                  suggestedReps: o.suggestedReps,
-                  suggestedRpe: o.suggestedRpe,
-                  notes: o.notes,
-                })),
-            })),
-          };
-        })()
-      : null;
-
     // Sessions by month
     const sessionsByMonth: Record<string, number> = {};
     for (let i = 7; i >= 0; i--) {
@@ -309,9 +207,7 @@ export class StudentSummaryService {
         createdAt: student.createdAt,
       },
       subscription: subscription ? mapSubscription(subscription) : null,
-      studentRoutine: studentRoutine ? mapStudentRoutine(studentRoutine) : null,
       workoutHistory: workoutHistory.map(mapWorkoutLog),
-      weeklyPlan,
       totalSessionsCount,
       sessionsByMonth,
       strengthProgressPct,
