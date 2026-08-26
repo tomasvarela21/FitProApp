@@ -93,12 +93,23 @@ export type ExpiringAlert = {
   daysUntilExpiry: number;
 };
 
+export type InactiveStudent = {
+  id: string;
+  name: string;
+  lastWorkoutDate?: string | null;
+};
+
 export type DashboardSummary = {
   stats: DashboardStats;
   recentStudents: DashboardRecentStudent[];
   alerts: {
     expiringSoon: ExpiringAlert[];
     expired: ExpiringAlert[];
+  };
+  inactivity: {
+    withoutRoutine: InactiveStudent[];
+    noWorkoutLast7: InactiveStudent[];
+    noWorkoutLast14: InactiveStudent[];
   };
 };
 

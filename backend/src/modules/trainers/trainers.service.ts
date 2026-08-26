@@ -178,6 +178,58 @@ export class TrainersService {
         ),
       }));
 
+    // Alertas de inactividad — solo alumnos ACTIVE no eliminados
+    const [studentsWithoutRoutineRaw, studentsWithRoutine] = await Promise.all([
+      prisma.student.findMany({
+        where: {
+          trainerId: trainer.id,
+          status: "ACTIVE",
+          deletedAt: null,
+          studentRoutines: { none: { isActive: true } },
+        },
+        select: { id: true, firstName: true, lastName: true },
+        take: 5,
+      }),
+      prisma.student.findMany({
+        where: {
+          trainerId: trainer.id,
+          status: "ACTIVE",
+          deletedAt: null,
+          studentRoutines: { some: { isActive: true } },
+        },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          studentRoutines: {
+            where: { isActive: true },
+            select: {
+              workoutLogs: {
+                orderBy: { date: "desc" },
+                take: 1,
+                select: { date: true },
+              },
+            },
+          },
+        },
+      }),
+    ]);
+
+    const withLastWorkout = studentsWithRoutine.map((s) => {
+      const lastDate =
+        s.studentRoutines
+          .flatMap((sr) => sr.workoutLogs.map((l) => l.date))
+          .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
+      return { id: s.id, firstName: s.firstName, lastName: s.lastName, lastWorkoutDate: lastDate };
+    });
+
+    const noWorkoutLast7 = withLastWorkout
+      .filter((s) => !s.lastWorkoutDate || s.lastWorkoutDate < weekAgo)
+      .slice(0, 5);
+    const noWorkoutLast14 = withLastWorkout
+      .filter((s) => !s.lastWorkoutDate || s.lastWorkoutDate < twoWeeksAgo)
+      .slice(0, 5);
+
     const retentionRate = total > 0 ? Math.round((active / total) * 100) : 0;
     const activePercentage = total > 0 ? Math.round((active / total) * 100) : 0;
     const weeklySessionsDelta = weeklySessionsCount - prevWeekSessionsCount;
@@ -194,6 +246,22 @@ export class TrainersService {
       alerts: {
         expired: expiredAlerts,
         expiringSoon: expiringSoonAlerts,
+      },
+      inactivity: {
+        withoutRoutine: studentsWithoutRoutineRaw.map((s) => ({
+          id: s.id,
+          name: `${s.firstName} ${s.lastName}`,
+        })),
+        noWorkoutLast7: noWorkoutLast7.map((s) => ({
+          id: s.id,
+          name: `${s.firstName} ${s.lastName}`,
+          lastWorkoutDate: s.lastWorkoutDate,
+        })),
+        noWorkoutLast14: noWorkoutLast14.map((s) => ({
+          id: s.id,
+          name: `${s.firstName} ${s.lastName}`,
+          lastWorkoutDate: s.lastWorkoutDate,
+        })),
       },
     };
   }

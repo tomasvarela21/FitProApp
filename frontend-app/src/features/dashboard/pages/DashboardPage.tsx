@@ -10,6 +10,8 @@ import {
   Plus,
   FileText,
   Calendar,
+  Activity,
+  ClipboardX,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,7 +20,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge/StatusBadge";
 import { PageHeader } from "@/components/shared/PageHeader/PageHeader";
 import { useDashboard } from "@/features/dashboard/hooks/use-dashboard";
 import { useAuth } from "@/hooks/use-auth";
-import type { DashboardStats, ExpiringAlert } from "@/types";
+import type { DashboardStats, ExpiringAlert, InactiveStudent } from "@/types";
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { parseLocalDate } from "@/lib/utils";
@@ -143,6 +145,29 @@ const AlertRow = ({
   </div>
 );
 
+const InactivityRow = ({
+  student,
+  onClick,
+}: {
+  student: InactiveStudent;
+  onClick: () => void;
+}) => (
+  <div
+    className="flex items-center gap-3 py-2.5 cursor-pointer hover:bg-muted/30 px-2 rounded-md transition-colors"
+    onClick={onClick}
+  >
+    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-orange-500/10 text-orange-400 shrink-0">
+      <Activity className="w-3 h-3" />
+    </div>
+    <p className="text-xs font-medium truncate flex-1">{student.name}</p>
+    {student.lastWorkoutDate && (
+      <p className="text-xs text-muted-foreground shrink-0">
+        {formatDistanceToNow(new Date(student.lastWorkoutDate), { locale: es, addSuffix: true })}
+      </p>
+    )}
+  </div>
+);
+
 export const DashboardPage = () => {
   const { user } = useAuth();
   const { data, isLoading } = useDashboard();
@@ -152,6 +177,10 @@ export const DashboardPage = () => {
   const hasExpired = (data?.alerts?.expired?.length ?? 0) > 0;
   const hasExpiring = (data?.alerts?.expiringSoon?.length ?? 0) > 0;
   const hasAlerts = hasExpired || hasExpiring;
+
+  const withoutRoutine = data?.inactivity?.withoutRoutine ?? [];
+  const noWorkout14 = data?.inactivity?.noWorkoutLast14 ?? [];
+  const hasInactivity = withoutRoutine.length > 0 || noWorkout14.length > 0;
 
   return (
     <div>
@@ -333,6 +362,61 @@ export const DashboardPage = () => {
                           alert={alert}
                           type="expiring"
                           onClick={() => navigate(`/app/students?highlight=${alert.studentId}`)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Inactividad */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Activity className="w-4 h-4 text-orange-400" />
+                Inactividad
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-3">
+              {isLoading ? (
+                <div className="space-y-3">
+                  {[1, 2].map((i) => <Skeleton key={i} className="h-10 w-full rounded-lg" />)}
+                </div>
+              ) : !hasInactivity ? (
+                <p className="text-xs text-muted-foreground py-3 text-center">
+                  Todos los alumnos están activos
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {withoutRoutine.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <ClipboardX className="w-3 h-3 text-muted-foreground" />
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                          Sin rutina ({withoutRoutine.length})
+                        </p>
+                      </div>
+                      {withoutRoutine.map((s) => (
+                        <InactivityRow
+                          key={s.id}
+                          student={s}
+                          onClick={() => navigate(`/app/students/${s.id}`)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {noWorkout14.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-orange-400 uppercase tracking-wide mb-1">
+                        Sin entreno +14 días ({noWorkout14.length})
+                      </p>
+                      {noWorkout14.map((s) => (
+                        <InactivityRow
+                          key={s.id}
+                          student={s}
+                          onClick={() => navigate(`/app/students/${s.id}`)}
                         />
                       ))}
                     </div>
