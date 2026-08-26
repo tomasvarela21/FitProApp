@@ -1,0 +1,5 @@
+# Claude Code
+.claude/launch.json
+
+# Archivos temporales de trabajo
+*.html
