@@ -3,7 +3,8 @@ import { useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Dumbbell, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { KorexIsotipo } from "@/components/shared/KorexLogo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -77,10 +78,8 @@ export const ActivateAccountPage = () => {
       <div className="w-full max-w-sm space-y-6">
         {/* Logo */}
         <div className="flex flex-col items-center gap-2 text-center">
-          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary">
-            <Dumbbell className="w-6 h-6 text-primary-foreground" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight">FitPro</h1>
+          <KorexIsotipo size={64} showBackground />
+          <h1 className="text-2xl font-bold tracking-[0.18em] uppercase">KOREX</h1>
         </div>
 
         {/* Loading */}

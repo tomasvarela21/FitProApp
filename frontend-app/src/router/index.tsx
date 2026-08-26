@@ -10,10 +10,12 @@ import { ActivateAccountPage } from "@/features/auth/pages/ActivateAccountPage";
 import { ProfilePage } from "@/features/auth/pages/ProfilePage";
 import { DashboardPage } from "@/features/dashboard/pages/DashboardPage";
 import { StudentsPage } from "@/features/students/pages/StudentsPage";
+import { TrainerStudentProfilePage } from "@/features/students/pages/StudentProfilePage";
 import { PlansPage } from "@/features/students/pages/PlansPage";
 import { ExercisesPage } from "@/features/exercises/pages/ExercisesPage";
 import { ExerciseGroupPage } from "@/features/exercises/pages/ExerciseGroupPage";
 import { RoutinesPage } from "@/features/routines/pages/RoutinesPage";
+import { PaymentsPage } from "@/features/payments/pages/PaymentsPage";
 import { StudentDashboardPage } from "@/features/student-portal/pages/StudentDashboardPage";
 import { StudentProfilePage } from "@/features/student-portal/pages/StudentProfilePage";
 import { StudentProgressPage } from "@/features/student-portal/pages/StudentProgressPage";
@@ -125,10 +127,12 @@ export const AppRouter = () => {
             <Route index element={<Navigate to="/app/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="students" element={<StudentsPage />} />
+            <Route path="students/:id" element={<TrainerStudentProfilePage />} />
             <Route path="plans" element={<PlansPage />} />
             <Route path="exercises" element={<ExercisesPage />} />
             <Route path="exercises/:slug" element={<ExerciseGroupPage />} />
             <Route path="routines" element={<RoutinesPage />} />
+            <Route path="payments" element={<PaymentsPage />} />
             <Route path="profile" element={<ProfilePage />} />
           </Route>
 

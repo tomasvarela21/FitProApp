@@ -3,18 +3,20 @@ import {
   LayoutDashboard,
   Users,
   LogOut,
-  Dumbbell,
   UserCircle,
   CreditCard,
   ClipboardList,
   ChevronLeft,
   ChevronRight,
+  Dumbbell,
+  Banknote,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { KorexIsotipo } from "@/components/shared/KorexLogo";
 
 const navItems = [
   {
@@ -31,6 +33,11 @@ const navItems = [
     label: "Planes",
     href: "/app/plans",
     icon: CreditCard,
+  },
+  {
+    label: "Cobros",
+    href: "/app/payments",
+    icon: Banknote,
   },
   {
     label: "Ejercicios",
@@ -98,11 +105,9 @@ export const Sidebar = ({
           collapsed ? "flex-col justify-center px-2" : "px-6"
         )}
       >
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary">
-          <Dumbbell className="w-4 h-4 text-primary-foreground" />
-        </div>
+        <KorexIsotipo size={32} showBackground />
         {!collapsed && (
-          <span className="font-bold text-lg tracking-tight">FitPro</span>
+          <span className="font-bold text-lg tracking-[0.16em] uppercase">KOREX</span>
         )}
         {onToggle && (
           <Button
@@ -138,8 +143,8 @@ export const Sidebar = ({
                 "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                 collapsed && "justify-center px-2",
                 isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  ? "bg-accent text-primary border-l-2 border-primary"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground border-l-2 border-transparent"
               )
             }
           >

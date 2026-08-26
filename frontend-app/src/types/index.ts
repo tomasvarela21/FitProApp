@@ -44,6 +44,8 @@ export type Student = {
   createdAt: string;
   updatedAt: string;
   subscription: StudentSubscriptionSummary | null;
+  sessionsCount: number;
+  lastSessionDate: string | null;
 };
 
 export type PaginatedResponse<T> = {
@@ -62,6 +64,11 @@ export type DashboardStats = {
   invited: number;
   paused: number;
   inactive: number;
+  retentionRate: number;
+  activePercentage: number;
+  weeklySessionsCount: number;
+  weeklySessionsDelta: number;
+  newStudentsThisMonth: number;
 };
 
 export type DashboardRecentStudent = {
@@ -357,6 +364,10 @@ export type WeeklyExerciseOverride = {
 };
 
 export type StudentSummary = {
+  totalSessionsCount: number;
+  sessionsByMonth: Record<string, number>;
+  strengthProgressPct: number | null;
+  monthsActive: number | null;
   student: Student;
   subscription: StudentSubscription | null;
   studentRoutine: {

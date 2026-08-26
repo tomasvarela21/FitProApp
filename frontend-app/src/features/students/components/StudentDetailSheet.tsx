@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Pencil, X, Trash2, Send, KeyRound } from "lucide-react";
+import { Loader2, Pencil, X, Trash2, Send, KeyRound, Dumbbell } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -28,6 +28,8 @@ import { studentsApi } from "@/api/students.api";
 import { SubscriptionPanel } from "./SubscriptionPanel";
 import { RoutinePanel } from "./RoutinePanel";
 import type { Student, StudentStatus } from "@/types";
+import { formatDistanceToNow } from "date-fns";
+import { es } from "date-fns/locale";
 
 const editStudentSchema = z.object({
   firstName: z.string().min(2, "El nombre es obligatorio"),
@@ -343,6 +345,21 @@ export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
                   label="Creado"
                   value={formatDate(student.createdAt)}
                 />
+                <DetailRow
+                  label="Sesiones completadas"
+                  value={
+                    <span className="flex items-center gap-1.5">
+                      <Dumbbell className="w-3.5 h-3.5 text-primary" />
+                      {student.sessionsCount}
+                    </span>
+                  }
+                />
+                {student.lastSessionDate && (
+                  <DetailRow
+                    label="Última sesión"
+                    value={formatDistanceToNow(new Date(student.lastSessionDate), { locale: es, addSuffix: true })}
+                  />
+                )}
               </div>
 
               {error && (

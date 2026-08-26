@@ -1,11 +1,12 @@
 import { Outlet } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Dumbbell, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import { StudentSidebar } from "./StudentSidebar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/use-auth";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
+import { KorexIsotipo } from "@/components/shared/KorexLogo";
 
 const STORAGE_KEY = "fitpro:student-sidebar-collapsed";
 
@@ -54,12 +55,8 @@ export const StudentLayout = () => {
             <Menu className="w-4 h-4" />
           </Button>
           <div className="flex items-center gap-2 min-w-0">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary">
-              <Dumbbell className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <span className="font-bold text-lg tracking-tight truncate">
-              FitPro
-            </span>
+            <KorexIsotipo size={32} showBackground />
+            <span className="font-bold text-lg tracking-[0.16em] uppercase truncate">KOREX</span>
           </div>
         </header>
 

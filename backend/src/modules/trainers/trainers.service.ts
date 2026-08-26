@@ -1,8 +1,9 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../../infrastructure/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
 import { hashPassword } from "../../shared/utils/hash";
 import { TrainersMapper } from "./trainers.mapper";
-import { CreateTrainerInput } from "./trainers.schema";
+import { CreateTrainerInput, ListSubscriptionsQueryInput } from "./trainers.schema";
 
 const DASHBOARD_RECENT_LIMIT = 5;
 
@@ -62,20 +63,29 @@ export class TrainersService {
     const baseWhere = { trainerId: trainer.id };
     const now = new Date();
     const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const [total, active, invited, paused, inactive, recentStudents] =
-      await Promise.all([
-        prisma.student.count({ where: baseWhere }),
-        prisma.student.count({ where: { ...baseWhere, status: "ACTIVE" } }),
-        prisma.student.count({ where: { ...baseWhere, status: "INVITED" } }),
-        prisma.student.count({ where: { ...baseWhere, status: "PAUSED" } }),
-        prisma.student.count({ where: { ...baseWhere, status: "INACTIVE" } }),
-        prisma.student.findMany({
-          where: baseWhere,
-          orderBy: { createdAt: "desc" },
-          take: DASHBOARD_RECENT_LIMIT,
-        }),
-      ]);
+    const total = await prisma.student.count({ where: baseWhere });
+    const active = await prisma.student.count({ where: { ...baseWhere, status: "ACTIVE" } });
+    const invited = await prisma.student.count({ where: { ...baseWhere, status: "INVITED" } });
+    const paused = await prisma.student.count({ where: { ...baseWhere, status: "PAUSED" } });
+    const inactive = await prisma.student.count({ where: { ...baseWhere, status: "INACTIVE" } });
+    const recentStudents = await prisma.student.findMany({
+      where: baseWhere,
+      orderBy: { createdAt: "desc" },
+      take: DASHBOARD_RECENT_LIMIT,
+    });
+    const weeklySessionsCount = await prisma.workoutLog.count({
+      where: { date: { gte: weekAgo }, studentRoutine: { student: { trainerId: trainer.id } } },
+    });
+    const prevWeekSessionsCount = await prisma.workoutLog.count({
+      where: { date: { gte: twoWeeksAgo, lt: weekAgo }, studentRoutine: { student: { trainerId: trainer.id } } },
+    });
+    const newStudentsThisMonth = await prisma.student.count({
+      where: { ...baseWhere, createdAt: { gte: monthStart } },
+    });
 
     // Cuotas vencidas
     const overdueInstallments = await prisma.installment.findMany({
@@ -168,8 +178,18 @@ export class TrainersService {
         ),
       }));
 
+    const retentionRate = total > 0 ? Math.round((active / total) * 100) : 0;
+    const activePercentage = total > 0 ? Math.round((active / total) * 100) : 0;
+    const weeklySessionsDelta = weeklySessionsCount - prevWeekSessionsCount;
+
     return {
-      stats: { total, active, invited, paused, inactive },
+      stats: {
+        total, active, invited, paused, inactive, retentionRate,
+        activePercentage,
+        weeklySessionsCount,
+        weeklySessionsDelta,
+        newStudentsThisMonth,
+      },
       recentStudents: recentStudents.map(TrainersMapper.toDashboardStudent),
       alerts: {
         expired: expiredAlerts,
@@ -224,6 +244,108 @@ export class TrainersService {
       firstName: updated.firstName,
       lastName: updated.lastName,
       phone: updated.phone,
+    };
+  }
+
+  static async listSubscriptions(trainerUserId: string, query: ListSubscriptionsQueryInput) {
+    const trainer = await prisma.trainer.findUnique({ where: { userId: trainerUserId } });
+    if (!trainer) throw new AppError("Entrenador no encontrado", 404);
+
+    const now = new Date();
+    const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const search = query.search?.trim();
+
+    const where: Prisma.SubscriptionWhereInput = {
+      trainerId: trainer.id,
+      status: { in: ["ACTIVE", "EXPIRED"] },
+      ...(search ? {
+        student: {
+          OR: [
+            { firstName: { contains: search, mode: "insensitive" } },
+            { lastName: { contains: search, mode: "insensitive" } },
+          ],
+        },
+      } : {}),
+    };
+
+    const allSubs = await prisma.subscription.findMany({
+      where,
+      orderBy: { endDate: "asc" },
+      include: {
+        student: {
+          select: { id: true, firstName: true, lastName: true, email: true, status: true, deletedAt: true },
+        },
+        plan: { select: { name: true } },
+        installments: { orderBy: { number: "asc" } },
+      },
+    });
+
+    const withStatus = allSubs
+      .filter((s) => !s.student.deletedAt)
+      .map((sub) => {
+        const installments = sub.installments;
+        const hasOverdue = installments.some(
+          (i) => i.status === "OVERDUE" || (i.status === "PENDING" && i.dueDate < now)
+        );
+        const hasExpiringSoon = installments.some(
+          (i) => i.status === "PENDING" && i.dueDate >= now && i.dueDate <= in7Days
+        );
+        const allPaid = installments.length > 0 && installments.every((i) => i.status === "PAID");
+
+        let paymentStatus: string;
+        if (hasOverdue) paymentStatus = "OVERDUE";
+        else if (hasExpiringSoon) paymentStatus = "EXPIRING_SOON";
+        else if (allPaid) paymentStatus = "PAID";
+        else paymentStatus = "ACTIVE";
+
+        const paidCount = installments.filter((i) => i.status === "PAID").length;
+        const overdueCount = installments.filter(
+          (i) => i.status === "OVERDUE" || (i.status === "PENDING" && i.dueDate < now)
+        ).length;
+        const pendingFuture = installments.filter(
+          (i) => i.status === "PENDING" && i.dueDate >= now
+        );
+        const nextPending = pendingFuture[0] ?? null;
+
+        return {
+          subscriptionId: sub.id,
+          studentId: sub.student.id,
+          studentName: `${sub.student.firstName} ${sub.student.lastName}`,
+          studentEmail: sub.student.email,
+          studentStatus: sub.student.status,
+          planName: sub.plan.name,
+          startDate: sub.startDate,
+          endDate: sub.endDate,
+          totalAmount: Number(sub.totalAmount),
+          installmentCount: sub.installmentCount,
+          frequency: sub.frequency,
+          subscriptionStatus: sub.status,
+          paymentStatus,
+          paidCount,
+          overdueCount,
+          pendingCount: pendingFuture.length,
+          nextDueDate: nextPending?.dueDate ?? null,
+          nextAmount: nextPending ? Number(nextPending.amount) : null,
+        };
+      });
+
+    const filtered =
+      query.status && query.status !== "ALL"
+        ? withStatus.filter((s) => s.paymentStatus === query.status)
+        : withStatus;
+
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const skip = (page - 1) * limit;
+
+    return {
+      items: filtered.slice(skip, skip + limit),
+      meta: {
+        page,
+        limit,
+        total: filtered.length,
+        totalPages: Math.ceil(filtered.length / limit) || 1,
+      },
     };
   }
 }
