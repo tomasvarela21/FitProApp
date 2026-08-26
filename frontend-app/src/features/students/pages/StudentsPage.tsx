@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Search, UserPlus, Eye, Pencil, MoreHorizontal, AlertTriangle, XCircle, CheckCircle2 } from "lucide-react";
 import { studentsApi } from "@/api/students.api";
@@ -50,11 +51,29 @@ const RowSkeleton = () => (
 
 export const StudentsPage = () => {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { students, meta, isLoading, page, setPage, search, setSearch, statusFilter, setStatusFilter } = useStudents();
   const { data: dashboardData } = useDashboard();
   const [searchInput, setSearchInput] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      setCreateOpen(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, []);
+
+  useEffect(() => {
+    const highlightId = searchParams.get("highlight");
+    if (!highlightId || isLoading || students.length === 0) return;
+    const match = students.find((s) => s.id === highlightId);
+    if (match) {
+      setSelectedStudent(match);
+      setSearchParams({}, { replace: true });
+    }
+  }, [students, isLoading]);
 
   const stats = dashboardData?.stats;
   const tabs: StatusTab[] = [
