@@ -174,6 +174,15 @@ export class StudentSummaryService {
       if (key in sessionsByMonth) sessionsByMonth[key]++;
     }
 
+    // Sessions by day (last 91 days for the heatmap)
+    const ninetyOneDaysAgo = new Date(now.getTime() - 91 * 24 * 60 * 60 * 1000);
+    const sessionsByDay: Record<string, number> = {};
+    for (const log of allRecentLogs) {
+      if (log.date < ninetyOneDaysAgo) continue;
+      const key = log.date.toISOString().split("T")[0];
+      sessionsByDay[key] = (sessionsByDay[key] ?? 0) + 1;
+    }
+
     // Strength progress
     const firstWeight = firstWeightSet?.weight ?? null;
     const latestMaxWeight = latestWeightSets.length > 0
@@ -210,6 +219,7 @@ export class StudentSummaryService {
       workoutHistory: workoutHistory.map(mapWorkoutLog),
       totalSessionsCount,
       sessionsByMonth,
+      sessionsByDay,
       strengthProgressPct,
       monthsActive,
     };

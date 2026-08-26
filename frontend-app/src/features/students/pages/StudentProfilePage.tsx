@@ -62,6 +62,120 @@ const SessionsChart = ({ data }: { data: Record<string, number> }) => {
   );
 };
 
+// ─── Calendar Heatmap ─────────────────────────────────────────────────────────
+
+const HEATMAP_DAYS = 91; // 13 weeks
+
+function buildHeatmapGrid(sessionsByDay: Record<string, number>) {
+  const today = new Date();
+  // Start from the Monday of the week 13 weeks ago
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - (HEATMAP_DAYS - 1));
+  // Align to Monday
+  const dayOfWeek = startDate.getDay(); // 0=Sun, 1=Mon...
+  const offset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  startDate.setDate(startDate.getDate() - offset);
+
+  const weeks: { date: Date; count: number; isFuture: boolean }[][] = [];
+  let current = new Date(startDate);
+
+  while (current <= today || weeks.length < 13) {
+    const week: { date: Date; count: number; isFuture: boolean }[] = [];
+    for (let d = 0; d < 7; d++) {
+      const key = current.toISOString().split("T")[0];
+      week.push({ date: new Date(current), count: sessionsByDay[key] ?? 0, isFuture: current > today });
+      current.setDate(current.getDate() + 1);
+    }
+    weeks.push(week);
+    if (weeks.length >= 13) break;
+  }
+  return weeks;
+}
+
+const INTENSITY: Record<number, string> = {
+  0: "bg-muted/40",
+  1: "bg-primary/30",
+  2: "bg-primary/60",
+  3: "bg-primary",
+};
+
+const MONTH_SHORT = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+const DAY_LABELS = ["L","M","X","J","V","S","D"];
+
+const CalendarHeatmap = ({ data }: { data: Record<string, number> }) => {
+  const weeks = buildHeatmapGrid(data);
+
+  // Month labels: find where each new month starts
+  const monthLabels: { colIndex: number; label: string }[] = [];
+  weeks.forEach((week, colIndex) => {
+    const firstDay = week[0].date;
+    if (colIndex === 0 || firstDay.getDate() <= 7) {
+      const label = MONTH_SHORT[firstDay.getMonth()];
+      if (monthLabels.length === 0 || monthLabels[monthLabels.length - 1].label !== label) {
+        monthLabels.push({ colIndex, label });
+      }
+    }
+  });
+
+  return (
+    <div className="overflow-x-auto">
+      <div className="inline-flex gap-2 min-w-0">
+        {/* Day labels */}
+        <div className="flex flex-col gap-[3px] pt-5">
+          {DAY_LABELS.map((d) => (
+            <div key={d} className="text-[9px] text-muted-foreground leading-none h-[11px] flex items-center">
+              {d}
+            </div>
+          ))}
+        </div>
+
+        {/* Weeks grid with month labels */}
+        <div className="flex flex-col gap-0">
+          {/* Month row */}
+          <div className="flex gap-[3px] mb-1 h-4">
+            {weeks.map((week, ci) => {
+              const ml = monthLabels.find((m) => m.colIndex === ci);
+              return (
+                <div key={ci} className="w-[11px]">
+                  {ml && <span className="text-[9px] text-muted-foreground leading-none">{ml.label}</span>}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Days */}
+          <div className="flex gap-[3px]">
+            {weeks.map((week, wi) => (
+              <div key={wi} className="flex flex-col gap-[3px]">
+                {week.map((day, di) => {
+                  const intensity = day.isFuture ? 0 : Math.min(day.count, 3);
+                  const cls = day.isFuture ? "bg-transparent" : INTENSITY[intensity];
+                  return (
+                    <div
+                      key={di}
+                      className={`w-[11px] h-[11px] rounded-[2px] ${cls} transition-opacity`}
+                      title={`${day.date.toLocaleDateString("es-AR", { day: "numeric", month: "short" })}: ${day.count} sesión(es)`}
+                    />
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-1.5 mt-2">
+        <span className="text-[10px] text-muted-foreground">Menos</span>
+        {[0, 1, 2, 3].map((v) => (
+          <div key={v} className={`w-[11px] h-[11px] rounded-[2px] ${INTENSITY[v]}`} />
+        ))}
+        <span className="text-[10px] text-muted-foreground">Más</span>
+      </div>
+    </div>
+  );
+};
+
 // ─── Edit Form ────────────────────────────────────────────────────────────────
 
 const editSchema = z.object({
@@ -383,7 +497,7 @@ export const TrainerStudentProfilePage = () => {
 
   if (!summary) return null;
 
-  const { student, subscription, workoutHistory, totalSessionsCount, sessionsByMonth, strengthProgressPct, monthsActive } = summary;
+  const { student, subscription, workoutHistory, totalSessionsCount, sessionsByMonth, sessionsByDay, strengthProgressPct, monthsActive } = summary;
 
   const statCards = [
     { label: "Sesiones", value: totalSessionsCount ?? 0, icon: Dumbbell, color: "text-primary" },
@@ -474,6 +588,7 @@ export const TrainerStudentProfilePage = () => {
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList variant="line" className="w-full rounded-none border-b border-border h-auto p-0 justify-start overflow-x-auto mb-6">
               <TabsTrigger value="progreso" className="py-2.5">Progreso</TabsTrigger>
+              <TabsTrigger value="metricas" className="py-2.5">Métricas</TabsTrigger>
               <TabsTrigger value="rutina" className="py-2.5">Rutina</TabsTrigger>
               <TabsTrigger value="plan" className="py-2.5">Plan / Pagos</TabsTrigger>
               <TabsTrigger value="info" className="py-2.5">Info / Editar</TabsTrigger>
@@ -528,6 +643,60 @@ export const TrainerStudentProfilePage = () => {
                       })}
                     </div>
                   )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Tab: Métricas */}
+            <TabsContent value="metricas" className="space-y-4 mt-0">
+              {/* Stats row */}
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: "Sesiones totales", value: totalSessionsCount, icon: Dumbbell, color: "text-primary", bg: "bg-primary/10" },
+                  { label: "Meses activo", value: monthsActive ?? "—", icon: Calendar, color: "text-blue-400", bg: "bg-blue-500/10" },
+                  { label: "Progreso fuerza", value: strengthProgressPct != null ? `${strengthProgressPct > 0 ? "+" : ""}${strengthProgressPct}%` : "—", icon: TrendingUp, color: "text-emerald-400", bg: "bg-emerald-500/10" },
+                ].map((stat) => (
+                  <Card key={stat.label}>
+                    <CardContent className="pt-4 pb-3">
+                      <div className={`flex items-center justify-center w-8 h-8 rounded-lg ${stat.bg} mb-2`}>
+                        <stat.icon className={`w-4 h-4 ${stat.color}`} />
+                      </div>
+                      <p className="text-xl font-bold" style={{ fontVariantNumeric: "tabular-nums" }}>{stat.value}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Heatmap */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-semibold">Actividad — últimas 13 semanas</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {sessionsByDay && Object.keys(sessionsByDay).length > 0 ? (
+                    <CalendarHeatmap data={sessionsByDay} />
+                  ) : (
+                    <div className="py-6">
+                      <CalendarHeatmap data={{}} />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Sessions by month chart */}
+              <Card>
+                <CardHeader className="pb-0">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-semibold">Sesiones por mes</CardTitle>
+                    <span className="text-xs text-muted-foreground">últimos 8 meses</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  {sessionsByMonth && Object.keys(sessionsByMonth).length > 0
+                    ? <SessionsChart data={sessionsByMonth} />
+                    : <p className="text-xs text-muted-foreground py-8 text-center">Sin sesiones registradas</p>
+                  }
                 </CardContent>
               </Card>
             </TabsContent>

@@ -377,6 +377,7 @@ export type WeeklyExerciseOverride = {
 export type StudentSummary = {
   totalSessionsCount: number;
   sessionsByMonth: Record<string, number>;
+  sessionsByDay?: Record<string, number>;
   strengthProgressPct: number | null;
   monthsActive: number | null;
   student: Student;
