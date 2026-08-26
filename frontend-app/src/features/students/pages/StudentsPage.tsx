@@ -32,15 +32,18 @@ const SubscriptionBadge = ({ subscription }: { subscription: Student["subscripti
   return <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 gap-1 text-xs"><CheckCircle2 className="w-3 h-3" />{subscription.planName}</Badge>;
 };
 
+const COLS = "md:grid-cols-[1fr_70px_110px_100px_130px_90px]";
+
 const RowSkeleton = () => (
-  <div className="grid grid-cols-[1fr_100px_110px_80px_80px] gap-4 items-center px-6 py-4 border-b border-border">
+  <div className={`hidden md:grid ${COLS} gap-4 items-center px-6 py-4 border-b border-border`}>
     <div className="flex items-center gap-3">
       <Skeleton className="w-8 h-8 rounded-full shrink-0" />
       <div className="space-y-1.5"><Skeleton className="h-3 w-32" /><Skeleton className="h-3 w-24" /></div>
     </div>
+    <Skeleton className="h-3 w-8" />
+    <Skeleton className="h-3 w-20" />
     <Skeleton className="h-5 w-20 rounded-full" />
-    <Skeleton className="h-5 w-20 rounded-full" />
-    <Skeleton className="h-3 w-16" />
+    <Skeleton className="h-5 w-24 rounded-full" />
     <Skeleton className="h-6 w-20 rounded-md" />
   </div>
 );
@@ -142,11 +145,12 @@ export const StudentsPage = () => {
 
         <CardContent className="p-0">
           {/* Table header */}
-          <div className="hidden md:grid md:grid-cols-[1fr_120px_130px_90px_100px] gap-4 items-center px-6 py-2.5 bg-muted/20 border-b border-border">
+          <div className={`hidden md:grid ${COLS} gap-4 items-center px-6 py-2.5 bg-muted/20 border-b border-border`}>
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Alumno</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ses.</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Últ. sesión</span>
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Estado</span>
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Plan</span>
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ingresó</span>
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Acciones</span>
           </div>
 
@@ -167,7 +171,7 @@ export const StudentsPage = () => {
               {students.map((student) => (
                 <div
                   key={student.id}
-                  className="grid grid-cols-1 md:grid-cols-[1fr_120px_130px_90px_100px] gap-2 md:gap-4 items-center px-4 md:px-6 py-3 hover:bg-muted/20 transition-colors cursor-pointer"
+                  className={`grid grid-cols-1 ${COLS} gap-2 md:gap-4 items-center px-4 md:px-6 py-3 hover:bg-muted/20 transition-colors cursor-pointer`}
                   onClick={() => setSelectedStudent(student)}
                   onMouseEnter={() => handleRowHover(student.id)}
                 >
@@ -179,23 +183,34 @@ export const StudentsPage = () => {
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{student.firstName} {student.lastName}</p>
                       <p className="text-xs text-muted-foreground truncate">{student.email}</p>
+                      <div className="flex items-center gap-2 mt-1 md:hidden">
+                        <StatusBadge status={student.status} />
+                        <SubscriptionBadge subscription={student.subscription} />
+                      </div>
                     </div>
                   </div>
 
+                  {/* Sesiones */}
+                  <span className="text-sm font-medium hidden md:block" style={{ fontVariantNumeric: "tabular-nums" }}>
+                    {student.sessionsCount}
+                  </span>
+
+                  {/* Últ. sesión */}
+                  <span className="text-xs text-muted-foreground hidden md:block">
+                    {student.lastSessionDate
+                      ? formatDistanceToNow(new Date(student.lastSessionDate), { locale: es, addSuffix: true })
+                      : "—"}
+                  </span>
+
                   {/* Estado */}
-                  <div onClick={(e) => e.stopPropagation()}>
+                  <div onClick={(e) => e.stopPropagation()} className="hidden md:block">
                     <StatusBadge status={student.status} />
                   </div>
 
                   {/* Plan */}
-                  <div onClick={(e) => e.stopPropagation()}>
+                  <div onClick={(e) => e.stopPropagation()} className="hidden md:block">
                     <SubscriptionBadge subscription={student.subscription} />
                   </div>
-
-                  {/* Ingresó */}
-                  <span className="text-xs text-muted-foreground hidden md:block" style={{ fontVariantNumeric: "tabular-nums" }}>
-                    {formatDistanceToNow(new Date(student.createdAt), { locale: es, addSuffix: true })}
-                  </span>
 
                   {/* Acciones */}
                   <div className="hidden md:flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>

@@ -166,8 +166,10 @@ export class TrainersService {
         ),
       }));
 
+    const retentionRate = total > 0 ? Math.round((active / total) * 100) : 0;
+
     return {
-      stats: { total, active, invited, paused, inactive },
+      stats: { total, active, invited, paused, inactive, retentionRate },
       recentStudents: recentStudents.map(TrainersMapper.toDashboardStudent),
       alerts: {
         expired: expiredAlerts,

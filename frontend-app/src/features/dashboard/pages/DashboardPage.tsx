@@ -57,7 +57,7 @@ const statCards = (stats: DashboardStats) => [
   },
   {
     label: "Retención",
-    value: stats.total > 0 ? `${Math.round((stats.active / stats.total) * 100)}%` : "—",
+    value: stats.total > 0 ? `${stats.retentionRate}%` : "—",
     icon: TrendingUp,
     color: "text-white",
     bg: "",

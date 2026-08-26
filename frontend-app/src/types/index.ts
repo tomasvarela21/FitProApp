@@ -44,6 +44,8 @@ export type Student = {
   createdAt: string;
   updatedAt: string;
   subscription: StudentSubscriptionSummary | null;
+  sessionsCount: number;
+  lastSessionDate: string | null;
 };
 
 export type PaginatedResponse<T> = {
@@ -62,6 +64,7 @@ export type DashboardStats = {
   invited: number;
   paused: number;
   inactive: number;
+  retentionRate: number;
 };
 
 export type DashboardRecentStudent = {
