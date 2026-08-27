@@ -71,6 +71,8 @@ model Trainer {
   verifications   TrainerVerification[]
   telegramLink      TelegramLink?
   telegramLinkCodes TelegramLinkCode[]
+  studentNotes    StudentNote[]
+  studentInjuries StudentInjury[]
 }
 
 model TelegramLink {
@@ -130,9 +132,52 @@ model Student {
   accountInvitations AccountInvitation[]
   subscriptions      Subscription[]
   studentRoutines    StudentRoutine[]
+  notes              StudentNote[]
+  injuries           StudentInjury[]
 
   @@index([trainerId])
   @@index([email])
+}
+
+enum InjurySeverity {
+  MILD
+  MODERATE
+  SEVERE
+}
+
+model StudentNote {
+  id        String   @id @default(cuid())
+  studentId String
+  trainerId String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  trainer Trainer @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([trainerId])
+}
+
+model StudentInjury {
+  id          String         @id @default(cuid())
+  studentId   String
+  trainerId   String
+  bodyPart    String
+  description String
+  severity    InjurySeverity @default(MILD)
+  occurredAt  DateTime
+  resolvedAt  DateTime?
+  notes       String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  trainer Trainer @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([trainerId])
 }
 
 model AccountInvitation {

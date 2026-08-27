@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { RoutinePanel } from "@/features/students/components/RoutinePanel";
 import { SubscriptionPanel } from "@/features/students/components/SubscriptionPanel";
+import { NotesInjuriesPanel } from "@/features/students/components/NotesInjuriesPanel";
 import { formatDistanceToNow, format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { Student } from "@/types";
@@ -591,6 +592,7 @@ export const TrainerStudentProfilePage = () => {
               <TabsTrigger value="metricas" className="py-2.5">Métricas</TabsTrigger>
               <TabsTrigger value="rutina" className="py-2.5">Rutina</TabsTrigger>
               <TabsTrigger value="plan" className="py-2.5">Plan / Pagos</TabsTrigger>
+              <TabsTrigger value="notas" className="py-2.5">Notas / Lesiones</TabsTrigger>
               <TabsTrigger value="info" className="py-2.5">Info / Editar</TabsTrigger>
             </TabsList>
 
@@ -709,6 +711,11 @@ export const TrainerStudentProfilePage = () => {
             {/* Tab: Plan / Pagos */}
             <TabsContent value="plan" className="mt-0">
               {mountedTabs.has("plan") && id && <SubscriptionPanel studentId={id} />}
+            </TabsContent>
+
+            {/* Tab: Notas / Lesiones */}
+            <TabsContent value="notas" className="mt-0">
+              {mountedTabs.has("notas") && id && <NotesInjuriesPanel studentId={id} />}
             </TabsContent>
 
             {/* Tab: Info / Editar */}

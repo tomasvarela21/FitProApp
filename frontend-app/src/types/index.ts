@@ -418,6 +418,31 @@ export type StudentSummary = {
   } | null;
 };
 
+export type StudentNote = {
+  id: string;
+  studentId: string;
+  trainerId: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type InjurySeverity = "MILD" | "MODERATE" | "SEVERE";
+
+export type StudentInjury = {
+  id: string;
+  studentId: string;
+  trainerId: string;
+  bodyPart: string;
+  description: string;
+  severity: InjurySeverity;
+  occurredAt: string;
+  resolvedAt: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type WeeklyPlan = {
   studentRoutine: {
     id: string;
