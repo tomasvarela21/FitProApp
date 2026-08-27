@@ -419,6 +419,7 @@ const AssignRoutineDialog = ({
                 {routines.map((r) => (
                   <SelectItem key={r.id} value={r.id}>
                     {r.name}
+                    {r.isTemplate && <span className="text-amber-600 ml-1">· Plantilla</span>}
                     {r.isGlobal && <span className="text-muted-foreground ml-1">· Global</span>}
                   </SelectItem>
                 ))}
@@ -521,6 +522,7 @@ const CreateWeeklyPlanDialog = ({
                 {routines.map((r) => (
                   <SelectItem key={r.id} value={r.id}>
                     {r.name}
+                    {r.isTemplate && <span className="text-amber-600 ml-1">· Plantilla</span>}
                     {r.isGlobal && <span className="text-muted-foreground ml-1">· Global</span>}
                   </SelectItem>
                 ))}

@@ -50,6 +50,7 @@ function toRoutineDto(routine: RoutineWithRelations) {
     name: routine.name,
     description: routine.description,
     isGlobal: routine.isGlobal,
+    isTemplate: routine.isTemplate,
     trainerId: routine.trainerId,
     createdAt: routine.createdAt,
     updatedAt: routine.updatedAt,
@@ -226,6 +227,68 @@ export class RoutinesService {
     await prisma.routineExercise.delete({ where: { id: routineExerciseId } });
 
     return { id: routineExerciseId };
+  }
+
+  static async toggleTemplate(trainerUserId: string, routineId: string) {
+    const trainer = await this.getTrainer(trainerUserId);
+    const routine = await this.getOwnedRoutine(trainer.id, routineId);
+
+    const updated = await prisma.routine.update({
+      where: { id: routineId },
+      data: { isTemplate: !routine.isTemplate },
+      include: routineInclude,
+    });
+
+    return toRoutineDto(updated);
+  }
+
+  static async cloneTemplate(trainerUserId: string, routineId: string) {
+    const trainer = await this.getTrainer(trainerUserId);
+
+    const source = await prisma.routine.findUnique({
+      where: { id: routineId },
+      include: routineInclude,
+    });
+    if (!source) throw new AppError("Rutina no encontrada", 404);
+    if (source.trainerId !== trainer.id && !source.isGlobal) {
+      throw new AppError("No tienes permisos para clonar esta rutina", 403);
+    }
+
+    const cloned = await prisma.$transaction(async (tx) => {
+      const newRoutine = await tx.routine.create({
+        data: {
+          name: `${source.name} (copia)`,
+          description: source.description,
+          trainerId: trainer.id,
+          isGlobal: false,
+          isTemplate: false,
+        },
+      });
+
+      if (source.routineExercises.length > 0) {
+        await tx.routineExercise.createMany({
+          data: source.routineExercises.map((re) => ({
+            routineId: newRoutine.id,
+            exerciseId: re.exerciseId,
+            dayOfWeek: re.dayOfWeek,
+            order: re.order,
+            sets: re.sets,
+            reps: re.reps,
+            suggestedWeight: re.suggestedWeight,
+            suggestedRpe: re.suggestedRpe,
+            restSeconds: re.restSeconds,
+            notes: re.notes,
+          })),
+        });
+      }
+
+      return tx.routine.findUniqueOrThrow({
+        where: { id: newRoutine.id },
+        include: routineInclude,
+      });
+    });
+
+    return toRoutineDto(cloned);
   }
 
   static async assignRoutineToStudent(

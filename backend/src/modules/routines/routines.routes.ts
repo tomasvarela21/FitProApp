@@ -18,6 +18,10 @@ routinesRouter.post("/", RoutinesController.create);
 routinesRouter.patch("/:id", RoutinesController.update);
 routinesRouter.delete("/:id", RoutinesController.delete);
 
+// ─── Template actions ─────────────────────────────────────
+routinesRouter.patch("/:id/toggle-template", RoutinesController.toggleTemplate);
+routinesRouter.post("/:id/clone", RoutinesController.cloneTemplate);
+
 // ─── Routine exercises ────────────────────────────────────
 routinesRouter.post("/:id/exercises", RoutinesController.addExercise);
 routinesRouter.patch("/:id/exercises/:routineExerciseId", RoutinesController.updateExercise);

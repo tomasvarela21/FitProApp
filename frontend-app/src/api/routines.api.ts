@@ -27,6 +27,10 @@ export const routinesApi = {
     apiClient.patch(`/routines/${routineId}/exercises/${routineExerciseId}`, data),
   removeExercise: (routineId: string, routineExerciseId: string) =>
     apiClient.delete(`/routines/${routineId}/exercises/${routineExerciseId}`),
+  toggleTemplate: (id: string) =>
+    apiClient.patch<ApiSuccess<Routine>>(`/routines/${id}/toggle-template`, {}),
+  clone: (id: string) =>
+    apiClient.post<ApiSuccess<Routine>>(`/routines/${id}/clone`, {}),
   assignToStudent: (studentId: string, data: { routineId: string; notes?: string }) =>
     apiClient.post(`/students/${studentId}/assign-routine`, data),
   getStudentRoutine: (studentId: string) =>

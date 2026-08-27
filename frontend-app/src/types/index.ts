@@ -249,6 +249,7 @@ export type Routine = {
   name: string;
   description: string | null;
   isGlobal: boolean;
+  isTemplate: boolean;
   trainerId: string | null;
   routineExercises: RoutineExercise[];
   createdAt: string;

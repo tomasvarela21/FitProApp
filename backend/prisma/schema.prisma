@@ -366,6 +366,7 @@ model Routine {
   name        String
   description String?
   isGlobal    Boolean  @default(false)
+  isTemplate  Boolean  @default(false)
   trainerId   String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -376,6 +377,7 @@ model Routine {
 
   @@index([trainerId])
   @@index([isGlobal])
+  @@index([isTemplate])
 }
 
 model RoutineExercise {

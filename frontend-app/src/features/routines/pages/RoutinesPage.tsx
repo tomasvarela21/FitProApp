@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -14,6 +14,8 @@ import {
   Pencil,
   Trash2,
   PlayCircle,
+  BookMarked,
+  Copy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -1146,12 +1148,23 @@ const RoutineDetailDialog = ({ routineId, onClose }: RoutineDetailDialogProps) =
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export const RoutinesPage = () => {
+  const qc = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [detailRoutineId, setDetailRoutineId] = useState<string | null>(null);
 
   const { data: routines = [], isLoading } = useQuery({
     queryKey: ["routines"],
     queryFn: () => routinesApi.list().then((r) => r.data.data),
+  });
+
+  const toggleMut = useMutation({
+    mutationFn: (id: string) => routinesApi.toggleTemplate(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["routines"] }),
+  });
+
+  const cloneMut = useMutation({
+    mutationFn: (id: string) => routinesApi.clone(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["routines"] }),
   });
 
   return (
@@ -1206,28 +1219,36 @@ export const RoutinesPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {routines.map((routine) => {
             const days = getRoutineDays(routine);
+            const isOwn = !routine.isGlobal;
             return (
               <Card key={routine.id} className="flex flex-col hover:shadow-md transition-shadow">
                 <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-sm font-semibold leading-tight">
+                  <div className="flex items-start justify-between gap-2 flex-wrap">
+                    <CardTitle className="text-sm font-semibold leading-tight flex-1 min-w-0">
                       {routine.name}
                     </CardTitle>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "text-xs shrink-0 gap-1",
-                        routine.isGlobal
-                          ? "bg-blue-500/10 text-blue-600 border-blue-500/20"
-                          : "bg-violet-500/10 text-violet-600 border-violet-500/20"
+                    <div className="flex items-center gap-1 shrink-0 flex-wrap">
+                      {routine.isTemplate && (
+                        <Badge variant="outline" className="text-xs gap-1 bg-amber-500/10 text-amber-600 border-amber-500/20">
+                          <BookMarked className="w-3 h-3" />Plantilla
+                        </Badge>
                       )}
-                    >
-                      {routine.isGlobal ? (
-                        <><Globe className="w-3 h-3" />Global</>
-                      ) : (
-                        <><User className="w-3 h-3" />Propia</>
-                      )}
-                    </Badge>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-xs gap-1",
+                          routine.isGlobal
+                            ? "bg-blue-500/10 text-blue-600 border-blue-500/20"
+                            : "bg-violet-500/10 text-violet-600 border-violet-500/20"
+                        )}
+                      >
+                        {routine.isGlobal ? (
+                          <><Globe className="w-3 h-3" />Global</>
+                        ) : (
+                          <><User className="w-3 h-3" />Propia</>
+                        )}
+                      </Badge>
+                    </div>
                   </div>
                   {routine.description && (
                     <CardDescription className="text-xs line-clamp-2">
@@ -1253,15 +1274,43 @@ export const RoutinesPage = () => {
                     {(routine.routineExercises ?? []).length !== 1 ? "s" : ""}
                   </p>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-auto gap-2 w-full"
-                    onClick={() => setDetailRoutineId(routine.id)}
-                  >
-                    Ver rutina
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </Button>
+                  <div className="mt-auto flex flex-col gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 w-full"
+                      onClick={() => setDetailRoutineId(routine.id)}
+                    >
+                      Ver rutina
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </Button>
+                    {isOwn && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn("gap-1.5 w-full text-xs", routine.isTemplate ? "text-amber-600 hover:text-amber-600" : "text-muted-foreground")}
+                        disabled={toggleMut.isPending && toggleMut.variables === routine.id}
+                        onClick={() => toggleMut.mutate(routine.id)}
+                      >
+                        {toggleMut.isPending && toggleMut.variables === routine.id
+                          ? <Loader2 className="w-3 h-3 animate-spin" />
+                          : <BookMarked className="w-3 h-3" />}
+                        {routine.isTemplate ? "Quitar de plantillas" : "Marcar como plantilla"}
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1.5 w-full text-xs text-muted-foreground"
+                      disabled={cloneMut.isPending && cloneMut.variables === routine.id}
+                      onClick={() => cloneMut.mutate(routine.id)}
+                    >
+                      {cloneMut.isPending && cloneMut.variables === routine.id
+                        ? <Loader2 className="w-3 h-3 animate-spin" />
+                        : <Copy className="w-3 h-3" />}
+                      Clonar
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             );
