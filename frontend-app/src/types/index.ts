@@ -482,6 +482,36 @@ export type MessagesResponse = {
   hasMore: boolean;
 };
 
+// ─── Analytics ────────────────────────────────────────────────────────────────
+
+export type MonthlyRevenue = { month: string; amount: number };
+
+export type BusinessAnalytics = {
+  revenue: {
+    totalCollected: number;
+    totalPending: number;
+    totalOverdue: number;
+    monthlyRevenue: MonthlyRevenue[];
+  };
+  students: {
+    total: number;
+    newLast30Days: number;
+    byStatus: Record<string, number>;
+  };
+  subscriptions: {
+    total: number;
+    byStatus: Record<string, number>;
+  };
+  plans: {
+    id: string;
+    name: string;
+    price: number;
+    duration: string;
+    isActive: boolean;
+    subscriberCount: number;
+  }[];
+};
+
 export type WeeklyPlan = {
   studentRoutine: {
     id: string;

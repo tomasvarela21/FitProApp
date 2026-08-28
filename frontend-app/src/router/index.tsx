@@ -17,6 +17,7 @@ import { ExerciseGroupPage } from "@/features/exercises/pages/ExerciseGroupPage"
 import { RoutinesPage } from "@/features/routines/pages/RoutinesPage";
 import { PaymentsPage } from "@/features/payments/pages/PaymentsPage";
 import { ChatPage } from "@/features/chat/pages/ChatPage";
+import { AnalyticsPage } from "@/features/analytics/pages/AnalyticsPage";
 import { StudentDashboardPage } from "@/features/student-portal/pages/StudentDashboardPage";
 import { StudentProfilePage } from "@/features/student-portal/pages/StudentProfilePage";
 import { StudentProgressPage } from "@/features/student-portal/pages/StudentProgressPage";
@@ -135,6 +136,7 @@ export const AppRouter = () => {
             <Route path="routines" element={<RoutinesPage />} />
             <Route path="payments" element={<PaymentsPage />} />
             <Route path="chat" element={<ChatPage />} />
+            <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="profile" element={<ProfilePage />} />
           </Route>
 

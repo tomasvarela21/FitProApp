@@ -11,6 +11,7 @@ import {
   Dumbbell,
   Banknote,
   MessageSquare,
+  BarChart2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -30,6 +31,7 @@ const navItems = [
   { label: "Ejercicios", href: "/app/exercises", icon: Dumbbell },
   { label: "Rutinas", href: "/app/routines", icon: ClipboardList },
   { label: "Chat", href: "/app/chat", icon: MessageSquare },
+  { label: "Analytics", href: "/app/analytics", icon: BarChart2 },
   { label: "Mi perfil", href: "/app/profile", icon: UserCircle },
 ];
 
