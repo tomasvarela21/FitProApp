@@ -36,7 +36,7 @@ const MUSCLE_GROUP_ICONS: Record<string, LucideIcon> = {
 
 const MUSCLE_GROUP_COLORS: Record<string, string> = {
   pecho: "bg-blue-500/10 text-blue-600",
-  espalda: "bg-emerald-500/10 text-emerald-600",
+  espalda: "bg-yellow-500/10 text-yellow-500",
   piernas: "bg-purple-500/10 text-purple-600",
   hombros: "bg-amber-500/10 text-amber-600",
   biceps: "bg-pink-500/10 text-pink-600",

@@ -274,7 +274,7 @@ export const PlansPage = () => {
                     variant="outline"
                     className={
                       plan.isActive
-                        ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                        ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
                         : "bg-zinc-500/10 text-zinc-500 border-zinc-500/20"
                     }
                   >
@@ -310,7 +310,7 @@ export const PlansPage = () => {
                     onClick={() => handleToggleActive(plan)}
                   >
                     {plan.isActive ? (
-                      <ToggleRight className="w-4 h-4 text-emerald-600" />
+                      <ToggleRight className="w-4 h-4 text-yellow-500" />
                     ) : (
                       <ToggleLeft className="w-4 h-4 text-zinc-400" />
                     )}

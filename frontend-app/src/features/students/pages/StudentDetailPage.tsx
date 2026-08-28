@@ -46,7 +46,7 @@ import { z } from "zod";
 import type { StudentStatus } from "@/types";
 
 const AVATAR_COLORS = [
-  "bg-emerald-500/20 text-emerald-600",
+  "bg-yellow-500/20 text-yellow-500",
   "bg-violet-500/20 text-violet-600",
   "bg-sky-500/20 text-sky-600",
   "bg-amber-500/20 text-amber-600",
@@ -251,7 +251,7 @@ export const StudentDetailPage = () => {
       </div>
 
       {actionMsg && (
-        <div className={`mb-4 rounded-md px-3 py-2 text-xs ${actionMsg.type === "ok" ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" : "bg-destructive/10 text-destructive border border-destructive/20"}`}>
+        <div className={`mb-4 rounded-md px-3 py-2 text-xs ${actionMsg.type === "ok" ? "bg-yellow-500/10 text-yellow-500 border border-yellow-500/20" : "bg-destructive/10 text-destructive border border-destructive/20"}`}>
           {actionMsg.text}
         </div>
       )}

@@ -398,16 +398,16 @@ export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
               )}
 
               {resendSuccess && (
-                <div className="rounded-md bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
-                  <p className="text-xs text-emerald-600">
+                <div className="rounded-md bg-yellow-500/10 border border-yellow-500/20 px-3 py-2">
+                  <p className="text-xs text-yellow-500">
                     ✓ Invitación reenviada correctamente
                   </p>
                 </div>
               )}
 
               {resetSuccess && (
-                <div className="rounded-md bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
-                  <p className="text-xs text-emerald-600">
+                <div className="rounded-md bg-yellow-500/10 border border-yellow-500/20 px-3 py-2">
+                  <p className="text-xs text-yellow-500">
                     ✓ Email de reset enviado correctamente
                   </p>
                 </div>

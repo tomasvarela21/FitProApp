@@ -84,7 +84,7 @@ const formatDate = (date: string) =>
 const InstallmentStatusBadge = ({ status }: { status: string }) => {
   if (status === "PAID")
     return (
-      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 gap-1 text-xs">
+      <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 gap-1 text-xs">
         <CheckCircle2 className="w-3 h-3" /> Pagada
       </Badge>
     );
@@ -312,7 +312,7 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
                       <AlertTriangle className="w-3 h-3" /> {subscription.daysUntilExpiry}d
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="w-fit bg-emerald-500/10 text-emerald-600 border-emerald-500/20 gap-1">
+                    <Badge variant="outline" className="w-fit bg-yellow-500/10 text-yellow-500 border-yellow-500/20 gap-1">
                       <CheckCircle2 className="w-3 h-3" /> Vigente
                     </Badge>
                   )}
@@ -330,7 +330,7 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Pagado</p>
-                    <p className="text-sm font-bold text-emerald-600">
+                    <p className="text-sm font-bold text-yellow-500">
                       ${subscription.paidAmount.toLocaleString("es-AR")}
                     </p>
                   </div>

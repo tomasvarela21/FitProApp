@@ -77,8 +77,8 @@ export const RegisterPage = () => {
 
           <Card>
             <CardContent className="flex flex-col items-center text-center py-10 gap-5">
-              <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+              <div className="w-16 h-16 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                <CheckCircle2 className="w-8 h-8 text-yellow-500" />
               </div>
               <div className="space-y-2">
                 <CardTitle className="text-xl font-bold">¡Registro exitoso!</CardTitle>

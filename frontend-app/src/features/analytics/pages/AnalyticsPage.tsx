@@ -120,7 +120,7 @@ export function AnalyticsPage() {
           title="Facturado total"
           value={fmt(revenue.totalCollected)}
           icon={TrendingUp}
-          color="text-green-500"
+          color="text-yellow-500"
         />
         <KpiCard
           title="Pendiente de cobro"
@@ -152,8 +152,8 @@ export function AnalyticsPage() {
             <AreaChart data={chartRevenue}>
               <defs>
                 <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#f0c428" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#f0c428" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -171,7 +171,7 @@ export function AnalyticsPage() {
                 formatter={(v: number) => [fmt(v), "Ingreso"]}
                 contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }}
               />
-              <Area type="monotone" dataKey="amount" stroke="#22c55e" fill="url(#revenueGrad)" strokeWidth={2} />
+              <Area type="monotone" dataKey="amount" stroke="#f0c428" fill="url(#revenueGrad)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>
@@ -302,7 +302,7 @@ export function AnalyticsPage() {
                       <td className="py-2 text-right tabular-nums">{fmt(p.price)}</td>
                       <td className="py-2 text-right tabular-nums">{p.subscriberCount}</td>
                       <td className="py-2 text-right">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${p.isActive ? "bg-green-500/10 text-green-500" : "bg-muted text-muted-foreground"}`}>
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${p.isActive ? "bg-green-500/10 text-yellow-500" : "bg-muted text-muted-foreground"}`}>
                           {p.isActive ? "Activo" : "Inactivo"}
                         </span>
                       </td>

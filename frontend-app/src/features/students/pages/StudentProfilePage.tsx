@@ -656,7 +656,7 @@ export const TrainerStudentProfilePage = () => {
                 {[
                   { label: "Sesiones totales", value: totalSessionsCount, icon: Dumbbell, color: "text-primary", bg: "bg-primary/10" },
                   { label: "Meses activo", value: monthsActive ?? "—", icon: Calendar, color: "text-blue-400", bg: "bg-blue-500/10" },
-                  { label: "Progreso fuerza", value: strengthProgressPct != null ? `${strengthProgressPct > 0 ? "+" : ""}${strengthProgressPct}%` : "—", icon: TrendingUp, color: "text-emerald-400", bg: "bg-emerald-500/10" },
+                  { label: "Progreso fuerza", value: strengthProgressPct != null ? `${strengthProgressPct > 0 ? "+" : ""}${strengthProgressPct}%` : "—", icon: TrendingUp, color: "text-yellow-400", bg: "bg-yellow-500/10" },
                 ].map((stat) => (
                   <Card key={stat.label}>
                     <CardContent className="pt-4 pb-3">

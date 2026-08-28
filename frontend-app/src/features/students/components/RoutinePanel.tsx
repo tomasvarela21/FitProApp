@@ -1334,7 +1334,7 @@ export const RoutinePanel = ({ studentId }: Props) => {
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="h-7 gap-1 text-xs text-green-600"
+                                      className="h-7 gap-1 text-xs text-yellow-500"
                                       onClick={() => handleDelete(re.id)}
                                       disabled={isDeleting}
                                     >
@@ -1470,7 +1470,7 @@ export const RoutinePanel = ({ studentId }: Props) => {
                                         <Button
                                           variant="ghost"
                                           size="sm"
-                                          className="h-5 w-5 p-0 text-green-600 hover:text-green-700"
+                                          className="h-5 w-5 p-0 text-yellow-500 hover:text-yellow-600"
                                           onClick={() => handleDelete(re.id)}
                                           disabled={isDeleting}
                                         >
