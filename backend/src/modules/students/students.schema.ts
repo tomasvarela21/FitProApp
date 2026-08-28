@@ -20,6 +20,7 @@ export const updateStudentSchema = z.object({
   lastName: z.string().min(2, "El apellido es obligatorio").optional(),
   phone: z.string().optional(),
   status: z.enum(["INVITED", "ACTIVE", "PAUSED", "INACTIVE"]).optional(),
+  gymId: z.string().nullable().optional(),
 });
 
 export type CreateStudentInput = z.infer<typeof createStudentSchema>;

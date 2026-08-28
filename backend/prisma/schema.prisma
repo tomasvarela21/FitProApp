@@ -62,6 +62,7 @@ model Trainer {
 
   user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   students        Student[]
+  gyms            Gym[]
   sentInvitations AccountInvitation[]   @relation("TrainerSentInvitations")
   plans           Plan[]
   subscriptions   Subscription[]
@@ -74,6 +75,20 @@ model Trainer {
   studentNotes    StudentNote[]
   studentInjuries StudentInjury[]
   conversations   Conversation[]
+}
+
+model Gym {
+  id        String   @id @default(cuid())
+  trainerId String
+  name      String
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  trainer  Trainer   @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  students Student[]
+
+  @@index([trainerId])
 }
 
 model TelegramLink {
@@ -116,6 +131,7 @@ model Student {
   id          String        @id @default(cuid())
   trainerId   String
   userId      String?       @unique
+  gymId       String?
   email       String
   dni         String
   firstName   String
@@ -130,6 +146,7 @@ model Student {
 
   trainer            Trainer             @relation(fields: [trainerId], references: [id], onDelete: Cascade)
   user               User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  gym                Gym?                @relation(fields: [gymId], references: [id], onDelete: SetNull)
   accountInvitations AccountInvitation[]
   subscriptions      Subscription[]
   studentRoutines    StudentRoutine[]

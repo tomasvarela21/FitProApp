@@ -39,6 +39,7 @@ export type Student = {
   lastName: string;
   phone: string | null;
   status: StudentStatus;
+  gym: { id: string; name: string } | null;
   invitedAt: string | null;
   activatedAt: string | null;
   createdAt: string;
@@ -482,9 +483,28 @@ export type MessagesResponse = {
   hasMore: boolean;
 };
 
+// ─── Gyms ─────────────────────────────────────────────────────────────────────
+
+export type Gym = {
+  id: string;
+  trainerId: string;
+  name: string;
+  address: string | null;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { students: number };
+};
+
 // ─── Analytics ────────────────────────────────────────────────────────────────
 
 export type MonthlyRevenue = { month: string; amount: number };
+
+export type GymAnalytics = {
+  id: string;
+  name: string;
+  studentCount: number;
+  revenue: number;
+};
 
 export type BusinessAnalytics = {
   revenue: {
@@ -497,6 +517,7 @@ export type BusinessAnalytics = {
     total: number;
     newLast30Days: number;
     byStatus: Record<string, number>;
+    unassignedToGym: number;
   };
   subscriptions: {
     total: number;
@@ -510,6 +531,7 @@ export type BusinessAnalytics = {
     isActive: boolean;
     subscriberCount: number;
   }[];
+  gyms: GymAnalytics[];
 };
 
 export type WeeklyPlan = {

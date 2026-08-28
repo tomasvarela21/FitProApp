@@ -1,3 +1,5 @@
+export type GymRef = { id: string; name: string } | null;
+
 export type StudentListItemDto = {
   id: string;
   email: string;
@@ -5,6 +7,7 @@ export type StudentListItemDto = {
   lastName: string;
   phone: string | null;
   status: string;
+  gym: GymRef;
   invitedAt: Date | null;
   activatedAt: Date | null;
   createdAt: Date;
@@ -18,6 +21,7 @@ export type StudentDetailDto = {
   lastName: string;
   phone: string | null;
   status: string;
+  gym: GymRef;
   invitedAt: Date | null;
   activatedAt: Date | null;
   createdAt: Date;

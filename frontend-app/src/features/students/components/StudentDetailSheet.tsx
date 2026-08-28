@@ -25,6 +25,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/shared/StatusBadge/StatusBadge";
 import { studentsApi } from "@/api/students.api";
+import { gymsApi } from "@/api/gyms.api";
 import { SubscriptionPanel } from "./SubscriptionPanel";
 import { RoutinePanel } from "./RoutinePanel";
 import type { Student, StudentStatus } from "@/types";
@@ -36,6 +37,7 @@ const editStudentSchema = z.object({
   lastName: z.string().min(2, "El apellido es obligatorio"),
   phone: z.string().optional(),
   status: z.enum(["INVITED", "ACTIVE", "PAUSED", "INACTIVE"]),
+  gymId: z.string().nullable().optional(),
 });
 
 type EditStudentForm = z.infer<typeof editStudentSchema>;
@@ -87,6 +89,11 @@ export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
   const [resetSuccess, setResetSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { data: gymsData } = useQuery({
+    queryKey: ["gyms"],
+    queryFn: () => gymsApi.list().then((r) => r.data.data),
+  });
+
   const {
     register,
     handleSubmit,
@@ -104,6 +111,7 @@ export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
       lastName: student.lastName,
       phone: student.phone ?? "",
       status: student.status,
+      gymId: student.gym?.id ?? null,
     });
     setIsEditing(true);
   };
@@ -254,6 +262,26 @@ export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
                 />
               </div>
 
+              {gymsData && gymsData.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label>Gimnasio <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                  <Select
+                    defaultValue={student.gym?.id ?? "none"}
+                    onValueChange={(val) => setValue("gymId", val === "none" ? null : val)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sin gimnasio" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin gimnasio</SelectItem>
+                      {gymsData.map((g) => (
+                        <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               <div className="space-y-1.5">
                 <Label>Estado</Label>
                 <Select
@@ -333,6 +361,7 @@ export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
                   value={<StatusBadge status={student.status} />}
                 />
                 <DetailRow label="Teléfono" value={student.phone ?? "—"} />
+                <DetailRow label="Gimnasio" value={student.gym?.name ?? "—"} />
                 <DetailRow
                   label="Invitado"
                   value={formatDate(student.invitedAt)}

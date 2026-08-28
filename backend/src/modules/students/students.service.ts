@@ -128,6 +128,7 @@ export class StudentsService {
         orderBy: { createdAt: "desc" },
         skip,
         take: limit,
+        include: { gym: true },
       }),
       prisma.student.count({ where }),
     ]);
@@ -158,6 +159,7 @@ export class StudentsService {
         trainerId: trainer.id,
         deletedAt: null,
       },
+      include: { gym: true },
     });
 
     if (!student) {
@@ -199,7 +201,9 @@ export class StudentsService {
         ...(data.lastName !== undefined ? { lastName: data.lastName } : {}),
         ...(data.phone !== undefined ? { phone: data.phone } : {}),
         ...(data.status !== undefined ? { status: data.status } : {}),
+        ...("gymId" in data ? { gymId: data.gymId ?? null } : {}),
       },
+      include: { gym: true },
     });
 
     return StudentsMapper.toDetail(updatedStudent);

@@ -13,6 +13,7 @@ export class AnalyticsService {
       students,
       subscriptions,
       plans,
+      gyms,
     ] = await Promise.all([
       prisma.installment.findMany({
         where: { trainerId },
@@ -20,11 +21,11 @@ export class AnalyticsService {
       }),
       prisma.student.findMany({
         where: { trainerId, deletedAt: null },
-        select: { status: true, createdAt: true },
+        select: { id: true, status: true, createdAt: true, gymId: true },
       }),
       prisma.subscription.findMany({
         where: { trainerId },
-        select: { status: true },
+        select: { status: true, studentId: true },
       }),
       prisma.plan.findMany({
         where: { trainerId },
@@ -36,6 +37,10 @@ export class AnalyticsService {
           isActive: true,
           _count: { select: { subscriptions: true } },
         },
+      }),
+      prisma.gym.findMany({
+        where: { trainerId },
+        select: { id: true, name: true },
       }),
     ]);
 
@@ -109,6 +114,47 @@ export class AnalyticsService {
       subscriberCount: p._count.subscriptions,
     }));
 
+    // ── Gyms analytics ───────────────────────────────────────────────────────
+    // Map studentId → gymId for revenue lookup
+    const studentGymMap = new Map<string, string | null>(
+      students.map((s) => [s.id, s.gymId ?? null])
+    );
+
+    // Revenue per gym (from PAID installments via subscription.studentId)
+    const subscriptionsWithStudents = await prisma.subscription.findMany({
+      where: { trainerId },
+      select: {
+        studentId: true,
+        installments: {
+          where: { status: "PAID" },
+          select: { amount: true },
+        },
+      },
+    });
+
+    const gymRevenue = new Map<string, number>();
+    for (const sub of subscriptionsWithStudents) {
+      const gymId = studentGymMap.get(sub.studentId) ?? null;
+      if (!gymId) continue;
+      const subtotal = sub.installments.reduce((acc, i) => acc + Number(i.amount), 0);
+      gymRevenue.set(gymId, (gymRevenue.get(gymId) ?? 0) + subtotal);
+    }
+
+    const gymStudentCount = new Map<string, number>();
+    for (const s of students) {
+      if (!s.gymId) continue;
+      gymStudentCount.set(s.gymId, (gymStudentCount.get(s.gymId) ?? 0) + 1);
+    }
+
+    const gymsSummary = gyms.map((g) => ({
+      id: g.id,
+      name: g.name,
+      studentCount: gymStudentCount.get(g.id) ?? 0,
+      revenue: Math.round((gymRevenue.get(g.id) ?? 0) * 100) / 100,
+    }));
+
+    const unassignedStudents = students.filter((s) => !s.gymId).length;
+
     return {
       revenue: {
         totalCollected: Math.round(totalCollected * 100) / 100,
@@ -120,12 +166,14 @@ export class AnalyticsService {
         total: students.length,
         newLast30Days: newStudentsLast30,
         byStatus: studentsByStatus,
+        unassignedToGym: unassignedStudents,
       },
       subscriptions: {
         total: subscriptions.length,
         byStatus: subscriptionsByStatus,
       },
       plans: plansSummary,
+      gyms: gymsSummary,
     };
   }
 }
