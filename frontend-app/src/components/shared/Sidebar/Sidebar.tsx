@@ -10,50 +10,27 @@ import {
   ChevronRight,
   Dumbbell,
   Banknote,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { KorexIsotipo } from "@/components/shared/KorexLogo";
+import { chatApi } from "@/api/chat.api";
 
 const navItems = [
-  {
-    label: "Dashboard",
-    href: "/app/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    label: "Alumnos",
-    href: "/app/students",
-    icon: Users,
-  },
-  {
-    label: "Planes",
-    href: "/app/plans",
-    icon: CreditCard,
-  },
-  {
-    label: "Cobros",
-    href: "/app/payments",
-    icon: Banknote,
-  },
-  {
-    label: "Ejercicios",
-    href: "/app/exercises",
-    icon: Dumbbell,
-  },
-  {
-    label: "Rutinas",
-    href: "/app/routines",
-    icon: ClipboardList,
-  },
-  {
-    label: "Mi perfil",
-    href: "/app/profile",
-    icon: UserCircle,
-  },
+  { label: "Dashboard", href: "/app/dashboard", icon: LayoutDashboard },
+  { label: "Alumnos", href: "/app/students", icon: Users },
+  { label: "Planes", href: "/app/plans", icon: CreditCard },
+  { label: "Cobros", href: "/app/payments", icon: Banknote },
+  { label: "Ejercicios", href: "/app/exercises", icon: Dumbbell },
+  { label: "Rutinas", href: "/app/routines", icon: ClipboardList },
+  { label: "Chat", href: "/app/chat", icon: MessageSquare },
+  { label: "Mi perfil", href: "/app/profile", icon: UserCircle },
 ];
 
 type SidebarProps = {
@@ -69,6 +46,14 @@ export const Sidebar = ({
 }: SidebarProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  const { data: convData } = useQuery({
+    queryKey: ["chat-conversations-badge"],
+    queryFn: () => chatApi.getConversations().then((r) => r.data.data),
+    refetchInterval: 10_000,
+    enabled: user?.role === "TRAINER",
+  });
+  const totalUnread = convData?.totalUnread ?? 0;
 
   const handleLogout = async () => {
     try {
@@ -148,8 +133,22 @@ export const Sidebar = ({
               )
             }
           >
-            <item.icon className="w-4 h-4 shrink-0" />
-            {!collapsed && <span className="truncate">{item.label}</span>}
+            <span className="relative shrink-0">
+              <item.icon className="w-4 h-4" />
+              {item.href === "/app/chat" && collapsed && totalUnread > 0 && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" />
+              )}
+            </span>
+            {!collapsed && (
+              <span className="flex-1 flex items-center justify-between truncate">
+                <span className="truncate">{item.label}</span>
+                {item.href === "/app/chat" && totalUnread > 0 && (
+                  <Badge className="ml-1 h-4 min-w-4 px-1 text-[10px] leading-none">
+                    {totalUnread > 99 ? "99+" : totalUnread}
+                  </Badge>
+                )}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>

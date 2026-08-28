@@ -444,6 +444,44 @@ export type StudentInjury = {
   updatedAt: string;
 };
 
+// ─── Chat ─────────────────────────────────────────────────────────────────────
+
+export type MessageSenderRole = "TRAINER" | "STUDENT";
+
+export type ChatMessage = {
+  id: string;
+  senderRole: MessageSenderRole;
+  senderId: string;
+  body: string;
+  readAt: string | null;
+  createdAt: string;
+};
+
+export type ConversationItem = {
+  id: string;
+  student: { id: string; firstName: string; lastName: string };
+  lastMessage: { body: string; senderRole: MessageSenderRole; createdAt: string } | null;
+  unreadCount: number;
+  updatedAt: string;
+};
+
+export type ConversationListResponse = {
+  conversations: ConversationItem[];
+  totalUnread: number;
+};
+
+export type StudentConversationResponse = {
+  conversationId: string;
+  trainer: { id: string; firstName: string; lastName: string };
+  messages: ChatMessage[];
+  unreadCount: number;
+};
+
+export type MessagesResponse = {
+  messages: ChatMessage[];
+  hasMore: boolean;
+};
+
 export type WeeklyPlan = {
   studentRoutine: {
     id: string;

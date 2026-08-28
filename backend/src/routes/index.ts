@@ -9,6 +9,7 @@ import { exercisesRouter } from "../modules/exercises/exercises.routes";
 import { routinesRouter, studentRoutinesRouter } from "../modules/routines/routines.routes";
 import { weeklyPlanRouter } from "../modules/routines/weekly-plan.routes";
 import { notificationsRouter } from "../modules/notifications/notifications.routes";
+import { chatRouter } from "../modules/chat/chat.routes";
 import { sendDailyPaymentAlerts } from "../infrastructure/jobs/payment-alerts.job";
 
 export const router = Router();
@@ -29,6 +30,7 @@ router.use("/plans", plansRouter);
 router.use("/subscriptions", subscriptionsRouter);
 router.use("/student", studentPortalRouter);
 router.use("/notifications", notificationsRouter);
+router.use("/chat", chatRouter);
 
 router.use("/exercises", exercisesRouter);
 router.use("/routines", routinesRouter);
