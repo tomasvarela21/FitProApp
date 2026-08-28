@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { Search, UserPlus, Eye, Pencil, MoreHorizontal, AlertTriangle, XCircle, CheckCircle2 } from "lucide-react";
 import { studentsApi } from "@/api/students.api";
 import { Input } from "@/components/ui/input";
@@ -49,13 +49,18 @@ const RowSkeleton = () => (
 );
 
 export const StudentsPage = () => {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { students, meta, isLoading, page, setPage, search, setSearch, statusFilter, setStatusFilter } = useStudents();
   const { data: dashboardData } = useDashboard();
   const [searchInput, setSearchInput] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [sheetMode, setSheetMode] = useState<"view" | "edit">("view");
+
+  const openSheet = (student: Student, mode: "view" | "edit" = "view") => {
+    setSheetMode(mode);
+    setSelectedStudent(student);
+  };
 
   useEffect(() => {
     const highlightId = searchParams.get("highlight");
@@ -148,7 +153,7 @@ export const StudentsPage = () => {
       </div>
 
       <CreateStudentSheet open={createOpen} onClose={() => setCreateOpen(false)} />
-      <StudentDetailSheet student={selectedStudent} open={!!selectedStudent} onClose={() => setSelectedStudent(null)} />
+      <StudentDetailSheet student={selectedStudent} open={!!selectedStudent} onClose={() => setSelectedStudent(null)} initialMode={sheetMode} />
 
       <Card className="overflow-hidden">
         {/* Tabs */}
@@ -202,7 +207,7 @@ export const StudentsPage = () => {
                 <div
                   key={student.id}
                   className={`grid grid-cols-1 ${COLS} gap-2 md:gap-4 items-center px-4 md:px-6 py-3 hover:bg-muted/20 transition-colors cursor-pointer`}
-                  onClick={() => navigate(`/app/students/${student.id}`)}
+                  onClick={() => openSheet(student, "view")}
                 >
                   {/* Alumno */}
                   <div className="flex items-center gap-3 min-w-0">
@@ -246,16 +251,16 @@ export const StudentsPage = () => {
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      title="Ver perfil"
-                      onClick={() => navigate(`/app/students/${student.id}`)}
+                      title="Ver detalle"
+                      onClick={() => openSheet(student, "view")}
                     >
                       <Eye className="w-3.5 h-3.5" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      title="Editar"
-                      onClick={() => setSelectedStudent(student)}
+                      title="Editar datos"
+                      onClick={() => openSheet(student, "edit")}
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
@@ -263,7 +268,7 @@ export const StudentsPage = () => {
                       variant="ghost"
                       size="icon-sm"
                       title="Más opciones"
-                      onClick={() => setSelectedStudent(student)}
+                      onClick={() => openSheet(student, "view")}
                     >
                       <MoreHorizontal className="w-3.5 h-3.5" />
                     </Button>

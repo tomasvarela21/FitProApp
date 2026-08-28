@@ -42,10 +42,13 @@ const editStudentSchema = z.object({
 
 type EditStudentForm = z.infer<typeof editStudentSchema>;
 
+type SheetMode = "view" | "edit";
+
 type Props = {
   student: Student | null;
   open: boolean;
   onClose: () => void;
+  initialMode?: SheetMode;
 };
 
 const DetailRow = ({
@@ -61,9 +64,47 @@ const DetailRow = ({
   </div>
 );
 
-export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
+export const StudentDetailSheet = ({ student, open, onClose, initialMode = "view" }: Props) => {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteLoading, setIsDeleteLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<EditStudentForm>({
+    resolver: zodResolver(editStudentSchema),
+  });
+
+  const { data: gymsData } = useQuery({
+    queryKey: ["gyms"],
+    queryFn: () => gymsApi.list().then((r) => r.data.data),
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    if (initialMode === "edit" && student) {
+      reset({
+        firstName: student.firstName,
+        lastName: student.lastName,
+        phone: student.phone ?? "",
+        status: student.status,
+        gymId: student.gym?.id ?? null,
+      });
+      setIsEditing(true);
+    } else {
+      setIsEditing(false);
+    }
+  }, [open, student?.id, initialMode]);
 
   const { data: summary } = useQuery({
     queryKey: ["student-summary", student?.id],
@@ -81,28 +122,6 @@ export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
       queryClient.setQueryData(["student-routine", student.id], summary.studentRoutine);
     }
   }, [summary, student?.id]);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isDeleteLoading, setIsDeleteLoading] = useState(false);
-  const [isResending, setIsResending] = useState(false);
-  const [isResettingPassword, setIsResettingPassword] = useState(false);
-  const [resendSuccess, setResendSuccess] = useState(false);
-  const [resetSuccess, setResetSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const { data: gymsData } = useQuery({
-    queryKey: ["gyms"],
-    queryFn: () => gymsApi.list().then((r) => r.data.data),
-  });
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setValue,
-    formState: { errors, isSubmitting },
-  } = useForm<EditStudentForm>({
-    resolver: zodResolver(editStudentSchema),
-  });
 
   const handleEdit = () => {
     if (!student) return;
