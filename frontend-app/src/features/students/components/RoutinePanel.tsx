@@ -792,7 +792,7 @@ const WeeklyPlanTabContent = ({ studentId }: { studentId: string }) => {
       </div>
 
       {/* Week tabs */}
-      <div className="flex gap-1 border-b border-border -mx-4 px-4 overflow-x-auto">
+      <div className="flex gap-1 border-b border-border -mx-4 px-4 overflow-x-auto scroll-no-bar">
         {weekTabs.map((wn) => (
           <button
             key={wn}
@@ -1210,7 +1210,7 @@ export const RoutinePanel = ({ studentId }: Props) => {
 
                   {/* Day tabs */}
                   {sortedDays.length > 0 && (
-                    <div className="flex gap-1 border-b border-border -mx-4 px-4 overflow-x-auto">
+                    <div className="flex gap-1 border-b border-border -mx-4 px-4 overflow-x-auto scroll-no-bar">
                       {sortedDays.map((day) => (
                         <button
                           key={day}

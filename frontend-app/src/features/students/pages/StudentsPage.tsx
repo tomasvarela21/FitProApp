@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Search, UserPlus, Eye, Pencil, MoreHorizontal, AlertTriangle, XCircle, CheckCircle2 } from "lucide-react";
 import { studentsApi } from "@/api/students.api";
 import { Input } from "@/components/ui/input";
@@ -49,6 +49,7 @@ const RowSkeleton = () => (
 );
 
 export const StudentsPage = () => {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { students, meta, isLoading, page, setPage, search, setSearch, statusFilter, setStatusFilter } = useStudents();
   const { data: dashboardData } = useDashboard();
@@ -207,7 +208,7 @@ export const StudentsPage = () => {
                 <div
                   key={student.id}
                   className={`grid grid-cols-1 ${COLS} gap-2 md:gap-4 items-center px-4 md:px-6 py-3 hover:bg-muted/20 transition-colors cursor-pointer`}
-                  onClick={() => openSheet(student, "view")}
+                  onClick={() => navigate(`/app/students/${student.id}`)}
                 >
                   {/* Alumno */}
                   <div className="flex items-center gap-3 min-w-0">
@@ -252,7 +253,7 @@ export const StudentsPage = () => {
                       variant="ghost"
                       size="icon-sm"
                       title="Ver detalle"
-                      onClick={() => openSheet(student, "view")}
+                      onClick={() => navigate(`/app/students/${student.id}`)}
                     >
                       <Eye className="w-3.5 h-3.5" />
                     </Button>

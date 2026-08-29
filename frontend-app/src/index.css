@@ -133,3 +133,37 @@
     font-family: var(--font-heading);
     }
 }
+
+/* ─── Scrollbar global ──────────────────────────────────────────────────────── */
+
+/* Ocultar scrollbar en listas de tabs (navegación) */
+[data-slot="tabs-list"],
+.scroll-no-bar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+[data-slot="tabs-list"]::-webkit-scrollbar,
+.scroll-no-bar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Scrollbar horizontal/vertical con estilo dorado */
+::-webkit-scrollbar {
+  height: 4px;
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb {
+  background: oklch(0.834 0.168 91 / 0.3);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.834 0.168 91 / 0.65);
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.834 0.168 91 / 0.3) transparent;
+}
