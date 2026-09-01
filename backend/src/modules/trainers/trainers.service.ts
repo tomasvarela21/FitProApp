@@ -67,72 +67,106 @@ export class TrainersService {
     const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const total = await prisma.student.count({ where: baseWhere });
-    const active = await prisma.student.count({ where: { ...baseWhere, status: "ACTIVE" } });
-    const invited = await prisma.student.count({ where: { ...baseWhere, status: "INVITED" } });
-    const paused = await prisma.student.count({ where: { ...baseWhere, status: "PAUSED" } });
-    const inactive = await prisma.student.count({ where: { ...baseWhere, status: "INACTIVE" } });
-    const recentStudents = await prisma.student.findMany({
-      where: baseWhere,
-      orderBy: { createdAt: "desc" },
-      take: DASHBOARD_RECENT_LIMIT,
-    });
-    const weeklySessionsCount = await prisma.workoutLog.count({
-      where: { date: { gte: weekAgo }, studentRoutine: { student: { trainerId: trainer.id } } },
-    });
-    const prevWeekSessionsCount = await prisma.workoutLog.count({
-      where: { date: { gte: twoWeeksAgo, lt: weekAgo }, studentRoutine: { student: { trainerId: trainer.id } } },
-    });
-    const newStudentsThisMonth = await prisma.student.count({
-      where: { ...baseWhere, createdAt: { gte: monthStart } },
-    });
-
-    // Cuotas vencidas
-    const overdueInstallments = await prisma.installment.findMany({
-      where: {
-        trainerId: trainer.id,
-        status: { in: ["OVERDUE", "PENDING"] },
-        dueDate: { lt: now },
-      },
-      include: {
-        subscription: {
-          include: {
-            student: true,
-            plan: true,
+    // Todas las queries independientes en paralelo
+    const [
+      statusCounts,
+      recentStudents,
+      weeklySessionsCount,
+      prevWeekSessionsCount,
+      newStudentsThisMonth,
+      overdueInstallments,
+      expiringSoonInstallments,
+      studentsWithoutRoutineRaw,
+      studentsWithRoutine,
+    ] = await Promise.all([
+      prisma.student.groupBy({
+        by: ["status"],
+        where: baseWhere,
+        _count: { id: true },
+      }),
+      prisma.student.findMany({
+        where: baseWhere,
+        orderBy: { createdAt: "desc" },
+        take: DASHBOARD_RECENT_LIMIT,
+      }),
+      prisma.workoutLog.count({
+        where: { date: { gte: weekAgo }, studentRoutine: { student: { trainerId: trainer.id } } },
+      }),
+      prisma.workoutLog.count({
+        where: { date: { gte: twoWeeksAgo, lt: weekAgo }, studentRoutine: { student: { trainerId: trainer.id } } },
+      }),
+      prisma.student.count({ where: { ...baseWhere, createdAt: { gte: monthStart } } }),
+      prisma.installment.findMany({
+        where: {
+          trainerId: trainer.id,
+          status: { in: ["OVERDUE", "PENDING"] },
+          dueDate: { lt: now },
+        },
+        include: { subscription: { include: { student: true, plan: true } } },
+        orderBy: { dueDate: "asc" },
+      }),
+      prisma.installment.findMany({
+        where: {
+          trainerId: trainer.id,
+          status: "PENDING",
+          dueDate: { gte: now, lte: in7Days },
+        },
+        include: { subscription: { include: { student: true, plan: true } } },
+        orderBy: { dueDate: "asc" },
+      }),
+      prisma.student.findMany({
+        where: {
+          trainerId: trainer.id,
+          status: "ACTIVE",
+          deletedAt: null,
+          studentRoutines: { none: { isActive: true } },
+        },
+        select: { id: true, firstName: true, lastName: true },
+        take: 5,
+      }),
+      prisma.student.findMany({
+        where: {
+          trainerId: trainer.id,
+          status: "ACTIVE",
+          deletedAt: null,
+          studentRoutines: { some: { isActive: true } },
+        },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          studentRoutines: {
+            where: { isActive: true },
+            select: {
+              workoutLogs: {
+                orderBy: { date: "desc" },
+                take: 1,
+                select: { date: true },
+              },
+            },
           },
         },
-      },
-      orderBy: { dueDate: "asc" },
-    });
+      }),
+    ]);
 
-    // Cuotas por vencer en 7 días
-    const expiringSoonInstallments = await prisma.installment.findMany({
-      where: {
-        trainerId: trainer.id,
-        status: "PENDING",
-        dueDate: { gte: now, lte: in7Days },
-      },
-      include: {
-        subscription: {
-          include: {
-            student: true,
-            plan: true,
-          },
-        },
-      },
-      orderBy: { dueDate: "asc" },
-    });
+    const countByStatus = (status: string) =>
+      statusCounts.find((s) => s.status === status)?._count.id ?? 0;
+    const total = statusCounts.reduce((acc, s) => acc + s._count.id, 0);
+    const active = countByStatus("ACTIVE");
+    const invited = countByStatus("INVITED");
+    const paused = countByStatus("PAUSED");
+    const inactive = countByStatus("INACTIVE");
 
-    // Marcar cuotas pendientes vencidas como OVERDUE
+    // Marcar cuotas pendientes vencidas como OVERDUE (fire-and-forget, no bloquea)
     const pendingOverdueIds = overdueInstallments
       .filter((i) => i.status === "PENDING")
       .map((i) => i.id);
 
     if (pendingOverdueIds.length > 0) {
-      await prisma.installment.updateMany({
+      prisma.installment.updateMany({
         where: { id: { in: pendingOverdueIds } },
         data: { status: "OVERDUE" },
-      });
+      }).catch(() => {});
     }
 
     // Deduplicar por alumno
@@ -177,43 +211,6 @@ export class TrainersService {
           (i.dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
         ),
       }));
-
-    // Alertas de inactividad — solo alumnos ACTIVE no eliminados
-    const [studentsWithoutRoutineRaw, studentsWithRoutine] = await Promise.all([
-      prisma.student.findMany({
-        where: {
-          trainerId: trainer.id,
-          status: "ACTIVE",
-          deletedAt: null,
-          studentRoutines: { none: { isActive: true } },
-        },
-        select: { id: true, firstName: true, lastName: true },
-        take: 5,
-      }),
-      prisma.student.findMany({
-        where: {
-          trainerId: trainer.id,
-          status: "ACTIVE",
-          deletedAt: null,
-          studentRoutines: { some: { isActive: true } },
-        },
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          studentRoutines: {
-            where: { isActive: true },
-            select: {
-              workoutLogs: {
-                orderBy: { date: "desc" },
-                take: 1,
-                select: { date: true },
-              },
-            },
-          },
-        },
-      }),
-    ]);
 
     const withLastWorkout = studentsWithRoutine.map((s) => {
       const lastDate =

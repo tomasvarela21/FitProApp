@@ -143,18 +143,9 @@ function SplitLayout() {
         <div className="relative z-10 flex flex-col flex-1 justify-end px-5 pb-8 pt-safe">
           {/* Marca */}
           <div className="mb-6">
-            <div style={{ background: 'rgba(14,11,9,0.55)', borderRadius: '14px', padding: '8px', display: 'inline-block', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <KorexIsotipo size={110} />
+            <div style={{ background: 'rgba(255,255,255,0.22)', borderRadius: '14px', padding: '3px', display: 'inline-block', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <KorexIsotipo size={135} />
             </div>
-            <p className="text-xs tracking-[0.2em] uppercase text-white/50 mt-3 mb-0.5">
-              Entrenamiento personal
-            </p>
-            <h1
-              className="text-4xl font-black tracking-[0.1em] uppercase leading-none"
-              style={{ color: "#fff", textShadow: "0 2px 16px rgba(0,0,0,0.5)" }}
-            >
-              {tenant.name}
-            </h1>
           </div>
 
           {/* Card del form */}
@@ -182,15 +173,15 @@ function SplitLayout() {
           />
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-background" />
           <div className="absolute bottom-10 left-10 right-0">
-            <p className="text-xs tracking-[0.18em] uppercase text-white/55 mb-2">
-              Entrenamiento personal
-            </p>
             <h1
-              className="text-5xl font-black tracking-[0.12em] uppercase text-white leading-none"
+              className="text-5xl font-black tracking-[0.02em] text-white leading-none"
               style={{ textShadow: "0 2px 24px rgba(0,0,0,0.5)" }}
             >
-              {tenant.name}
+              {tenant.trainerName}
             </h1>
+            <p className="text-xs tracking-[0.18em] uppercase text-white/55 mt-2">
+              Personal Trainer
+            </p>
           </div>
         </div>
 
@@ -198,8 +189,8 @@ function SplitLayout() {
         <div className="flex-1 flex items-center justify-center px-8 py-12">
           <div className="w-full max-w-sm space-y-6">
             <div className="flex flex-col items-center gap-3">
-              <div style={{ background: 'rgba(14,11,9,0.55)', borderRadius: '14px', padding: '8px', display: 'inline-block', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                <KorexIsotipo size={130} />
+              <div style={{ background: 'rgba(255,255,255,0.22)', borderRadius: '14px', padding: '3px', display: 'inline-block', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <KorexIsotipo size={155} />
               </div>
             </div>
             <Card>
