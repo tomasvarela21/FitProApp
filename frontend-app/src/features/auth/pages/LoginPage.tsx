@@ -143,7 +143,7 @@ function SplitLayout() {
         <div className="relative z-10 flex flex-col flex-1 justify-end px-5 pb-8 pt-safe">
           {/* Marca */}
           <div className="mb-6">
-            <KorexIsotipo size={52} />
+            <KorexIsotipo size={72} />
             <p className="text-xs tracking-[0.2em] uppercase text-white/50 mt-3 mb-0.5">
               Entrenamiento personal
             </p>
@@ -196,7 +196,7 @@ function SplitLayout() {
         <div className="flex-1 flex items-center justify-center px-8 py-12">
           <div className="w-full max-w-sm space-y-6">
             <div className="flex flex-col items-center gap-3">
-              <KorexIsotipo size={64} />
+              <KorexIsotipo size={80} />
               <h2 className="text-xl font-bold tracking-[0.14em] uppercase">{tenant.name}</h2>
             </div>
             <Card>
