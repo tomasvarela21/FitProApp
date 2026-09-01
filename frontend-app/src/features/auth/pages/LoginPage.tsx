@@ -201,7 +201,6 @@ function SplitLayout() {
               <div style={{ background: 'rgba(14,11,9,0.55)', borderRadius: '14px', padding: '8px', display: 'inline-block', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.1)' }}>
                 <KorexIsotipo size={130} />
               </div>
-              <h2 className="text-xl font-bold tracking-[0.14em] uppercase">{tenant.name}</h2>
             </div>
             <Card>
               <CardHeader className="pb-4">
