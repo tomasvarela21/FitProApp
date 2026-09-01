@@ -18,6 +18,7 @@ export function usePayments() {
         status: statusFilter,
       }),
     select: (res) => res.data.data,
+    staleTime: 30_000,
   });
 
   return {

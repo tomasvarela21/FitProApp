@@ -21,6 +21,7 @@ export const useStudents = () => {
       });
       return res.data.data;
     },
+    staleTime: 30_000,
   });
 
   return {

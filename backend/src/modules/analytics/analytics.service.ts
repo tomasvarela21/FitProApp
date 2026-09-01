@@ -17,7 +17,7 @@ export class AnalyticsService {
     ] = await Promise.all([
       prisma.installment.findMany({
         where: { trainerId },
-        select: { amount: true, status: true, paidAt: true, dueDate: true },
+        select: { amount: true, status: true, paidAt: true, dueDate: true, subscriptionId: true },
       }),
       prisma.student.findMany({
         where: { trainerId, deletedAt: null },
@@ -25,7 +25,7 @@ export class AnalyticsService {
       }),
       prisma.subscription.findMany({
         where: { trainerId },
-        select: { status: true, studentId: true },
+        select: { id: true, status: true, studentId: true },
       }),
       prisma.plan.findMany({
         where: { trainerId },
@@ -120,24 +120,19 @@ export class AnalyticsService {
       students.map((s) => [s.id, s.gymId ?? null])
     );
 
-    // Revenue per gym (from PAID installments via subscription.studentId)
-    const subscriptionsWithStudents = await prisma.subscription.findMany({
-      where: { trainerId },
-      select: {
-        studentId: true,
-        installments: {
-          where: { status: "PAID" },
-          select: { amount: true },
-        },
-      },
-    });
+    // Revenue per gym — sin query extra: cruzar installments → subscription → student → gym
+    const subToStudent = new Map<string, string>(
+      subscriptions.map((s) => [s.id, s.studentId])
+    );
 
     const gymRevenue = new Map<string, number>();
-    for (const sub of subscriptionsWithStudents) {
-      const gymId = studentGymMap.get(sub.studentId) ?? null;
+    for (const inst of installments) {
+      if (inst.status !== "PAID") continue;
+      const studentId = subToStudent.get(inst.subscriptionId);
+      if (!studentId) continue;
+      const gymId = studentGymMap.get(studentId) ?? null;
       if (!gymId) continue;
-      const subtotal = sub.installments.reduce((acc, i) => acc + Number(i.amount), 0);
-      gymRevenue.set(gymId, (gymRevenue.get(gymId) ?? 0) + subtotal);
+      gymRevenue.set(gymId, (gymRevenue.get(gymId) ?? 0) + Number(inst.amount));
     }
 
     const gymStudentCount = new Map<string, number>();

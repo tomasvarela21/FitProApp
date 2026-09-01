@@ -54,16 +54,19 @@ export const ExercisesPage = () => {
   const { data: muscleGroups = [], isLoading: loadingGroups } = useQuery({
     queryKey: ["muscle-groups"],
     queryFn: () => exercisesApi.getMuscleGroups().then((r) => r.data.data),
+    staleTime: 5 * 60_000,
   });
 
   const { data: allExercises = [] } = useQuery({
     queryKey: ["exercises"],
     queryFn: () => exercisesApi.list().then((r) => r.data.data),
+    staleTime: 5 * 60_000,
   });
 
   const { data: equipment = [] } = useQuery({
     queryKey: ["equipment"],
     queryFn: () => exercisesApi.getEquipment().then((r) => r.data.data),
+    staleTime: 5 * 60_000,
   });
 
   const countByGroupId = useMemo(
