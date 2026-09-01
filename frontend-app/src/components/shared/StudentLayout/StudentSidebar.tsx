@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { KorexIsotipo } from "@/components/shared/KorexLogo";
+import { tenant } from "@/lib/tenant";
 
 const navItems = [
   {
@@ -88,7 +89,7 @@ export const StudentSidebar = ({
       >
         <KorexIsotipo size={32} showBackground />
         {!collapsed && (
-          <span className="font-bold text-lg tracking-[0.16em] uppercase">KOREX</span>
+          <span className="font-bold text-lg tracking-[0.16em] uppercase">{tenant.name}</span>
         )}
         {onToggle && (
           <Button

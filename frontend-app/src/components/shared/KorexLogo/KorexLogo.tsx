@@ -1,3 +1,5 @@
+import { tenant } from "@/lib/tenant";
+
 interface KorexIsotipoProps {
   size?: number;
   showBackground?: boolean;
@@ -10,8 +12,8 @@ export function KorexIsotipo({
 }: KorexIsotipoProps) {
   return (
     <img
-      src="/korex-icon.png"
-      alt="KOREX"
+      src={tenant.logoPath}
+      alt={tenant.name}
       width={size}
       height={size}
       style={{ objectFit: "contain", display: "block" }}
@@ -37,7 +39,7 @@ export function KorexWordmark({
       <KorexIsotipo size={size} />
       <span
         style={{
-          fontFamily: "'Syne', sans-serif",
+          fontFamily: "var(--font-heading)",
           fontWeight: 800,
           fontSize: size * 0.56,
           color: textColor,
@@ -46,7 +48,7 @@ export function KorexWordmark({
           userSelect: 'none',
         }}
       >
-        KOREX
+        {tenant.name}
       </span>
     </div>
   );

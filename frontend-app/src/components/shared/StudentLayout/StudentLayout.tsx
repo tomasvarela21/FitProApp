@@ -7,6 +7,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/use-auth";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
 import { KorexIsotipo } from "@/components/shared/KorexLogo";
+import { tenant } from "@/lib/tenant";
 
 const STORAGE_KEY = "fitpro:student-sidebar-collapsed";
 
@@ -56,7 +57,7 @@ export const StudentLayout = () => {
           </Button>
           <div className="flex items-center gap-2 min-w-0">
             <KorexIsotipo size={32} showBackground />
-            <span className="font-bold text-lg tracking-[0.16em] uppercase truncate">KOREX</span>
+            <span className="font-bold text-lg tracking-[0.16em] uppercase truncate">{tenant.name}</span>
           </div>
         </header>
 

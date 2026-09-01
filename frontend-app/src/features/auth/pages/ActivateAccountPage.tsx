@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { KorexIsotipo } from "@/components/shared/KorexLogo";
+import { tenant } from "@/lib/tenant";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -79,7 +80,7 @@ export const ActivateAccountPage = () => {
         {/* Logo */}
         <div className="flex flex-col items-center gap-2 text-center">
           <KorexIsotipo size={64} showBackground />
-          <h1 className="text-2xl font-bold tracking-[0.18em] uppercase">KOREX</h1>
+          <h1 className="text-2xl font-bold tracking-[0.18em] uppercase">{tenant.name}</h1>
         </div>
 
         {/* Loading */}
