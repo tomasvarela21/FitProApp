@@ -143,8 +143,8 @@ function SplitLayout() {
         <div className="relative z-10 flex flex-col flex-1 justify-end px-5 pb-8 pt-safe">
           {/* Marca */}
           <div className="mb-6">
-            <div style={{ filter: 'brightness(0.65) contrast(1.1)', display: 'inline-block' }}>
-              <KorexIsotipo size={160} />
+            <div style={{ background: 'rgba(14,11,9,0.55)', borderRadius: '14px', padding: '8px', display: 'inline-block', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <KorexIsotipo size={110} />
             </div>
             <p className="text-xs tracking-[0.2em] uppercase text-white/50 mt-3 mb-0.5">
               Entrenamiento personal
@@ -198,8 +198,8 @@ function SplitLayout() {
         <div className="flex-1 flex items-center justify-center px-8 py-12">
           <div className="w-full max-w-sm space-y-6">
             <div className="flex flex-col items-center gap-3">
-              <div style={{ filter: 'brightness(0.65) contrast(1.1)', display: 'inline-block' }}>
-                <KorexIsotipo size={180} />
+              <div style={{ background: 'rgba(14,11,9,0.55)', borderRadius: '14px', padding: '8px', display: 'inline-block', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <KorexIsotipo size={130} />
               </div>
               <h2 className="text-xl font-bold tracking-[0.14em] uppercase">{tenant.name}</h2>
             </div>
