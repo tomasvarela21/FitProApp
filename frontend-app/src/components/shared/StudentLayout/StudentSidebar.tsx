@@ -83,13 +83,22 @@ export const StudentSidebar = ({
     >
       <div
         className={cn(
-          "flex items-center gap-2 py-5",
-          collapsed ? "flex-col justify-center px-2" : "px-6"
+          "flex items-center gap-3 py-4",
+          collapsed ? "flex-col justify-center px-2" : "px-4"
         )}
       >
-        <KorexIsotipo size={32} showBackground />
+        <div style={{ background: 'rgba(255,255,255,0.13)', borderRadius: '12px', padding: '3px', display: 'inline-flex', border: '1px solid rgba(255,255,255,0.18)' }}>
+          <KorexIsotipo size={collapsed ? 44 : 70} />
+        </div>
         {!collapsed && (
-          <span className="font-bold text-lg tracking-[0.16em] uppercase">{tenant.name}</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold tracking-[0.12em] uppercase leading-tight truncate">
+              {tenant.trainerName}
+            </p>
+            <p className="text-[10px] text-muted-foreground leading-tight truncate">
+              Personal Trainer
+            </p>
+          </div>
         )}
         {onToggle && (
           <Button

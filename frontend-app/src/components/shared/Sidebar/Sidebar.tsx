@@ -93,8 +93,8 @@ export const Sidebar = ({
           collapsed ? "flex-col justify-center px-2" : "px-4"
         )}
       >
-        <div style={{ background: 'rgba(255,255,255,0.13)', borderRadius: '12px', padding: '7px', display: 'inline-flex', border: '1px solid rgba(255,255,255,0.18)' }}>
-          <KorexIsotipo size={collapsed ? 40 : 62} />
+        <div style={{ background: 'rgba(255,255,255,0.13)', borderRadius: '12px', padding: '3px', display: 'inline-flex', border: '1px solid rgba(255,255,255,0.18)' }}>
+          <KorexIsotipo size={collapsed ? 44 : 70} />
         </div>
         {!collapsed && (
           <div className="flex-1 min-w-0">
