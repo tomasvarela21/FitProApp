@@ -15,6 +15,8 @@ export const AppLayout = () => {
   const { isAuthenticated } = useAuth();
   usePushNotifications(isAuthenticated);
 
+  const bgImage = tenant.trainerPhoto ? "/brands/franco/franco1.JPEG" : null;
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -70,8 +72,23 @@ export const AppLayout = () => {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6">
-          <Outlet />
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 relative">
+          {bgImage && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 z-0"
+              style={{
+                backgroundImage: `url(${bgImage})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center 20%',
+                backgroundRepeat: 'no-repeat',
+                opacity: 0.06,
+              }}
+            />
+          )}
+          <div className="relative z-10">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>
