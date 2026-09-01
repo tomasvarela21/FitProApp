@@ -177,7 +177,8 @@ function SplitLayout() {
           <img
             src={tenant.trainerPhoto!}
             alt={tenant.trainerName}
-            className="absolute inset-0 w-full h-full object-cover object-center"
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{ objectPosition: "center 20%" }}
           />
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-background" />
           <div className="absolute bottom-10 left-10 right-0">
