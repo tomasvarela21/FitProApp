@@ -10,7 +10,7 @@ type StatusConfig = {
 const statusConfig: Record<StudentStatus, StatusConfig> = {
   ACTIVE: {
     label: "Activo",
-    className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+    className: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
   },
   INVITED: {
     label: "Invitado",

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Pencil, X, Trash2, Send, KeyRound } from "lucide-react";
+import { Loader2, Pencil, X, Trash2, Send, KeyRound, Dumbbell } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -25,23 +25,30 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/shared/StatusBadge/StatusBadge";
 import { studentsApi } from "@/api/students.api";
+import { gymsApi } from "@/api/gyms.api";
 import { SubscriptionPanel } from "./SubscriptionPanel";
 import { RoutinePanel } from "./RoutinePanel";
 import type { Student, StudentStatus } from "@/types";
+import { formatDistanceToNow } from "date-fns";
+import { es } from "date-fns/locale";
 
 const editStudentSchema = z.object({
   firstName: z.string().min(2, "El nombre es obligatorio"),
   lastName: z.string().min(2, "El apellido es obligatorio"),
   phone: z.string().optional(),
   status: z.enum(["INVITED", "ACTIVE", "PAUSED", "INACTIVE"]),
+  gymId: z.string().nullable().optional(),
 });
 
 type EditStudentForm = z.infer<typeof editStudentSchema>;
+
+type SheetMode = "view" | "edit";
 
 type Props = {
   student: Student | null;
   open: boolean;
   onClose: () => void;
+  initialMode?: SheetMode;
 };
 
 const DetailRow = ({
@@ -57,26 +64,9 @@ const DetailRow = ({
   </div>
 );
 
-export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
+export const StudentDetailSheet = ({ student, open, onClose, initialMode = "view" }: Props) => {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
-
-  const { data: summary } = useQuery({
-    queryKey: ["student-summary", student?.id],
-    queryFn: () => studentsApi.getSummary(student!.id).then((r) => r.data.data),
-    enabled: open && !!student,
-    staleTime: 1000 * 60 * 2,
-  });
-
-  useEffect(() => {
-    if (!summary || !student) return;
-    if (summary.subscription !== undefined) {
-      queryClient.setQueryData(["subscription", student.id], summary.subscription);
-    }
-    if (summary.studentRoutine !== undefined) {
-      queryClient.setQueryData(["student-routine", student.id], summary.studentRoutine);
-    }
-  }, [summary, student?.id]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
@@ -95,6 +85,44 @@ export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
     resolver: zodResolver(editStudentSchema),
   });
 
+  const { data: gymsData } = useQuery({
+    queryKey: ["gyms"],
+    queryFn: () => gymsApi.list().then((r) => r.data.data),
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    if (initialMode === "edit" && student) {
+      reset({
+        firstName: student.firstName,
+        lastName: student.lastName,
+        phone: student.phone ?? "",
+        status: student.status,
+        gymId: student.gym?.id ?? null,
+      });
+      setIsEditing(true);
+    } else {
+      setIsEditing(false);
+    }
+  }, [open, student?.id, initialMode]);
+
+  const { data: summary } = useQuery({
+    queryKey: ["student-summary", student?.id],
+    queryFn: () => studentsApi.getSummary(student!.id).then((r) => r.data.data),
+    enabled: open && !!student,
+    staleTime: 1000 * 60 * 2,
+  });
+
+  useEffect(() => {
+    if (!summary || !student) return;
+    if (summary.subscription !== undefined) {
+      queryClient.setQueryData(["subscription", student.id], summary.subscription);
+    }
+    if (summary.studentRoutine !== undefined) {
+      queryClient.setQueryData(["student-routine", student.id], summary.studentRoutine);
+    }
+  }, [summary, student?.id]);
+
   const handleEdit = () => {
     if (!student) return;
     reset({
@@ -102,6 +130,7 @@ export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
       lastName: student.lastName,
       phone: student.phone ?? "",
       status: student.status,
+      gymId: student.gym?.id ?? null,
     });
     setIsEditing(true);
   };
@@ -252,6 +281,26 @@ export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
                 />
               </div>
 
+              {gymsData && gymsData.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label>Gimnasio <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                  <Select
+                    defaultValue={student.gym?.id ?? "none"}
+                    onValueChange={(val) => setValue("gymId", val === "none" ? null : val)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sin gimnasio" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin gimnasio</SelectItem>
+                      {gymsData.map((g) => (
+                        <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               <div className="space-y-1.5">
                 <Label>Estado</Label>
                 <Select
@@ -331,6 +380,7 @@ export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
                   value={<StatusBadge status={student.status} />}
                 />
                 <DetailRow label="Teléfono" value={student.phone ?? "—"} />
+                <DetailRow label="Gimnasio" value={student.gym?.name ?? "—"} />
                 <DetailRow
                   label="Invitado"
                   value={formatDate(student.invitedAt)}
@@ -343,6 +393,21 @@ export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
                   label="Creado"
                   value={formatDate(student.createdAt)}
                 />
+                <DetailRow
+                  label="Sesiones completadas"
+                  value={
+                    <span className="flex items-center gap-1.5">
+                      <Dumbbell className="w-3.5 h-3.5 text-primary" />
+                      {student.sessionsCount}
+                    </span>
+                  }
+                />
+                {student.lastSessionDate && (
+                  <DetailRow
+                    label="Última sesión"
+                    value={formatDistanceToNow(new Date(student.lastSessionDate), { locale: es, addSuffix: true })}
+                  />
+                )}
               </div>
 
               {error && (
@@ -352,16 +417,16 @@ export const StudentDetailSheet = ({ student, open, onClose }: Props) => {
               )}
 
               {resendSuccess && (
-                <div className="rounded-md bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
-                  <p className="text-xs text-emerald-600">
+                <div className="rounded-md bg-yellow-500/10 border border-yellow-500/20 px-3 py-2">
+                  <p className="text-xs text-yellow-500">
                     ✓ Invitación reenviada correctamente
                   </p>
                 </div>
               )}
 
               {resetSuccess && (
-                <div className="rounded-md bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
-                  <p className="text-xs text-emerald-600">
+                <div className="rounded-md bg-yellow-500/10 border border-yellow-500/20 px-3 py-2">
+                  <p className="text-xs text-yellow-500">
                     ✓ Email de reset enviado correctamente
                   </p>
                 </div>

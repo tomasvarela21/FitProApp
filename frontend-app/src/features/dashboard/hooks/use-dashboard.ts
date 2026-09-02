@@ -8,5 +8,6 @@ export const useDashboard = () => {
       const res = await trainersApi.getDashboardSummary();
       return res.data.data;
     },
+    staleTime: 60_000, // 1 minuto — evita refetch al volver al tab
   });
 };

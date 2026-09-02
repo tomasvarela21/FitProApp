@@ -2,17 +2,19 @@ import { NavLink, useNavigate } from "react-router-dom";
 import {
   UserCircle,
   LogOut,
-  Dumbbell,
   TrendingUp,
   ChevronLeft,
   ChevronRight,
   BookOpen,
+  Dumbbell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { KorexIsotipo } from "@/components/shared/KorexLogo";
+import { tenant } from "@/lib/tenant";
 
 const navItems = [
   {
@@ -81,15 +83,22 @@ export const StudentSidebar = ({
     >
       <div
         className={cn(
-          "flex items-center gap-2 py-5",
-          collapsed ? "flex-col justify-center px-2" : "px-6"
+          "flex items-center gap-3 py-4",
+          collapsed ? "flex-col justify-center px-2" : "px-4"
         )}
       >
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary">
-          <Dumbbell className="w-4 h-4 text-primary-foreground" />
+        <div style={{ background: 'rgba(255,255,255,0.13)', borderRadius: '12px', padding: '3px', display: 'inline-flex', border: '1px solid rgba(255,255,255,0.18)' }}>
+          <KorexIsotipo size={collapsed ? 44 : 70} />
         </div>
         {!collapsed && (
-          <span className="font-bold text-lg tracking-tight">FitPro</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold tracking-[0.12em] uppercase leading-tight truncate">
+              {tenant.trainerName}
+            </p>
+            <p className="text-[10px] text-muted-foreground leading-tight truncate">
+              Personal Trainer
+            </p>
+          </div>
         )}
         {onToggle && (
           <Button
@@ -124,8 +133,8 @@ export const StudentSidebar = ({
                 "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                 collapsed && "justify-center px-2",
                 isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  ? "bg-accent text-primary border-l-2 border-primary"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground border-l-2 border-transparent"
               )
             }
           >

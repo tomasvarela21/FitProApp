@@ -115,7 +115,7 @@ type ExerciseInput = {
 const InstallmentStatusBadge = ({ status }: { status: string }) => {
   if (status === "PAID")
     return (
-      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 gap-1 text-xs">
+      <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 gap-1 text-xs">
         <CheckCircle2 className="w-3 h-3" /> Pagada
       </Badge>
     );
@@ -249,9 +249,9 @@ const WorkoutForm = ({ exercises, routineName }: {
 
   if (success) {
     return (
-      <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-6 py-10 text-center">
-        <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto mb-3" />
-        <p className="font-semibold text-emerald-700">¡Entrenamiento registrado!</p>
+      <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/10 px-6 py-10 text-center">
+        <CheckCircle2 className="w-8 h-8 text-yellow-500 mx-auto mb-3" />
+        <p className="font-semibold text-yellow-600">¡Entrenamiento registrado!</p>
         <p className="text-sm text-muted-foreground mt-1">Tu sesión fue guardada correctamente.</p>
       </div>
     );
@@ -504,7 +504,7 @@ const TodayTab = () => {
             Recuperando: {DAY_LABELS[resolvedDay!]}
           </Badge>
         ) : (
-          <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+          <Badge variant="outline" className="text-xs bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
             Hoy
           </Badge>
         )}
@@ -566,10 +566,10 @@ const AlreadyLogged = ({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 flex items-start gap-3 sm:items-center">
-        <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+      <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/10 px-4 py-3 flex items-start gap-3 sm:items-center">
+        <CheckCircle2 className="w-5 h-5 text-yellow-500 shrink-0" />
         <div>
-          <p className="text-sm font-medium text-emerald-700">Ya registraste tu entrenamiento de hoy</p>
+          <p className="text-sm font-medium text-yellow-600">Ya registraste tu entrenamiento de hoy</p>
           <p className="text-xs text-muted-foreground">{routineName} — {log.sets.length} sets totales</p>
         </div>
       </div>
@@ -760,7 +760,7 @@ export const StudentDashboardPage = () => {
                               <AlertTriangle className="w-3 h-3" /> Por vencer
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="w-fit bg-emerald-500/10 text-emerald-600 border-emerald-500/20 gap-1">
+                            <Badge variant="outline" className="w-fit bg-yellow-500/10 text-yellow-500 border-yellow-500/20 gap-1">
                               <CheckCircle2 className="w-3 h-3" /> Vigente
                             </Badge>
                           )}
@@ -777,7 +777,7 @@ export const StudentDashboardPage = () => {
                           </div>
                           <div>
                             <p className="text-xs text-muted-foreground">Pagado</p>
-                            <p className="text-sm font-bold text-emerald-600">
+                            <p className="text-sm font-bold text-yellow-500">
                               ${subscription.paidAmount.toLocaleString("es-AR")}
                             </p>
                           </div>

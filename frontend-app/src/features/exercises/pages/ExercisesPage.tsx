@@ -36,7 +36,7 @@ const MUSCLE_GROUP_ICONS: Record<string, LucideIcon> = {
 
 const MUSCLE_GROUP_COLORS: Record<string, string> = {
   pecho: "bg-blue-500/10 text-blue-600",
-  espalda: "bg-emerald-500/10 text-emerald-600",
+  espalda: "bg-yellow-500/10 text-yellow-500",
   piernas: "bg-purple-500/10 text-purple-600",
   hombros: "bg-amber-500/10 text-amber-600",
   biceps: "bg-pink-500/10 text-pink-600",
@@ -54,16 +54,19 @@ export const ExercisesPage = () => {
   const { data: muscleGroups = [], isLoading: loadingGroups } = useQuery({
     queryKey: ["muscle-groups"],
     queryFn: () => exercisesApi.getMuscleGroups().then((r) => r.data.data),
+    staleTime: 5 * 60_000,
   });
 
   const { data: allExercises = [] } = useQuery({
     queryKey: ["exercises"],
     queryFn: () => exercisesApi.list().then((r) => r.data.data),
+    staleTime: 5 * 60_000,
   });
 
   const { data: equipment = [] } = useQuery({
     queryKey: ["equipment"],
     queryFn: () => exercisesApi.getEquipment().then((r) => r.data.data),
+    staleTime: 5 * 60_000,
   });
 
   const countByGroupId = useMemo(

@@ -3,7 +3,9 @@ import { useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Dumbbell, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { KorexIsotipo } from "@/components/shared/KorexLogo";
+import { tenant } from "@/lib/tenant";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -77,10 +79,8 @@ export const ActivateAccountPage = () => {
       <div className="w-full max-w-sm space-y-6">
         {/* Logo */}
         <div className="flex flex-col items-center gap-2 text-center">
-          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary">
-            <Dumbbell className="w-6 h-6 text-primary-foreground" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight">FitPro</h1>
+          <KorexIsotipo size={64} showBackground />
+          <h1 className="text-2xl font-bold tracking-[0.18em] uppercase">{tenant.name}</h1>
         </div>
 
         {/* Loading */}
@@ -161,8 +161,8 @@ export const ActivateAccountPage = () => {
         {pageState === "success" && (
           <Card>
             <CardContent className="flex flex-col items-center text-center py-10 gap-4">
-              <div className="w-14 h-14 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                <CheckCircle2 className="w-7 h-7 text-emerald-600" />
+              <div className="w-14 h-14 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                <CheckCircle2 className="w-7 h-7 text-yellow-500" />
               </div>
               <div>
                 <p className="font-semibold text-lg">¡Cuenta activada!</p>

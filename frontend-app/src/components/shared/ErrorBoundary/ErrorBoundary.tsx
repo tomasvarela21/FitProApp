@@ -31,7 +31,7 @@ export class ErrorBoundary extends Component<Props, State> {
             >
               Recargar página
             </button>
-            {process.env.NODE_ENV !== "production" && (
+            {import.meta.env.DEV && (
               <pre className="mt-4 text-left text-xs bg-muted p-3 rounded-md overflow-auto max-h-48 text-muted-foreground">
                 {this.state.error.message}
               </pre>

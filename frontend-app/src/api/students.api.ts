@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { ApiSuccess, PaginatedResponse, Student, StudentSummary } from "@/types";
+import type { ApiSuccess, PaginatedResponse, Student, StudentSummary, StudentNote, StudentInjury } from "@/types";
 
 type CreateStudentPayload = {
   email: string;
@@ -20,6 +20,7 @@ type ListStudentsQuery = {
   page?: number;
   limit?: number;
   search?: string;
+  status?: string;
 };
 
 export const studentsApi = {
@@ -52,4 +53,24 @@ export const studentsApi = {
 
   getSummary: (id: string) =>
     apiClient.get<ApiSuccess<StudentSummary>>(`/students/${id}/summary`),
+
+  // Notes
+  getNotes: (id: string) =>
+    apiClient.get<ApiSuccess<StudentNote[]>>(`/students/${id}/notes`),
+  createNote: (id: string, content: string) =>
+    apiClient.post<ApiSuccess<StudentNote>>(`/students/${id}/notes`, { content }),
+  deleteNote: (id: string, noteId: string) =>
+    apiClient.delete<ApiSuccess<{ deleted: boolean }>>(`/students/${id}/notes/${noteId}`),
+
+  // Injuries
+  getInjuries: (id: string) =>
+    apiClient.get<ApiSuccess<StudentInjury[]>>(`/students/${id}/injuries`),
+  createInjury: (id: string, data: {
+    bodyPart: string; description: string;
+    severity: "MILD" | "MODERATE" | "SEVERE"; occurredAt: string; notes?: string;
+  }) => apiClient.post<ApiSuccess<StudentInjury>>(`/students/${id}/injuries`, data),
+  updateInjury: (id: string, injuryId: string, data: { resolvedAt?: string | null; notes?: string }) =>
+    apiClient.patch<ApiSuccess<StudentInjury>>(`/students/${id}/injuries/${injuryId}`, data),
+  deleteInjury: (id: string, injuryId: string) =>
+    apiClient.delete<ApiSuccess<{ deleted: boolean }>>(`/students/${id}/injuries/${injuryId}`),
 };

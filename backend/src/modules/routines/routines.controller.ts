@@ -106,6 +106,18 @@ export class RoutinesController {
     return res.status(200).json(successResponse("Ejercicio eliminado de la rutina", result));
   });
 
+  static toggleTemplate = asyncHandler(async (req: Request, res: Response) => {
+    const id = req.params.id as string;
+    const result = await RoutinesService.toggleTemplate(req.user!.userId, id);
+    return res.status(200).json(successResponse("Plantilla actualizada", result));
+  });
+
+  static cloneTemplate = asyncHandler(async (req: Request, res: Response) => {
+    const id = req.params.id as string;
+    const result = await RoutinesService.cloneTemplate(req.user!.userId, id);
+    return res.status(201).json(successResponse("Rutina clonada", result));
+  });
+
   static assignRoutine = asyncHandler(async (req: Request, res: Response) => {
     const studentId = req.params.studentId as string;
     const { routineId, notes } = assignRoutineSchema.parse(req.body);

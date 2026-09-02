@@ -19,3 +19,12 @@ export const updateProfileSchema = z.object({
 });
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
+export const listSubscriptionsSchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+  search: z.string().trim().optional(),
+  status: z.enum(["ALL", "OVERDUE", "EXPIRING_SOON", "ACTIVE", "PAID"]).optional(),
+});
+
+export type ListSubscriptionsQueryInput = z.infer<typeof listSubscriptionsSchema>;

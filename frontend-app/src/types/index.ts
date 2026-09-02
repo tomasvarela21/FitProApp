@@ -39,11 +39,14 @@ export type Student = {
   lastName: string;
   phone: string | null;
   status: StudentStatus;
+  gym: { id: string; name: string } | null;
   invitedAt: string | null;
   activatedAt: string | null;
   createdAt: string;
   updatedAt: string;
   subscription: StudentSubscriptionSummary | null;
+  sessionsCount: number;
+  lastSessionDate: string | null;
 };
 
 export type PaginatedResponse<T> = {
@@ -62,6 +65,11 @@ export type DashboardStats = {
   invited: number;
   paused: number;
   inactive: number;
+  retentionRate: number;
+  activePercentage: number;
+  weeklySessionsCount: number;
+  weeklySessionsDelta: number;
+  newStudentsThisMonth: number;
 };
 
 export type DashboardRecentStudent = {
@@ -86,12 +94,23 @@ export type ExpiringAlert = {
   daysUntilExpiry: number;
 };
 
+export type InactiveStudent = {
+  id: string;
+  name: string;
+  lastWorkoutDate?: string | null;
+};
+
 export type DashboardSummary = {
   stats: DashboardStats;
   recentStudents: DashboardRecentStudent[];
   alerts: {
     expiringSoon: ExpiringAlert[];
     expired: ExpiringAlert[];
+  };
+  inactivity: {
+    withoutRoutine: InactiveStudent[];
+    noWorkoutLast7: InactiveStudent[];
+    noWorkoutLast14: InactiveStudent[];
   };
 };
 
@@ -231,6 +250,7 @@ export type Routine = {
   name: string;
   description: string | null;
   isGlobal: boolean;
+  isTemplate: boolean;
   trainerId: string | null;
   routineExercises: RoutineExercise[];
   createdAt: string;
@@ -357,6 +377,11 @@ export type WeeklyExerciseOverride = {
 };
 
 export type StudentSummary = {
+  totalSessionsCount: number;
+  sessionsByMonth: Record<string, number>;
+  sessionsByDay?: Record<string, number>;
+  strengthProgressPct: number | null;
+  monthsActive: number | null;
   student: Student;
   subscription: StudentSubscription | null;
   studentRoutine: {
@@ -393,6 +418,120 @@ export type StudentSummary = {
       overrides: WeeklyExerciseOverride[];
     }[];
   } | null;
+};
+
+export type StudentNote = {
+  id: string;
+  studentId: string;
+  trainerId: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type InjurySeverity = "MILD" | "MODERATE" | "SEVERE";
+
+export type StudentInjury = {
+  id: string;
+  studentId: string;
+  trainerId: string;
+  bodyPart: string;
+  description: string;
+  severity: InjurySeverity;
+  occurredAt: string;
+  resolvedAt: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+// ─── Chat ─────────────────────────────────────────────────────────────────────
+
+export type MessageSenderRole = "TRAINER" | "STUDENT";
+
+export type ChatMessage = {
+  id: string;
+  senderRole: MessageSenderRole;
+  senderId: string;
+  body: string;
+  readAt: string | null;
+  createdAt: string;
+};
+
+export type ConversationItem = {
+  id: string;
+  student: { id: string; firstName: string; lastName: string };
+  lastMessage: { body: string; senderRole: MessageSenderRole; createdAt: string } | null;
+  unreadCount: number;
+  updatedAt: string;
+};
+
+export type ConversationListResponse = {
+  conversations: ConversationItem[];
+  totalUnread: number;
+};
+
+export type StudentConversationResponse = {
+  conversationId: string;
+  trainer: { id: string; firstName: string; lastName: string };
+  messages: ChatMessage[];
+  unreadCount: number;
+};
+
+export type MessagesResponse = {
+  messages: ChatMessage[];
+  hasMore: boolean;
+};
+
+// ─── Gyms ─────────────────────────────────────────────────────────────────────
+
+export type Gym = {
+  id: string;
+  trainerId: string;
+  name: string;
+  address: string | null;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { students: number };
+};
+
+// ─── Analytics ────────────────────────────────────────────────────────────────
+
+export type MonthlyRevenue = { month: string; amount: number };
+
+export type GymAnalytics = {
+  id: string;
+  name: string;
+  studentCount: number;
+  revenue: number;
+};
+
+export type BusinessAnalytics = {
+  revenue: {
+    totalCollected: number;
+    totalPending: number;
+    totalOverdue: number;
+    monthlyRevenue: MonthlyRevenue[];
+  };
+  students: {
+    total: number;
+    newLast30Days: number;
+    byStatus: Record<string, number>;
+    unassignedToGym: number;
+  };
+  subscriptions: {
+    total: number;
+    byStatus: Record<string, number>;
+  };
+  plans: {
+    id: string;
+    name: string;
+    price: number;
+    duration: string;
+    isActive: boolean;
+    subscriberCount: number;
+  }[];
+  gyms: GymAnalytics[];
 };
 
 export type WeeklyPlan = {

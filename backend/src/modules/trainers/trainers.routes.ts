@@ -36,3 +36,10 @@ trainersRouter.patch(
   validate(updateProfileSchema),
   TrainersController.updateProfile
 );
+
+trainersRouter.get(
+  "/subscriptions",
+  requireAuth,
+  requireRole("TRAINER"),
+  TrainersController.listSubscriptions
+);

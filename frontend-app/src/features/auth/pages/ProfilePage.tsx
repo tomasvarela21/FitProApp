@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/shared/PageHeader/PageHeader";
 import { useProfile } from "@/features/auth/hooks/use-profile";
+import { GymsPanel } from "@/features/auth/components/GymsPanel";
 
 const profileSchema = z.object({
   firstName: z.string().min(2, "El nombre es obligatorio"),
@@ -70,108 +72,114 @@ export const ProfilePage = () => {
     <div className="max-w-xl">
       <PageHeader
         title="Mi perfil"
-        description="Administrá tu información personal"
+        description="Administrá tu información personal y gimnasios"
       />
 
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 text-primary text-lg font-bold shrink-0">
-              {profile?.firstName[0]}
-              {profile?.lastName[0]}
-            </div>
-            <div>
-              <CardTitle className="text-base">
-                {profile?.firstName} {profile?.lastName}
-              </CardTitle>
-              <CardDescription>{profile?.email}</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
+      <Tabs defaultValue="perfil">
+        <TabsList className="mb-6">
+          <TabsTrigger value="perfil">Perfil</TabsTrigger>
+          <TabsTrigger value="gimnasios">Gimnasios</TabsTrigger>
+        </TabsList>
 
-        <Separator />
+        <TabsContent value="perfil">
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 text-primary text-lg font-bold shrink-0">
+                  {profile?.firstName[0]}
+                  {profile?.lastName[0]}
+                </div>
+                <div>
+                  <CardTitle className="text-base">
+                    {profile?.firstName} {profile?.lastName}
+                  </CardTitle>
+                  <CardDescription>{profile?.email}</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
 
-        <CardContent className="pt-6">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="firstName">Nombre</Label>
-                <Input id="firstName" {...register("firstName")} />
-                {errors.firstName && (
-                  <p className="text-xs text-destructive">
-                    {errors.firstName.message}
-                  </p>
+            <Separator />
+
+            <CardContent className="pt-6">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="firstName">Nombre</Label>
+                    <Input id="firstName" {...register("firstName")} />
+                    {errors.firstName && (
+                      <p className="text-xs text-destructive">{errors.firstName.message}</p>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="lastName">Apellido</Label>
+                    <Input id="lastName" {...register("lastName")} />
+                    {errors.lastName && (
+                      <p className="text-xs text-destructive">{errors.lastName.message}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    value={profile?.email}
+                    disabled
+                    className="bg-muted/50 text-muted-foreground"
+                  />
+                  <p className="text-xs text-muted-foreground">El email no se puede modificar</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="phone">
+                    Teléfono{" "}
+                    <span className="text-muted-foreground font-normal">(opcional)</span>
+                  </Label>
+                  <Input id="phone" placeholder="+54 9 11 1234-5678" {...register("phone")} />
+                </div>
+
+                {error && (
+                  <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2">
+                    <p className="text-xs text-destructive">{error}</p>
+                  </div>
                 )}
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="lastName">Apellido</Label>
-                <Input id="lastName" {...register("lastName")} />
-                {errors.lastName && (
-                  <p className="text-xs text-destructive">
-                    {errors.lastName.message}
-                  </p>
+
+                {success && (
+                  <div className="rounded-md bg-yellow-500/10 border border-yellow-500/20 px-3 py-2">
+                    <p className="text-xs text-yellow-500">✓ Perfil actualizado correctamente</p>
+                  </div>
                 )}
-              </div>
-            </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                value={profile?.email}
-                disabled
-                className="bg-muted/50 text-muted-foreground"
-              />
-              <p className="text-xs text-muted-foreground">
-                El email no se puede modificar
-              </p>
-            </div>
+                <Button type="submit" disabled={isUpdating || !isDirty} className="w-full">
+                  {isUpdating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Guardando...
+                    </>
+                  ) : (
+                    "Guardar cambios"
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="phone">
-                Teléfono{" "}
-                <span className="text-muted-foreground font-normal">
-                  (opcional)
-                </span>
-              </Label>
-              <Input
-                id="phone"
-                placeholder="+54 9 11 1234-5678"
-                {...register("phone")}
-              />
-            </div>
-
-            {error && (
-              <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2">
-                <p className="text-xs text-destructive">{error}</p>
-              </div>
-            )}
-
-            {success && (
-              <div className="rounded-md bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
-                <p className="text-xs text-emerald-600">
-                  ✓ Perfil actualizado correctamente
-                </p>
-              </div>
-            )}
-
-            <Button
-              type="submit"
-              disabled={isUpdating || !isDirty}
-              className="w-full"
-            >
-              {isUpdating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Guardando...
-                </>
-              ) : (
-                "Guardar cambios"
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+        <TabsContent value="gimnasios">
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base">Mis gimnasios</CardTitle>
+              <CardDescription>
+                Administrá las sedes donde entrenás a tus alumnos
+              </CardDescription>
+            </CardHeader>
+            <Separator />
+            <CardContent className="pt-6">
+              <GymsPanel />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

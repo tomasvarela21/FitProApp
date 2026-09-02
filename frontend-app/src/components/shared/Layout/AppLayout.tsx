@@ -1,17 +1,21 @@
 import { Outlet } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Dumbbell, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Sidebar } from "@/components/shared/Sidebar/Sidebar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/use-auth";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
+import { KorexIsotipo } from "@/components/shared/KorexLogo";
+import { tenant } from "@/lib/tenant";
 
 const STORAGE_KEY = "fitpro:trainer-sidebar-collapsed";
 
 export const AppLayout = () => {
   const { isAuthenticated } = useAuth();
   usePushNotifications(isAuthenticated);
+
+  const bgImage = tenant.trainerPhoto ? "/brands/franco/franco1.webp" : null;
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
@@ -53,18 +57,38 @@ export const AppLayout = () => {
           >
             <Menu className="w-4 h-4" />
           </Button>
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary">
-              <Dumbbell className="w-4 h-4 text-primary-foreground" />
+          <div className="flex items-center gap-3 min-w-0">
+            <div style={{ background: 'rgba(255,255,255,0.13)', borderRadius: '12px', padding: '7px', display: 'inline-flex', border: '1px solid rgba(255,255,255,0.18)' }}>
+              <KorexIsotipo size={52} />
             </div>
-            <span className="font-bold text-lg tracking-tight truncate">
-              FitPro
-            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold tracking-[0.12em] uppercase leading-tight truncate">
+                {tenant.trainerName}
+              </p>
+              <p className="text-[10px] text-muted-foreground leading-tight truncate">
+                Personal Trainer
+              </p>
+            </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6">
-          <Outlet />
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 relative">
+          {bgImage && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 z-0"
+              style={{
+                backgroundImage: `url(${bgImage})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center 20%',
+                backgroundRepeat: 'no-repeat',
+                opacity: 0.06,
+              }}
+            />
+          )}
+          <div className="relative z-10">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

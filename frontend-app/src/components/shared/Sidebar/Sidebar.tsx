@@ -3,50 +3,37 @@ import {
   LayoutDashboard,
   Users,
   LogOut,
-  Dumbbell,
   UserCircle,
   CreditCard,
   ClipboardList,
   ChevronLeft,
   ChevronRight,
+  Dumbbell,
+  Banknote,
+  MessageSquare,
+  BarChart2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { KorexIsotipo } from "@/components/shared/KorexLogo";
+import { tenant } from "@/lib/tenant";
+import { chatApi } from "@/api/chat.api";
 
 const navItems = [
-  {
-    label: "Dashboard",
-    href: "/app/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    label: "Alumnos",
-    href: "/app/students",
-    icon: Users,
-  },
-  {
-    label: "Planes",
-    href: "/app/plans",
-    icon: CreditCard,
-  },
-  {
-    label: "Ejercicios",
-    href: "/app/exercises",
-    icon: Dumbbell,
-  },
-  {
-    label: "Rutinas",
-    href: "/app/routines",
-    icon: ClipboardList,
-  },
-  {
-    label: "Mi perfil",
-    href: "/app/profile",
-    icon: UserCircle,
-  },
+  { label: "Dashboard", href: "/app/dashboard", icon: LayoutDashboard },
+  { label: "Alumnos", href: "/app/students", icon: Users },
+  { label: "Planes", href: "/app/plans", icon: CreditCard },
+  { label: "Cobros", href: "/app/payments", icon: Banknote },
+  { label: "Ejercicios", href: "/app/exercises", icon: Dumbbell },
+  { label: "Rutinas", href: "/app/routines", icon: ClipboardList },
+  { label: "Chat", href: "/app/chat", icon: MessageSquare },
+  { label: "Analytics", href: "/app/analytics", icon: BarChart2 },
+  { label: "Mi perfil", href: "/app/profile", icon: UserCircle },
 ];
 
 type SidebarProps = {
@@ -62,6 +49,14 @@ export const Sidebar = ({
 }: SidebarProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  const { data: convData } = useQuery({
+    queryKey: ["chat-conversations-badge"],
+    queryFn: () => chatApi.getConversations().then((r) => r.data.data),
+    refetchInterval: 10_000,
+    enabled: user?.role === "TRAINER",
+  });
+  const totalUnread = convData?.totalUnread ?? 0;
 
   const handleLogout = async () => {
     try {
@@ -94,22 +89,29 @@ export const Sidebar = ({
       {/* Logo */}
       <div
         className={cn(
-          "flex items-center gap-2 py-5",
-          collapsed ? "flex-col justify-center px-2" : "px-6"
+          "flex items-center gap-3 py-4",
+          collapsed ? "flex-col justify-center px-2" : "px-4"
         )}
       >
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary">
-          <Dumbbell className="w-4 h-4 text-primary-foreground" />
+        <div style={{ background: 'rgba(255,255,255,0.13)', borderRadius: '12px', padding: '3px', display: 'inline-flex', border: '1px solid rgba(255,255,255,0.18)' }}>
+          <KorexIsotipo size={collapsed ? 44 : 70} />
         </div>
         {!collapsed && (
-          <span className="font-bold text-lg tracking-tight">FitPro</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold tracking-[0.12em] uppercase leading-tight truncate">
+              {tenant.trainerName}
+            </p>
+            <p className="text-[10px] text-muted-foreground leading-tight truncate">
+              Personal Trainer
+            </p>
+          </div>
         )}
         {onToggle && (
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
-            className={cn("ml-auto hidden lg:inline-flex", collapsed && "ml-0")}
+            className={cn("shrink-0 hidden lg:inline-flex", collapsed ? "mt-1" : "ml-auto")}
             onClick={onToggle}
             aria-label={collapsed ? "Expandir sidebar" : "Contraer sidebar"}
             title={collapsed ? "Expandir sidebar" : "Contraer sidebar"}
@@ -138,13 +140,27 @@ export const Sidebar = ({
                 "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                 collapsed && "justify-center px-2",
                 isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  ? "bg-accent text-primary border-l-2 border-primary"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground border-l-2 border-transparent"
               )
             }
           >
-            <item.icon className="w-4 h-4 shrink-0" />
-            {!collapsed && <span className="truncate">{item.label}</span>}
+            <span className="relative shrink-0">
+              <item.icon className="w-4 h-4" />
+              {item.href === "/app/chat" && collapsed && totalUnread > 0 && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" />
+              )}
+            </span>
+            {!collapsed && (
+              <span className="flex-1 flex items-center justify-between truncate">
+                <span className="truncate">{item.label}</span>
+                {item.href === "/app/chat" && totalUnread > 0 && (
+                  <Badge className="ml-1 h-4 min-w-4 px-1 text-[10px] leading-none">
+                    {totalUnread > 99 ? "99+" : totalUnread}
+                  </Badge>
+                )}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>

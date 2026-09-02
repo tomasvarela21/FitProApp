@@ -9,6 +9,9 @@ import { exercisesRouter } from "../modules/exercises/exercises.routes";
 import { routinesRouter, studentRoutinesRouter } from "../modules/routines/routines.routes";
 import { weeklyPlanRouter } from "../modules/routines/weekly-plan.routes";
 import { notificationsRouter } from "../modules/notifications/notifications.routes";
+import { chatRouter } from "../modules/chat/chat.routes";
+import { analyticsRouter } from "../modules/analytics/analytics.routes";
+import { gymsRouter } from "../modules/gyms/gyms.routes";
 import { sendDailyPaymentAlerts } from "../infrastructure/jobs/payment-alerts.job";
 
 export const router = Router();
@@ -29,6 +32,9 @@ router.use("/plans", plansRouter);
 router.use("/subscriptions", subscriptionsRouter);
 router.use("/student", studentPortalRouter);
 router.use("/notifications", notificationsRouter);
+router.use("/chat", chatRouter);
+router.use("/analytics", analyticsRouter);
+router.use("/gyms", gymsRouter);
 
 router.use("/exercises", exercisesRouter);
 router.use("/routines", routinesRouter);

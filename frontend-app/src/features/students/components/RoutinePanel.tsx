@@ -419,6 +419,7 @@ const AssignRoutineDialog = ({
                 {routines.map((r) => (
                   <SelectItem key={r.id} value={r.id}>
                     {r.name}
+                    {r.isTemplate && <span className="text-amber-600 ml-1">· Plantilla</span>}
                     {r.isGlobal && <span className="text-muted-foreground ml-1">· Global</span>}
                   </SelectItem>
                 ))}
@@ -521,6 +522,7 @@ const CreateWeeklyPlanDialog = ({
                 {routines.map((r) => (
                   <SelectItem key={r.id} value={r.id}>
                     {r.name}
+                    {r.isTemplate && <span className="text-amber-600 ml-1">· Plantilla</span>}
                     {r.isGlobal && <span className="text-muted-foreground ml-1">· Global</span>}
                   </SelectItem>
                 ))}
@@ -790,7 +792,7 @@ const WeeklyPlanTabContent = ({ studentId }: { studentId: string }) => {
       </div>
 
       {/* Week tabs */}
-      <div className="flex gap-1 border-b border-border -mx-4 px-4 overflow-x-auto">
+      <div className="flex gap-1 border-b border-border -mx-4 px-4 overflow-x-auto scroll-no-bar">
         {weekTabs.map((wn) => (
           <button
             key={wn}
@@ -1208,7 +1210,7 @@ export const RoutinePanel = ({ studentId }: Props) => {
 
                   {/* Day tabs */}
                   {sortedDays.length > 0 && (
-                    <div className="flex gap-1 border-b border-border -mx-4 px-4 overflow-x-auto">
+                    <div className="flex gap-1 border-b border-border -mx-4 px-4 overflow-x-auto scroll-no-bar">
                       {sortedDays.map((day) => (
                         <button
                           key={day}
@@ -1332,7 +1334,7 @@ export const RoutinePanel = ({ studentId }: Props) => {
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="h-7 gap-1 text-xs text-green-600"
+                                      className="h-7 gap-1 text-xs text-yellow-500"
                                       onClick={() => handleDelete(re.id)}
                                       disabled={isDeleting}
                                     >
@@ -1468,7 +1470,7 @@ export const RoutinePanel = ({ studentId }: Props) => {
                                         <Button
                                           variant="ghost"
                                           size="sm"
-                                          className="h-5 w-5 p-0 text-green-600 hover:text-green-700"
+                                          className="h-5 w-5 p-0 text-yellow-500 hover:text-yellow-600"
                                           onClick={() => handleDelete(re.id)}
                                           disabled={isDeleting}
                                         >

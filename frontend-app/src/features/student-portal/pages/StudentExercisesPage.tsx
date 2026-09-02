@@ -32,7 +32,7 @@ const DIFFICULTY_LABELS: Record<string, string> = {
 };
 
 const DIFFICULTY_COLORS: Record<string, string> = {
-  BEGINNER: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+  BEGINNER: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
   INTERMEDIATE: "bg-amber-500/10 text-amber-600 border-amber-500/20",
   ADVANCED: "bg-red-500/10 text-red-600 border-red-500/20",
 };

@@ -148,8 +148,8 @@ export const StudentProfilePage = () => {
             )}
 
             {success && (
-              <div className="rounded-md bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
-                <p className="text-xs text-emerald-600">
+              <div className="rounded-md bg-yellow-500/10 border border-yellow-500/20 px-3 py-2">
+                <p className="text-xs text-yellow-500">
                   ✓ Perfil actualizado correctamente
                 </p>
               </div>

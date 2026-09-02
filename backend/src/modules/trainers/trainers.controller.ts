@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { asyncHandler } from "../../shared/errors/async-handler";
 import { successResponse } from "../../shared/responses/api-response";
+import { listSubscriptionsSchema } from "./trainers.schema";
 import { TrainersService } from "./trainers.service";
 
 export class TrainersController {
@@ -41,5 +42,14 @@ export class TrainersController {
     return res
       .status(200)
       .json(successResponse("Perfil actualizado correctamente", result));
+  });
+
+  static listSubscriptions = asyncHandler(async (req: Request, res: Response) => {
+    const parsedQuery = listSubscriptionsSchema.parse(req.query);
+    const result = await TrainersService.listSubscriptions(req.user!.userId, parsedQuery);
+
+    return res
+      .status(200)
+      .json(successResponse("Cobros obtenidos correctamente", result));
   });
 }

@@ -119,6 +119,7 @@ export class StudentsService {
             ],
           }
         : {}),
+      ...(query.status ? { status: query.status } : {}),
     };
 
     const [students, total] = await Promise.all([
@@ -127,6 +128,7 @@ export class StudentsService {
         orderBy: { createdAt: "desc" },
         skip,
         take: limit,
+        include: { gym: true },
       }),
       prisma.student.count({ where }),
     ]);
@@ -157,6 +159,7 @@ export class StudentsService {
         trainerId: trainer.id,
         deletedAt: null,
       },
+      include: { gym: true },
     });
 
     if (!student) {
@@ -198,7 +201,9 @@ export class StudentsService {
         ...(data.lastName !== undefined ? { lastName: data.lastName } : {}),
         ...(data.phone !== undefined ? { phone: data.phone } : {}),
         ...(data.status !== undefined ? { status: data.status } : {}),
+        ...("gymId" in data ? { gymId: data.gymId ?? null } : {}),
       },
+      include: { gym: true },
     });
 
     return StudentsMapper.toDetail(updatedStudent);
@@ -324,6 +329,7 @@ export class StudentsService {
     const where: Prisma.StudentWhereInput = {
       trainerId: trainer.id,
       deletedAt: null,
+      ...(query.status ? { status: query.status } : {}),
       ...(search
         ? {
             OR: [
@@ -356,6 +362,16 @@ export class StudentsService {
               },
             },
           },
+          studentRoutines: {
+            select: {
+              _count: { select: { workoutLogs: true } },
+              workoutLogs: {
+                orderBy: { date: "desc" },
+                take: 1,
+                select: { date: true },
+              },
+            },
+          },
         },
       }),
       prisma.student.count({ where }),
@@ -385,6 +401,14 @@ export class StudentsService {
           else subscriptionStatus = "ACTIVE";
         }
 
+        const sessionsCount = s.studentRoutines.reduce(
+          (acc, sr) => acc + sr._count.workoutLogs,
+          0
+        );
+        const lastSessionDate = s.studentRoutines
+          .flatMap((sr) => sr.workoutLogs.map((l) => l.date))
+          .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
+
         return {
           ...StudentsMapper.toListItem(s),
           subscription: sub
@@ -395,6 +419,8 @@ export class StudentsService {
                 subscriptionStatus,
               }
             : null,
+          sessionsCount,
+          lastSessionDate,
         };
       }),
       meta: {
