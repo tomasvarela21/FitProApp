@@ -10,7 +10,6 @@ import {
   Loader2,
   CalendarDays,
   Dumbbell,
-  CreditCard,
 } from "lucide-react";
 import { format, differenceInMonths } from "date-fns";
 import { es } from "date-fns/locale";
@@ -19,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/shared/StatusBadge/StatusBadge";
 import { SubscriptionPanel } from "@/features/students/components/SubscriptionPanel";
 import { RoutinePanel } from "@/features/students/components/RoutinePanel";

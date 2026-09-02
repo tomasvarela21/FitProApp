@@ -68,7 +68,7 @@ apiClient.interceptors.response.use(
 
     try {
       // Llamada directa con axios para evitar que el interceptor se llame a sí mismo
-      const res = await axios.post<{ data: { data: { accessToken: string } } }>(
+      const res = await axios.post<{ data: { accessToken: string } }>(
         `${BASE_URL}/auth/refresh`,
         {},
         { withCredentials: true }

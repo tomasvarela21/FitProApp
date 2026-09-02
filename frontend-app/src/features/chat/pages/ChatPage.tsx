@@ -4,7 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import {
   MessageSquare, Send, Loader2, Search, ChevronLeft,
 } from "lucide-react";
-import { formatDistanceToNow, format, isToday, isYesterday } from "date-fns";
+import { format, isToday, isYesterday } from "date-fns";
 import { es } from "date-fns/locale";
 import { chatApi } from "@/api/chat.api";
 import { studentsApi } from "@/api/students.api";

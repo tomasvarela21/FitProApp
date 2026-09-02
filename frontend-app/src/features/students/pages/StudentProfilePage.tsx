@@ -17,9 +17,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/shared/StatusBadge/StatusBadge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
 import { RoutinePanel } from "@/features/students/components/RoutinePanel";
@@ -134,7 +131,7 @@ const CalendarHeatmap = ({ data }: { data: Record<string, number> }) => {
         <div className="flex flex-col gap-0">
           {/* Month row */}
           <div className="flex gap-[3px] mb-1 h-4">
-            {weeks.map((week, ci) => {
+            {weeks.map((_week, ci) => {
               const ml = monthLabels.find((m) => m.colIndex === ci);
               return (
                 <div key={ci} className="w-[11px]">
@@ -220,7 +217,7 @@ const InfoTab = ({ student, onUpdated }: InfoTabProps) => {
   const [deleting, setDeleting] = useState(false);
   const [actionMsg, setActionMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
-  const { register, handleSubmit, control, reset, formState: { errors } } = useForm<EditForm>({
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<EditForm>({
     resolver: zodResolver(editSchema),
     defaultValues: {
       firstName: student.firstName,
