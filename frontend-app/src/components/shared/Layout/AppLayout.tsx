@@ -58,9 +58,13 @@ export const AppLayout = () => {
             <Menu className="w-4 h-4" />
           </Button>
           <div className="flex items-center gap-3 min-w-0">
-            <div style={{ background: 'rgba(255,255,255,0.13)', borderRadius: '12px', padding: '7px', display: 'inline-flex', border: '1px solid rgba(255,255,255,0.18)' }}>
+            {tenant.trainerPhoto ? (
+              <div style={{ background: 'rgba(255,255,255,0.13)', borderRadius: '12px', padding: '7px', display: 'inline-flex', border: '1px solid rgba(255,255,255,0.18)' }}>
+                <KorexIsotipo size={52} />
+              </div>
+            ) : (
               <KorexIsotipo size={52} />
-            </div>
+            )}
             <div className="min-w-0">
               <p className="text-xs font-semibold tracking-[0.12em] uppercase leading-tight truncate">
                 {tenant.trainerName}
