@@ -15,7 +15,7 @@ export const AppLayout = () => {
   const { isAuthenticated } = useAuth();
   usePushNotifications(isAuthenticated);
 
-  const bgImage = tenant.trainerPhoto ? "/brands/franco/franco1.JPEG" : null;
+  const bgImage = tenant.trainerPhoto ? "/brands/franco/franco1.webp" : null;
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
