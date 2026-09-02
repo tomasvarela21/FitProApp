@@ -215,7 +215,7 @@ function CenteredLayout() {
     <div className="min-h-dvh flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="flex flex-col items-center gap-2 text-center">
-          <KorexIsotipo size={64} showBackground />
+          <img src={tenant.logoPath} alt={tenant.name} className="w-16 h-16 object-contain" />
           <h1 className="text-2xl font-bold tracking-[0.18em] uppercase">{tenant.name}</h1>
           <p className="text-muted-foreground text-sm">
             Panel de gestión para entrenadores
