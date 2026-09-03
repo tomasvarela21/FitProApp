@@ -3,7 +3,8 @@ import { errorResponse } from "../responses/api-response";
 
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 30,
+  skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
   handler: (_req, res) => {
