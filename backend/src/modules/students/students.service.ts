@@ -230,9 +230,15 @@ export class StudentsService {
       throw new AppError("Alumno no encontrado", 404);
     }
 
-    await prisma.student.update({
-      where: { id: studentId },
-      data: { deletedAt: new Date() },
+    await prisma.$transaction(async (tx) => {
+      await tx.student.update({
+        where: { id: studentId },
+        data: { deletedAt: new Date() },
+      });
+
+      if (student.userId) {
+        await tx.user.delete({ where: { id: student.userId } });
+      }
     });
 
     return { deleted: true };
