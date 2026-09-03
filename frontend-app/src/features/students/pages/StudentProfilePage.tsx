@@ -209,6 +209,7 @@ type InfoTabProps = {
 
 const InfoTab = ({ student, onUpdated }: InfoTabProps) => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [resettingPwd, setResettingPwd] = useState(false);
