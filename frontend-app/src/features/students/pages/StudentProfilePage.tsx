@@ -289,6 +289,8 @@ const InfoTab = ({ student, onUpdated }: InfoTabProps) => {
     setDeleting(true);
     try {
       await studentsApi.delete(student.id);
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
       navigate("/app/students");
     } catch {
       setDeleteOpen(false);
