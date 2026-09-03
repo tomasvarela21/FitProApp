@@ -102,6 +102,10 @@ export class AuthService {
       throw new AppError("La cuenta no está activa", 403);
     }
 
+    if (user.role === "STUDENT" && user.student?.deletedAt) {
+      throw new AppError("Credenciales inválidas", 401);
+    }
+
     const isPasswordValid = await comparePassword(
       data.password,
       user.passwordHash
