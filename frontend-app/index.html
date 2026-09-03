@@ -2,9 +2,20 @@
 <html lang="es" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/korex-icon.png" />
+    <link rel="icon" type="image/png" href="%VITE_BRAND_FAVICON_PATH%" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>KOREX</title>
+    <title>%VITE_BRAND_NAME%</title>
+
+    <!-- Open Graph (WhatsApp, Facebook, etc.) -->
+    <meta property="og:title" content="%VITE_BRAND_NAME%" />
+    <meta property="og:description" content="Plataforma de entrenamiento personalizado" />
+    <meta property="og:image" content="%VITE_BRAND_OG_IMAGE%" />
+    <meta property="og:type" content="website" />
+
+    <!-- Twitter/X -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="%VITE_BRAND_NAME%" />
+    <meta name="twitter:image" content="%VITE_BRAND_OG_IMAGE%" />
   </head>
   <body>
     <div id="root"></div>

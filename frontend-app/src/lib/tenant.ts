@@ -3,6 +3,7 @@ export interface TenantConfig {
   trainerName: string
   logoPath: string
   faviconPath: string
+  ogImage: string
   trainerPhoto: string | null
   primary: string | null
   primaryFg: string | null
@@ -20,6 +21,7 @@ export function getTenantConfig(): TenantConfig {
     trainerName:      import.meta.env.VITE_BRAND_TRAINER_NAME   ?? 'KOREX Team',
     logoPath:         import.meta.env.VITE_BRAND_LOGO_PATH      ?? '/korex-icon.png',
     faviconPath:      import.meta.env.VITE_BRAND_FAVICON_PATH   ?? '/korex-icon.png',
+    ogImage:          import.meta.env.VITE_BRAND_OG_IMAGE       ?? '/korex-icon.png',
     trainerPhoto:     import.meta.env.VITE_BRAND_TRAINER_PHOTO  ?? null,
     primary:          import.meta.env.VITE_BRAND_PRIMARY        ?? null,
     primaryFg:        import.meta.env.VITE_BRAND_PRIMARY_FG     ?? null,
