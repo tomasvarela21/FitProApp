@@ -24,17 +24,21 @@ import { KorexIsotipo } from "@/components/shared/KorexLogo";
 import { tenant } from "@/lib/tenant";
 import { chatApi } from "@/api/chat.api";
 
-const navItems = [
+const allNavItems = [
   { label: "Dashboard", href: "/app/dashboard", icon: LayoutDashboard },
   { label: "Alumnos", href: "/app/students", icon: Users },
   { label: "Planes", href: "/app/plans", icon: CreditCard },
   { label: "Cobros", href: "/app/payments", icon: Banknote },
   { label: "Ejercicios", href: "/app/exercises", icon: Dumbbell },
   { label: "Rutinas", href: "/app/routines", icon: ClipboardList },
-  { label: "Chat", href: "/app/chat", icon: MessageSquare },
+  { label: "Chat", href: "/app/chat", icon: MessageSquare, feature: "chat" as const },
   { label: "Analytics", href: "/app/analytics", icon: BarChart2 },
   { label: "Mi perfil", href: "/app/profile", icon: UserCircle },
 ];
+
+const navItems = allNavItems.filter(
+  (item) => item.feature !== "chat" || tenant.showChat
+);
 
 type SidebarProps = {
   collapsed?: boolean;
@@ -54,7 +58,7 @@ export const Sidebar = ({
     queryKey: ["chat-conversations-badge"],
     queryFn: () => chatApi.getConversations().then((r) => r.data.data),
     refetchInterval: 10_000,
-    enabled: user?.role === "TRAINER",
+    enabled: user?.role === "TRAINER" && tenant.showChat,
   });
   const totalUnread = convData?.totalUnread ?? 0;
 

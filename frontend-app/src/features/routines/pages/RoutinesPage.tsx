@@ -18,6 +18,7 @@ import {
   Copy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { tenant } from "@/lib/tenant";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -499,18 +500,20 @@ const AddExerciseDialog = ({ open, onClose, routineId, nextOrder, defaultDay }: 
                 {...register("suggestedWeight", { setValueAs: (v) => v === "" || v == null ? undefined : Number(v) })}
               />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="ae-rpe">RPE <span className="text-muted-foreground text-xs">(1-10)</span></Label>
-              <Input
-                id="ae-rpe"
-                type="number"
-                min={0}
-                max={10}
-                step={0.5}
-                placeholder="—"
-                {...register("suggestedRpe", { setValueAs: (v) => v === "" || v == null ? undefined : Number(v) })}
-              />
-            </div>
+            {tenant.showRpe && (
+              <div className="space-y-1.5">
+                <Label htmlFor="ae-rpe">RPE <span className="text-muted-foreground text-xs">(1-10)</span></Label>
+                <Input
+                  id="ae-rpe"
+                  type="number"
+                  min={0}
+                  max={10}
+                  step={0.5}
+                  placeholder="—"
+                  {...register("suggestedRpe", { setValueAs: (v) => v === "" || v == null ? undefined : Number(v) })}
+                />
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label htmlFor="ae-rest">Descanso (s)</Label>
               <Input id="ae-rest" type="number" min={0} {...register("restSeconds", { valueAsNumber: true })} />
@@ -807,20 +810,22 @@ const RoutineDetailDialog = ({ routineId, onClose }: RoutineDetailDialogProps) =
                                   width="w-full"
                                 />
                               </div>
-                              <div>
-                                <p className="text-muted-foreground">RPE</p>
-                                <InlineCell
-                                  value={re.suggestedRpe}
-                                  type="number"
-                                  min={1}
-                                  max={10}
-                                  step={0.5}
-                                  placeholder="—"
-                                  disabled={!isOwn}
-                                  onSave={(v) => handleCellSave(re, "suggestedRpe", v)}
-                                  width="w-full"
-                                />
-                              </div>
+                              {tenant.showRpe && (
+                                <div>
+                                  <p className="text-muted-foreground">RPE</p>
+                                  <InlineCell
+                                    value={re.suggestedRpe}
+                                    type="number"
+                                    min={1}
+                                    max={10}
+                                    step={0.5}
+                                    placeholder="—"
+                                    disabled={!isOwn}
+                                    onSave={(v) => handleCellSave(re, "suggestedRpe", v)}
+                                    width="w-full"
+                                  />
+                                </div>
+                              )}
                               <div>
                                 <p className="text-muted-foreground">Descanso</p>
                                 <InlineCell
@@ -872,7 +877,7 @@ const RoutineDetailDialog = ({ routineId, onClose }: RoutineDetailDialogProps) =
                           <th className="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground w-16">Series</th>
                           <th className="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground w-20">Reps</th>
                           <th className="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground w-24">Peso (kg)</th>
-                          <th className="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground w-20">RPE</th>
+                          {tenant.showRpe && <th className="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground w-20">RPE</th>}
                           <th className="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground w-24">Descanso (s)</th>
                           <th className="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground min-w-28">Notas</th>
                           {isOwn && <th className="px-3 py-2.5 w-10" />}

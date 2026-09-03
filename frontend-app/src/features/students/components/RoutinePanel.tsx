@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { tenant } from "@/lib/tenant";
 import { routinesApi } from "@/api/routines.api";
 import { exercisesApi } from "@/api/exercises.api";
 import { weeklyPlanApi } from "@/api/weekly-plan.api";
@@ -327,10 +328,12 @@ const AddExerciseDialog = ({
               <Label htmlFor="p-weight">Peso sug. (kg) <span className="text-muted-foreground text-xs">(opc.)</span></Label>
               <Input id="p-weight" type="number" min={0} step={0.5} placeholder="—" {...register("suggestedWeight", { setValueAs: (v) => v === "" || v == null ? undefined : Number(v) })} />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="p-rpe">RPE sug. <span className="text-muted-foreground text-xs">(1-10)</span></Label>
-              <Input id="p-rpe" type="number" min={0} max={10} step={0.5} placeholder="—" {...register("suggestedRpe", { setValueAs: (v) => v === "" || v == null ? undefined : Number(v) })} />
-            </div>
+            {tenant.showRpe && (
+              <div className="space-y-1.5">
+                <Label htmlFor="p-rpe">RPE sug. <span className="text-muted-foreground text-xs">(1-10)</span></Label>
+                <Input id="p-rpe" type="number" min={0} max={10} step={0.5} placeholder="—" {...register("suggestedRpe", { setValueAs: (v) => v === "" || v == null ? undefined : Number(v) })} />
+              </div>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -863,24 +866,28 @@ const WeeklyPlanTabContent = ({ studentId }: { studentId: string }) => {
                         onSave={(v) => handleOverrideSave(re.id, "suggestedWeight", v)}
                       />
                     </div>
-                    <div>
-                      <p className="text-muted-foreground">RPE base</p>
-                      <p className="font-medium text-muted-foreground/70">
-                        {re.suggestedRpe ?? "—"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">RPE semana</p>
-                      <InlineCell
-                        value={override?.suggestedRpe ?? null}
-                        type="number"
-                        min={0}
-                        max={10}
-                        step={0.5}
-                        placeholder={re.suggestedRpe?.toString() ?? "—"}
-                        onSave={(v) => handleOverrideSave(re.id, "suggestedRpe", v)}
-                      />
-                    </div>
+                    {tenant.showRpe && (
+                      <div>
+                        <p className="text-muted-foreground">RPE base</p>
+                        <p className="font-medium text-muted-foreground/70">
+                          {re.suggestedRpe ?? "—"}
+                        </p>
+                      </div>
+                    )}
+                    {tenant.showRpe && (
+                      <div>
+                        <p className="text-muted-foreground">RPE semana</p>
+                        <InlineCell
+                          value={override?.suggestedRpe ?? null}
+                          type="number"
+                          min={0}
+                          max={10}
+                          step={0.5}
+                          placeholder={re.suggestedRpe?.toString() ?? "—"}
+                          onSave={(v) => handleOverrideSave(re.id, "suggestedRpe", v)}
+                        />
+                      </div>
+                    )}
                     <div className="col-span-2">
                       <p className="text-muted-foreground">Notas semana</p>
                       <InlineCell
@@ -916,10 +923,8 @@ const WeeklyPlanTabContent = ({ studentId }: { studentId: string }) => {
                 Peso base
               </th>
               <th className="px-2 py-2 text-left font-medium text-muted-foreground">Peso sem.</th>
-              <th className="px-2 py-2 text-left font-medium text-muted-foreground/60">
-                RPE base
-              </th>
-              <th className="px-2 py-2 text-left font-medium text-muted-foreground">RPE sem.</th>
+              {tenant.showRpe && <th className="px-2 py-2 text-left font-medium text-muted-foreground/60">RPE base</th>}
+              {tenant.showRpe && <th className="px-2 py-2 text-left font-medium text-muted-foreground">RPE sem.</th>}
               <th className="px-2 py-2 text-left font-medium text-muted-foreground">Notas</th>
             </tr>
           </thead>
@@ -1304,18 +1309,20 @@ export const RoutinePanel = ({ studentId }: Props) => {
                                   onSave={(v) => handleCellSave(re.id, "suggestedWeight", v)}
                                 />
                               </div>
-                              <div>
-                                <p className="text-muted-foreground">RPE sug.</p>
-                                <InlineCell
-                                  value={re.suggestedRpe}
-                                  type="number"
-                                  min={1}
-                                  max={10}
-                                  step={0.5}
-                                  placeholder="—"
-                                  onSave={(v) => handleCellSave(re.id, "suggestedRpe", v)}
-                                />
-                              </div>
+                              {tenant.showRpe && (
+                                <div>
+                                  <p className="text-muted-foreground">RPE sug.</p>
+                                  <InlineCell
+                                    value={re.suggestedRpe}
+                                    type="number"
+                                    min={1}
+                                    max={10}
+                                    step={0.5}
+                                    placeholder="—"
+                                    onSave={(v) => handleCellSave(re.id, "suggestedRpe", v)}
+                                  />
+                                </div>
+                              )}
                               <div>
                                 <p className="text-muted-foreground">Descanso</p>
                                 <InlineCell
@@ -1383,7 +1390,7 @@ export const RoutinePanel = ({ studentId }: Props) => {
                             <th className="px-2 py-2 text-left font-medium text-muted-foreground">Series</th>
                             <th className="px-2 py-2 text-left font-medium text-muted-foreground">Reps</th>
                             <th className="px-2 py-2 text-left font-medium text-muted-foreground">Peso sug.</th>
-                            <th className="px-2 py-2 text-left font-medium text-muted-foreground">RPE sug.</th>
+                            {tenant.showRpe && <th className="px-2 py-2 text-left font-medium text-muted-foreground">RPE sug.</th>}
                             <th className="px-2 py-2 text-left font-medium text-muted-foreground">Descanso</th>
                             <th className="px-2 py-2" />
                             {isOwn && <th className="px-2 py-2" />}
@@ -1591,7 +1598,7 @@ export const RoutinePanel = ({ studentId }: Props) => {
                                       <span className="w-12 text-right text-foreground font-medium">Set {s.setNumber}</span>
                                       <span>{s.reps} reps</span>
                                       {s.weight && <span>{s.weight} kg</span>}
-                                      {s.rpe && <span>RPE {s.rpe}</span>}
+                                      {tenant.showRpe && s.rpe && <span>RPE {s.rpe}</span>}
                                     </div>
                                   ))}
                                 </div>

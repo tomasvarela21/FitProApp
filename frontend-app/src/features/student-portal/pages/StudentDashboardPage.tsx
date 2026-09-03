@@ -21,6 +21,7 @@ import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { ExerciseTutorialDialog } from "@/features/student-portal/components/ExerciseTutorialDialog";
 import type { TutorialExercise } from "@/features/student-portal/components/ExerciseTutorialDialog";
 import { cn, parseLocalDate, todayLocalString } from "@/lib/utils";
+import { tenant } from "@/lib/tenant";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -301,7 +302,7 @@ const WorkoutForm = ({ exercises, routineName }: {
               <div className="text-right text-xs text-muted-foreground shrink-0">
                 <p>{ex.suggestedSets} × {ex.suggestedReps}</p>
                 {ex.suggestedWeight && <p>{ex.suggestedWeight} kg</p>}
-                {ex.suggestedRpe && <p>RPE {ex.suggestedRpe}</p>}
+                {tenant.showRpe && ex.suggestedRpe && <p>RPE {ex.suggestedRpe}</p>}
               </div>
             </div>
           </CardHeader>
@@ -313,7 +314,7 @@ const WorkoutForm = ({ exercises, routineName }: {
                     <th className="pb-1.5 text-left font-medium text-muted-foreground w-12">Set</th>
                     <th className="pb-1.5 text-left font-medium text-muted-foreground w-20">Reps *</th>
                     <th className="pb-1.5 text-left font-medium text-muted-foreground w-24">Peso (kg)</th>
-                    <th className="pb-1.5 text-left font-medium text-muted-foreground w-20">RPE</th>
+                    {tenant.showRpe && <th className="pb-1.5 text-left font-medium text-muted-foreground w-20">RPE</th>}
                     <th className="pb-1.5 text-left font-medium text-muted-foreground">Notas</th>
                   </tr>
                 </thead>
@@ -342,18 +343,20 @@ const WorkoutForm = ({ exercises, routineName }: {
                           placeholder="—"
                         />
                       </td>
-                      <td className="py-1.5 pr-2">
-                        <Input
-                          type="number"
-                          min={1}
-                          max={10}
-                          step={0.5}
-                          value={s.rpe}
-                          onChange={(e) => updateSet(exIdx, setIdx, "rpe", e.target.value)}
-                          className="h-7 text-xs w-16"
-                          placeholder="—"
-                        />
-                      </td>
+                      {tenant.showRpe && (
+                        <td className="py-1.5 pr-2">
+                          <Input
+                            type="number"
+                            min={1}
+                            max={10}
+                            step={0.5}
+                            value={s.rpe}
+                            onChange={(e) => updateSet(exIdx, setIdx, "rpe", e.target.value)}
+                            className="h-7 text-xs w-16"
+                            placeholder="—"
+                          />
+                        </td>
+                      )}
                       <td className="py-1.5">
                         <Input
                           value={s.notes}
@@ -584,7 +587,7 @@ const AlreadyLogged = ({
                     <span className="w-10 font-medium text-foreground">Set {s.setNumber}</span>
                     <span>{s.reps} reps</span>
                     {s.weight != null && <span>{s.weight} kg</span>}
-                    {s.rpe != null && <span>RPE {s.rpe}</span>}
+                    {tenant.showRpe && s.rpe != null && <span>RPE {s.rpe}</span>}
                   </div>
                 ))}
               </div>
@@ -673,7 +676,7 @@ const HistorialTab = () => {
                           <span className="w-10 font-medium text-foreground">Set {s.setNumber}</span>
                           <span>{s.reps} reps</span>
                           {s.weight != null && <span>{s.weight} kg</span>}
-                          {s.rpe != null && <span>RPE {s.rpe}</span>}
+                          {tenant.showRpe && s.rpe != null && <span>RPE {s.rpe}</span>}
                         </div>
                       ))}
                     </div>

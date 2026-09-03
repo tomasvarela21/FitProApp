@@ -13,6 +13,8 @@ export interface TenantConfig {
   fontBody: string | null
   googleFontsUrl: string | null
   showRegisterLink: boolean
+  showChat: boolean
+  showRpe: boolean
 }
 
 export function getTenantConfig(): TenantConfig {
@@ -31,6 +33,8 @@ export function getTenantConfig(): TenantConfig {
     fontBody:         import.meta.env.VITE_BRAND_FONT_BODY      ?? null,
     googleFontsUrl:   import.meta.env.VITE_BRAND_GOOGLE_FONTS   ?? null,
     showRegisterLink: import.meta.env.VITE_BRAND_SHOW_REGISTER !== 'false',
+    showChat:         import.meta.env.VITE_BRAND_SHOW_CHAT      !== 'false',
+    showRpe:          import.meta.env.VITE_BRAND_SHOW_RPE       !== 'false',
   }
 }
 

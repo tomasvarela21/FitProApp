@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/PageHeader/PageHeader";
 import { studentPortalApi } from "@/api/student-portal.api";
 import { parseLocalDate } from "@/lib/utils";
+import { tenant } from "@/lib/tenant";
 import type { WorkoutProgress } from "@/types";
 
 const formatDate = (d: string) =>
@@ -123,7 +124,7 @@ const ExerciseProgress = ({ exerciseId, exerciseName }: { exerciseId: string; ex
                 <tr className="border-b border-border">
                   <th className="pb-2 text-left text-xs font-medium text-muted-foreground">Fecha</th>
                   <th className="pb-2 text-right text-xs font-medium text-muted-foreground">Peso máx.</th>
-                  <th className="pb-2 text-right text-xs font-medium text-muted-foreground">RPE prom.</th>
+                  {tenant.showRpe && <th className="pb-2 text-right text-xs font-medium text-muted-foreground">RPE prom.</th>}
                   <th className="pb-2 text-right text-xs font-medium text-muted-foreground">Sets</th>
                 </tr>
               </thead>
@@ -134,9 +135,11 @@ const ExerciseProgress = ({ exerciseId, exerciseName }: { exerciseId: string; ex
                     <td className="py-2 text-xs text-right">
                       {p.maxWeight != null ? `${p.maxWeight} kg` : "—"}
                     </td>
-                    <td className="py-2 text-xs text-right">
-                      {p.avgRpe != null ? p.avgRpe : "—"}
-                    </td>
+                    {tenant.showRpe && (
+                      <td className="py-2 text-xs text-right">
+                        {p.avgRpe != null ? p.avgRpe : "—"}
+                      </td>
+                    )}
                     <td className="py-2 text-xs text-right">{p.totalSets}</td>
                   </tr>
                 ))}
