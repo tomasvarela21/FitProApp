@@ -159,16 +159,6 @@ export class ChatService {
   ) {
     await assertConversationAccess(conversationId, userId, role);
 
-    const messages = await prisma.message.findMany({
-      where: {
-        conversationId,
-        ...(since ? { createdAt: { gt: new Date(since) } } : {}),
-      },
-      orderBy: { createdAt: "asc" },
-      take: limit,
-    });
-
-    // Si no hay `since` (primera carga), traer los últimos `limit`
     if (!since) {
       const initial = await prisma.message.findMany({
         where: { conversationId },
@@ -180,6 +170,15 @@ export class ChatService {
         hasMore: false,
       };
     }
+
+    const messages = await prisma.message.findMany({
+      where: {
+        conversationId,
+        createdAt: { gt: new Date(since) },
+      },
+      orderBy: { createdAt: "asc" },
+      take: limit,
+    });
 
     return {
       messages: messages.map(toMessageDto),

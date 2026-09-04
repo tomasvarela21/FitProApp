@@ -60,7 +60,7 @@ export class TrainersService {
       throw new AppError("El entrenador autenticado no existe", 404);
     }
 
-    const baseWhere = { trainerId: trainer.id };
+    const baseWhere = { trainerId: trainer.id, deletedAt: null };
     const now = new Date();
     const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -323,14 +323,15 @@ export class TrainersService {
     const where: Prisma.SubscriptionWhereInput = {
       trainerId: trainer.id,
       status: { in: ["ACTIVE", "EXPIRED"] },
-      ...(search ? {
-        student: {
+      student: {
+        deletedAt: null,
+        ...(search ? {
           OR: [
             { firstName: { contains: search, mode: "insensitive" } },
             { lastName: { contains: search, mode: "insensitive" } },
           ],
-        },
-      } : {}),
+        } : {}),
+      },
     };
 
     const allSubs = await prisma.subscription.findMany({
@@ -346,7 +347,6 @@ export class TrainersService {
     });
 
     const withStatus = allSubs
-      .filter((s) => !s.student.deletedAt)
       .map((sub) => {
         const installments = sub.installments;
         const hasOverdue = installments.some(

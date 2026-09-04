@@ -16,7 +16,13 @@ export class AnalyticsService {
       gyms,
     ] = await Promise.all([
       prisma.installment.findMany({
-        where: { trainerId },
+        where: {
+          trainerId,
+          OR: [
+            { paidAt: { gte: new Date(new Date().setMonth(new Date().getMonth() - 13)) } },
+            { paidAt: null, dueDate: { gte: new Date(new Date().setMonth(new Date().getMonth() - 13)) } },
+          ],
+        },
         select: { amount: true, status: true, paidAt: true, dueDate: true, subscriptionId: true },
       }),
       prisma.student.findMany({

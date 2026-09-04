@@ -344,6 +344,7 @@ export class WorkoutService {
       where: { studentRoutine: { studentId: student.id } },
       select: { date: true },
       orderBy: { date: "desc" },
+      take: 90,
     });
 
     const today = todayStr ?? new Date().toISOString().split("T")[0];
