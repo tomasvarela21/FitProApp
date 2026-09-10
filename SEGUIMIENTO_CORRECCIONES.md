@@ -21,7 +21,7 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 | Fase | Objetivo | Estado | Entregas |
 |---|---|---|---:|
 | 1 | Testing aislado y línea base | Completada con limitaciones registradas | 2/2 |
-| 2 | Autorización y validación de entradas | Pendiente de autorización | 0/3 |
+| 2 | Autorización y validación de entradas | En progreso | 1/3 |
 | 3 | Autenticación y aislamiento de sesiones | Pendiente | 0/4 |
 | 4 | Cobros y suscripciones | Pendiente | 0/3 |
 | 5 | Historial y migraciones | Pendiente | 0/2 |
@@ -73,10 +73,24 @@ Los hallazgos de dependencias se validarán contra su uso real antes de actualiz
 
 ## Fase 2 — Autorización y validación de entradas
 
-**Estado:** pendiente de autorización.  
-**Registro de entregas:** todavía no iniciado.
+**Estado:** en progreso; primera entrega completada.
+**Objetivo parcial alcanzado:** las lecturas y mutaciones individuales de ejercicios y rutinas aplican el alcance del usuario autenticado y ocultan recursos inaccesibles con HTTP 404.
 
-Se documentarán aquí los controles de propiedad, la matriz de permisos, la validación de relaciones y la normalización de respuestas HTTP.
+### Entrega 2.1 — Acceso autorizado a ejercicios y rutinas
+
+| Elemento | Evidencia |
+|---|---|
+| Problema | Las lecturas individuales resolvían ejercicios y rutinas solo por ID. Un entrenador o alumno podía consultar recursos privados de otro entrenador. También era posible asociar a una rutina propia un ejercicio privado ajeno. |
+| Reproducción | La primera matriz de integración produjo 6 fallos de 20 casos: cuatro accesos o asociaciones ajenas respondieron `200/201` y dos mutaciones ajenas respondieron `403`, revelando la existencia del recurso. |
+| Cambio | Se centralizó la construcción del alcance de recursos. Los entrenadores leen recursos propios y globales; las escrituras requieren propiedad privada. Los alumnos leen ejercicios globales y privados incluidos en alguna de sus asignaciones. Los recursos fuera del alcance responden 404. |
+| Protección de datos | La asociación comprueba el ejercicio antes de escribir. Las pruebas verifican que un rechazo no modifica nombres, no crea ejercicios de rutina y no clona rutinas. |
+| Infraestructura de prueba | Cada archivo de integración limpia únicamente una base local cuyo nombre contiene `test`; la comprobación aborta para cualquier otro destino. Las migraciones permanecen aplicadas. |
+| Pruebas | Integración: 23/23 exitosas. Unitarias: 25/25 exitosas. Compilación TypeScript: exitosa. La integración final se ejecutó sobre PostgreSQL temporal reconstruido. |
+| Regresión | Se comprobaron acceso sin sesión, ambos entrenadores como propietarios, recursos globales, dos alumnos con asignaciones distintas, edición rechazada, asociación propia/global permitida y clonación ajena rechazada. |
+| Limitaciones | Continúan las advertencias ya registradas de configuración futura de Vitest/Vite y source map de `node-cron`; no afectan el resultado. |
+| Commit | `3a3466e` — `fix: restringir recursos al usuario autorizado` |
+
+**Pendiente de la fase:** validar asignaciones, planes semanales, overrides, registros de entrenamiento, gimnasios y alumnos eliminados; después aplicar esquemas uniformes a parámetros y queries.
 
 ## Fase 3 — Autenticación y aislamiento de sesiones
 
