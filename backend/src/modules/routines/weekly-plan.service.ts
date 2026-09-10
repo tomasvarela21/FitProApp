@@ -1,6 +1,7 @@
 import { WeeklyExerciseOverride } from "@prisma/client";
 import { prisma } from "../../infrastructure/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
+import { ResourceAccessService } from "../../shared/services/resource-access.service";
 
 type WeekOverrideInput = {
   routineExerciseId: string;
@@ -44,7 +45,7 @@ export class WeeklyPlanService {
 
   private static async getOwnedStudent(trainerId: string, studentId: string) {
     const student = await prisma.student.findFirst({
-      where: { id: studentId, trainerId },
+      where: { id: studentId, trainerId, deletedAt: null },
     });
     if (!student) throw new AppError("Alumno no encontrado", 404);
     return student;
@@ -58,6 +59,21 @@ export class WeeklyPlanService {
     return studentRoutine;
   }
 
+  private static async assertRoutineExercises(
+    routineId: string,
+    overrides: WeekOverrideInput[],
+  ) {
+    const exerciseIds = [...new Set(overrides.map((override) => override.routineExerciseId))];
+    if (exerciseIds.length === 0) return;
+
+    const count = await prisma.routineExercise.count({
+      where: { id: { in: exerciseIds }, routineId },
+    });
+    if (count !== exerciseIds.length) {
+      throw new AppError("Ejercicio de rutina no encontrado", 404);
+    }
+  }
+
   static async createWeeklyPlan(
     trainerUserId: string,
     studentId: string,
@@ -66,8 +82,17 @@ export class WeeklyPlanService {
     const trainer = await this.getTrainer(trainerUserId);
     await this.getOwnedStudent(trainer.id, studentId);
 
-    const routine = await prisma.routine.findUnique({ where: { id: data.routineId } });
+    const routineWhere = await ResourceAccessService.trainerReadableRoutineWhere(
+      trainerUserId,
+      data.routineId,
+    );
+    const routine = await prisma.routine.findFirst({ where: routineWhere });
     if (!routine) throw new AppError("Rutina no encontrada", 404);
+
+    await this.assertRoutineExercises(
+      data.routineId,
+      data.weeks.flatMap((week) => week.overrides ?? []),
+    );
 
     const week1 = data.weeks.find((w) => w.weekNumber === 1);
 
@@ -215,6 +240,8 @@ export class WeeklyPlanService {
     await this.getOwnedStudent(trainer.id, studentId);
 
     const studentRoutine = await this.getActiveStudentRoutine(studentId);
+
+    await this.assertRoutineExercises(studentRoutine.routineId, overrides);
 
     const updated = await prisma.$transaction(async (tx) => {
       await tx.weeklyExerciseOverride.deleteMany({

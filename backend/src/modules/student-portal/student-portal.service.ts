@@ -4,7 +4,7 @@ import { AppError } from "../../shared/errors/app-error";
 export class StudentPortalService {
   static async getMyProfile(userId: string) {
     const student = await prisma.student.findFirst({
-      where: { userId },
+      where: { userId, deletedAt: null },
       include: {
         trainer: {
           include: { user: true },
@@ -36,7 +36,7 @@ export class StudentPortalService {
     data: { firstName?: string; lastName?: string; phone?: string }
   ) {
     const student = await prisma.student.findFirst({
-      where: { userId },
+      where: { userId, deletedAt: null },
     });
 
     if (!student) throw new AppError("Alumno no encontrado", 404);
@@ -60,10 +60,15 @@ export class StudentPortalService {
   }
 
   static async getMySubscription(userId: string) {
-    // Single query — filter subscription through the student relation instead of two sequential lookups
+    const student = await prisma.student.findFirst({
+      where: { userId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!student) throw new AppError("Alumno no encontrado", 404);
+
     const subscription = await prisma.subscription.findFirst({
       where: {
-        student: { userId },
+        studentId: student.id,
         status: { in: ["ACTIVE", "EXPIRED"] },
       },
       include: {

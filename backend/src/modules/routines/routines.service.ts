@@ -305,11 +305,15 @@ export class RoutinesService {
     const trainer = await this.getTrainer(trainerUserId);
 
     const student = await prisma.student.findFirst({
-      where: { id: studentId, trainerId: trainer.id },
+      where: { id: studentId, trainerId: trainer.id, deletedAt: null },
     });
     if (!student) throw new AppError("Alumno no encontrado", 404);
 
-    const routine = await prisma.routine.findUnique({ where: { id: routineId } });
+    const routineWhere = await ResourceAccessService.trainerReadableRoutineWhere(
+      trainerUserId,
+      routineId,
+    );
+    const routine = await prisma.routine.findFirst({ where: routineWhere });
     if (!routine) throw new AppError("Rutina no encontrada", 404);
 
     const studentRoutine = await prisma.$transaction(async (tx) => {
@@ -350,7 +354,7 @@ export class RoutinesService {
     const trainer = await this.getTrainer(trainerUserId);
 
     const student = await prisma.student.findFirst({
-      where: { id: studentId, trainerId: trainer.id },
+      where: { id: studentId, trainerId: trainer.id, deletedAt: null },
     });
     if (!student) throw new AppError("Alumno no encontrado", 404);
 
@@ -377,7 +381,7 @@ export class RoutinesService {
     const trainer = await this.getTrainer(trainerUserId);
 
     const student = await prisma.student.findFirst({
-      where: { id: studentId, trainerId: trainer.id },
+      where: { id: studentId, trainerId: trainer.id, deletedAt: null },
     });
     if (!student) throw new AppError("Alumno no encontrado", 404);
 

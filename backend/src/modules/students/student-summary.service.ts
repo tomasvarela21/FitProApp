@@ -102,8 +102,10 @@ export class StudentSummaryService {
     const eightMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 7, 1);
 
     const student = await prisma.student.findFirst({
-      where: { id: studentId, trainer: { userId: trainerUserId } },
+      where: { id: studentId, trainer: { userId: trainerUserId }, deletedAt: null },
     });
+
+    if (!student) throw new AppError("Alumno no encontrado", 404);
 
     const subscription = await prisma.subscription.findFirst({
       where: { studentId, status: { in: ["ACTIVE", "EXPIRED"] } },
@@ -140,8 +142,6 @@ export class StudentSummaryService {
       take: 30,
       select: { weight: true },
     });
-
-    if (!student) throw new AppError("Alumno no encontrado", 404);
 
     // Mark overdue installments inline (no extra round-trip)
     if (subscription) {

@@ -122,7 +122,7 @@ function toRoutineDto(
 
 export class WorkoutService {
   private static async getStudent(userId: string) {
-    const student = await prisma.student.findFirst({ where: { userId } });
+    const student = await prisma.student.findFirst({ where: { userId, deletedAt: null } });
     if (!student) throw new AppError("Alumno no encontrado", 404);
     return student;
   }
@@ -201,7 +201,7 @@ export class WorkoutService {
 
   static async logWorkout(userId: string, data: LogWorkoutData) {
     const student = await prisma.student.findFirst({
-      where: { userId },
+      where: { userId, deletedAt: null },
       include: {
         trainer: {
           include: {
@@ -219,6 +219,19 @@ export class WorkoutService {
     if (!studentRoutine) throw new AppError("No tienes una rutina activa asignada", 404);
 
     const workoutLog = await prisma.$transaction(async (tx) => {
+      const routineExerciseIds = [
+        ...new Set(data.routineExercises.map((exercise) => exercise.routineExerciseId)),
+      ];
+      const validExerciseCount = await tx.routineExercise.count({
+        where: {
+          id: { in: routineExerciseIds },
+          routineId: studentRoutine.routineId,
+        },
+      });
+      if (validExerciseCount !== routineExerciseIds.length) {
+        throw new AppError("Ejercicio de rutina no encontrado", 404);
+      }
+
       const log = await tx.workoutLog.create({
         data: {
           studentRoutineId: studentRoutine.id,

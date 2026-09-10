@@ -194,6 +194,14 @@ export class StudentsService {
       throw new AppError("Alumno no encontrado", 404);
     }
 
+    if (data.gymId) {
+      const gym = await prisma.gym.findFirst({
+        where: { id: data.gymId, trainerId: trainer.id },
+        select: { id: true },
+      });
+      if (!gym) throw new AppError("Gimnasio no encontrado", 404);
+    }
+
     const updatedStudent = await prisma.student.update({
       where: { id: studentId },
       data: {
