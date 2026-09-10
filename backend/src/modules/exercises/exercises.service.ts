@@ -1,6 +1,7 @@
 import { Difficulty, MediaType, MovementType, Prisma } from "@prisma/client";
 import { prisma } from "../../infrastructure/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
+import { ResourceAccessService } from "../../shared/services/resource-access.service";
 
 type ExerciseFilters = {
   muscleGroupId?: string;
@@ -110,9 +111,10 @@ export class ExercisesService {
     return exercises.map(toDto);
   }
 
-  static async getExercise(id: string) {
-    const exercise = await prisma.exercise.findUnique({
-      where: { id },
+  static async getExercise(userId: string, role: string, id: string) {
+    const where = await ResourceAccessService.readableExerciseWhere(userId, role, id);
+    const exercise = await prisma.exercise.findFirst({
+      where,
       include: exerciseInclude,
     });
 
@@ -133,21 +135,9 @@ export class ExercisesService {
   }
 
   static async updateExercise(trainerUserId: string, id: string, data: UpdateExerciseData) {
-    const [trainer, exercise] = await Promise.all([
-      prisma.trainer.findUnique({ where: { userId: trainerUserId } }),
-      prisma.exercise.findUnique({ where: { id } }),
-    ]);
-
-    if (!trainer) throw new AppError("Trainer no encontrado", 404);
+    const where = await ResourceAccessService.trainerOwnedExerciseWhere(trainerUserId, id);
+    const exercise = await prisma.exercise.findFirst({ where, select: { id: true } });
     if (!exercise) throw new AppError("Ejercicio no encontrado", 404);
-
-    if (exercise.isGlobal) {
-      throw new AppError("No podés editar un ejercicio global", 403);
-    }
-
-    if (exercise.trainerId !== trainer.id) {
-      throw new AppError("No tienes permisos para editar este ejercicio", 403);
-    }
 
     const updated = await prisma.exercise.update({
       where: { id },
@@ -159,14 +149,9 @@ export class ExercisesService {
   }
 
   static async deleteExercise(trainerUserId: string, id: string) {
-    const trainer = await this.getTrainer(trainerUserId);
-
-    const exercise = await prisma.exercise.findUnique({ where: { id } });
+    const where = await ResourceAccessService.trainerOwnedExerciseWhere(trainerUserId, id);
+    const exercise = await prisma.exercise.findFirst({ where, select: { id: true } });
     if (!exercise) throw new AppError("Ejercicio no encontrado", 404);
-
-    if (exercise.isGlobal || exercise.trainerId !== trainer.id) {
-      throw new AppError("No tienes permisos para eliminar este ejercicio", 403);
-    }
 
     await prisma.exercise.delete({ where: { id } });
 

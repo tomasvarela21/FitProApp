@@ -1,6 +1,7 @@
 import { DayOfWeek, Prisma } from "@prisma/client";
 import { prisma } from "../../infrastructure/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
+import { ResourceAccessService } from "../../shared/services/resource-access.service";
 import { NotificationService } from "../notifications/notifications.service";
 
 type CreateRoutineData = {
@@ -90,15 +91,13 @@ export class RoutinesService {
     return trainer;
   }
 
-  private static async getOwnedRoutine(trainerId: string, routineId: string) {
-    const routine = await prisma.routine.findUnique({ where: { id: routineId } });
+  private static async getOwnedRoutine(trainerUserId: string, routineId: string) {
+    const where = await ResourceAccessService.trainerOwnedRoutineWhere(
+      trainerUserId,
+      routineId,
+    );
+    const routine = await prisma.routine.findFirst({ where });
     if (!routine) throw new AppError("Rutina no encontrada", 404);
-    if (routine.isGlobal) {
-      throw new AppError("Las rutinas globales no pueden ser modificadas", 403);
-    }
-    if (routine.trainerId !== trainerId) {
-      throw new AppError("No tienes permisos para modificar esta rutina", 403);
-    }
     return routine;
   }
 
@@ -114,9 +113,10 @@ export class RoutinesService {
     return routines.map(toRoutineDto);
   }
 
-  static async getRoutine(id: string) {
-    const routine = await prisma.routine.findUnique({
-      where: { id },
+  static async getRoutine(trainerUserId: string, id: string) {
+    const where = await ResourceAccessService.trainerReadableRoutineWhere(trainerUserId, id);
+    const routine = await prisma.routine.findFirst({
+      where,
       include: routineInclude,
     });
 
@@ -137,8 +137,7 @@ export class RoutinesService {
   }
 
   static async updateRoutine(trainerUserId: string, id: string, data: UpdateRoutineData) {
-    const trainer = await this.getTrainer(trainerUserId);
-    await this.getOwnedRoutine(trainer.id, id);
+    await this.getOwnedRoutine(trainerUserId, id);
 
     const updated = await prisma.routine.update({
       where: { id },
@@ -150,8 +149,7 @@ export class RoutinesService {
   }
 
   static async deleteRoutine(trainerUserId: string, id: string) {
-    const trainer = await this.getTrainer(trainerUserId);
-    await this.getOwnedRoutine(trainer.id, id);
+    await this.getOwnedRoutine(trainerUserId, id);
 
     await prisma.routine.delete({ where: { id } });
 
@@ -159,8 +157,17 @@ export class RoutinesService {
   }
 
   static async addExerciseToRoutine(trainerUserId: string, routineId: string, data: AddExerciseData) {
-    const trainer = await this.getTrainer(trainerUserId);
-    await this.getOwnedRoutine(trainer.id, routineId);
+    await this.getOwnedRoutine(trainerUserId, routineId);
+
+    const exerciseWhere = await ResourceAccessService.trainerReadableExerciseWhere(
+      trainerUserId,
+      data.exerciseId,
+    );
+    const exercise = await prisma.exercise.findFirst({
+      where: exerciseWhere,
+      select: { id: true },
+    });
+    if (!exercise) throw new AppError("Ejercicio no encontrado", 404);
 
     const routineExercise = await prisma.routineExercise.create({
       data: { routineId, ...data },
@@ -197,8 +204,7 @@ export class RoutinesService {
     routineExerciseId: string,
     data: UpdateRoutineExerciseData
   ) {
-    const trainer = await this.getTrainer(trainerUserId);
-    await this.getOwnedRoutine(trainer.id, routineId);
+    await this.getOwnedRoutine(trainerUserId, routineId);
 
     const routineExercise = await prisma.routineExercise.findFirst({
       where: { id: routineExerciseId, routineId },
@@ -216,8 +222,7 @@ export class RoutinesService {
     routineId: string,
     routineExerciseId: string
   ) {
-    const trainer = await this.getTrainer(trainerUserId);
-    await this.getOwnedRoutine(trainer.id, routineId);
+    await this.getOwnedRoutine(trainerUserId, routineId);
 
     const routineExercise = await prisma.routineExercise.findFirst({
       where: { id: routineExerciseId, routineId },
@@ -230,8 +235,7 @@ export class RoutinesService {
   }
 
   static async toggleTemplate(trainerUserId: string, routineId: string) {
-    const trainer = await this.getTrainer(trainerUserId);
-    const routine = await this.getOwnedRoutine(trainer.id, routineId);
+    const routine = await this.getOwnedRoutine(trainerUserId, routineId);
 
     const updated = await prisma.routine.update({
       where: { id: routineId },
@@ -245,14 +249,15 @@ export class RoutinesService {
   static async cloneTemplate(trainerUserId: string, routineId: string) {
     const trainer = await this.getTrainer(trainerUserId);
 
-    const source = await prisma.routine.findUnique({
-      where: { id: routineId },
+    const where = await ResourceAccessService.trainerReadableRoutineWhere(
+      trainerUserId,
+      routineId,
+    );
+    const source = await prisma.routine.findFirst({
+      where,
       include: routineInclude,
     });
     if (!source) throw new AppError("Rutina no encontrada", 404);
-    if (source.trainerId !== trainer.id && !source.isGlobal) {
-      throw new AppError("No tienes permisos para clonar esta rutina", 403);
-    }
 
     const cloned = await prisma.$transaction(async (tx) => {
       const newRoutine = await tx.routine.create({

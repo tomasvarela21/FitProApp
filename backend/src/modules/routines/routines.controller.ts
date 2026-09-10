@@ -48,7 +48,7 @@ export class RoutinesController {
 
   static getOne = asyncHandler(async (req: Request, res: Response) => {
     const id = req.params.id as string;
-    const result = await RoutinesService.getRoutine(id);
+    const result = await RoutinesService.getRoutine(req.user!.userId, id);
     return res.status(200).json(successResponse("Rutina obtenida", result));
   });
 

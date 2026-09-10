@@ -45,7 +45,11 @@ export class ExercisesController {
 
   static getOne = asyncHandler(async (req: Request, res: Response) => {
     const id = req.params.id as string;
-    const result = await ExercisesService.getExercise(id);
+    const result = await ExercisesService.getExercise(
+      req.user!.userId,
+      req.user!.role,
+      id,
+    );
     return res.status(200).json(successResponse("Ejercicio obtenido", result));
   });
 

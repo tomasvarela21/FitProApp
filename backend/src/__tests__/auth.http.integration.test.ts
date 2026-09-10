@@ -3,8 +3,10 @@ import request from "supertest";
 import { app } from "../app";
 import { prisma } from "../infrastructure/db/prisma";
 import { createTenantFixture } from "./support/tenant.fixture";
+import { resetTestDatabase } from "./support/test-database";
 
 beforeAll(async () => {
+  await resetTestDatabase(prisma);
   await createTenantFixture(prisma);
 });
 
