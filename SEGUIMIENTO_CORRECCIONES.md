@@ -21,7 +21,7 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 | Fase | Objetivo | Estado | Entregas |
 |---|---|---|---:|
 | 1 | Testing aislado y línea base | Completada con limitaciones registradas | 2/2 |
-| 2 | Autorización y validación de entradas | En progreso | 1/3 |
+| 2 | Autorización y validación de entradas | En progreso | 2/3 |
 | 3 | Autenticación y aislamiento de sesiones | Pendiente | 0/4 |
 | 4 | Cobros y suscripciones | Pendiente | 0/3 |
 | 5 | Historial y migraciones | Pendiente | 0/2 |
@@ -90,7 +90,21 @@ Los hallazgos de dependencias se validarán contra su uso real antes de actualiz
 | Limitaciones | Continúan las advertencias ya registradas de configuración futura de Vitest/Vite y source map de `node-cron`; no afectan el resultado. |
 | Commit | `3a3466e` — `fix: restringir recursos al usuario autorizado` |
 
-**Pendiente de la fase:** validar asignaciones, planes semanales, overrides, registros de entrenamiento, gimnasios y alumnos eliminados; después aplicar esquemas uniformes a parámetros y queries.
+### Entrega 2.2 — Validación de relaciones de rutinas y alumnos
+
+| Elemento | Evidencia |
+|---|---|
+| Problema | IDs válidos pero ajenos podían asociarse entre tenants o entre rutinas: asignaciones, planes semanales, overrides, registros de entrenamiento y gimnasios. Varias rutas seguían operando sobre alumnos con `deletedAt`. |
+| Reproducción | La nueva suite produjo 8 fallos de 33 casos. Las operaciones vulnerables respondían `200/201` y llegaban a crear o reemplazar relaciones incorrectas. |
+| Cambio | Se validó el alcance propio/global de la rutina, la pertenencia de todos los ejercicios anidados a la rutina elegida o activa, la propiedad del gimnasio y el estado no eliminado del alumno. El portal resuelve primero un alumno activo. |
+| Atomicidad | La sesión valida la lista completa dentro de la transacción antes de crear el log. Los casos mezclan IDs válidos y ajenos y comprueban que los conteos de sesiones, series, overrides y asignaciones no cambian tras un rechazo. |
+| Pruebas | Integración: 34/34 exitosas. Unitarias: 25/25 exitosas. Compilación TypeScript: exitosa. PostgreSQL fue temporal y reconstruido. |
+| Regresión | Pasaron asignación de rutina propia y global, override válido, entrenamiento válido, gimnasio propio y consultas del portal para alumnos activos. Los alumnos eliminados reciben 404 en asignaciones, planes, resumen, perfil, suscripción, rutina y nuevos entrenamientos. |
+| Migraciones | No se modificó el esquema ni se ejecutaron migraciones sobre bases reales. |
+| Limitaciones | Permanecen las advertencias de tooling registradas en `QA-002`. |
+| Commit | `a3da01b` — `fix: validar relaciones de rutinas y alumnos` |
+
+**Pendiente de la fase:** aplicar esquemas uniformes a cuerpos, parámetros y queries, y comprobar la normalización de errores HTTP 400/404.
 
 ## Fase 3 — Autenticación y aislamiento de sesiones
 
