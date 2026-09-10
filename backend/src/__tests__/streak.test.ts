@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeStreak } from "../modules/student-portal/workout.service";
+import { computeStreak } from "../shared/utils/streak";
 
 const TODAY = "2026-08-20";
 const yesterday = (d: string) => {
