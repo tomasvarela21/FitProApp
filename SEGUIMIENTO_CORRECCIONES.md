@@ -13,7 +13,7 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 - El archivo `Presupuesto De La Rosa.pdf` permanece fuera de los commits.
 - Publicaciones, despliegues, push y migraciones sobre bases reales requieren autorización independiente.
 
-**Última actualización:** 10 de septiembre de 2026  
+**Última actualización:** 11 de septiembre de 2026  
 **Commit inicial del plan:** `8a9f261`
 
 ## Estado general
@@ -22,7 +22,7 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 |---|---|---|---:|
 | 1 | Testing aislado y línea base | Completada con limitaciones registradas | 2/2 |
 | 2 | Autorización y validación de entradas | Completada | 3/3 |
-| 3 | Autenticación y aislamiento de sesiones | Pendiente | 0/4 |
+| 3 | Autenticación y aislamiento de sesiones | En progreso | 1/4 |
 | 4 | Cobros y suscripciones | Pendiente | 0/3 |
 | 5 | Historial y migraciones | Pendiente | 0/2 |
 | 6 | Planificación, entrenamientos y fechas | Pendiente | 0/4 |
@@ -123,8 +123,24 @@ Los hallazgos de dependencias se validarán contra su uso real antes de actualiz
 
 ## Fase 3 — Autenticación y aislamiento de sesiones
 
-**Estado:** pendiente.  
-**Registro de entregas:** todavía no iniciado.
+**Estado:** en progreso; primera entrega completada.  
+**Objetivo parcial alcanzado:** las credenciales de un solo uso se consumen mediante escrituras condicionales atómicas y rechazan competidores concurrentes.
+
+### Entrega 3.1 — Consumo atómico de tokens
+
+| Elemento | Evidencia |
+|---|---|
+| Problema | Refresh tokens, invitaciones de alumnos y verificaciones de entrenadores seguían un patrón de lectura, comprobación y actualización separado. Dos solicitudes simultáneas podían superar la comprobación antes de que alguna marcara el token como usado. |
+| Reproducción | La matriz concurrente inicial falló 2 de 3 casos: activación de alumno y verificación de email respondieron `200/200` al usar dos veces el mismo token. La rotación de refresh produjo un solo éxito por orden incidental, aunque conservaba el mismo patrón no atómico. |
+| Cambio | Cada token se reclama con `updateMany` condicionado a `usedAt/revokedAt = null` y vigencia dentro de la misma transacción que aplica sus efectos. Solo la solicitud que actualiza una fila continúa. Logout utiliza una actualización condicional idempotente. |
+| Pruebas | Integración: 51/51 exitosas sobre PostgreSQL temporal. Unitarias: 25/25 exitosas. Compilación TypeScript: exitosa. La matriz concurrente se repitió después de corregir un error de tipado detectado por el compilador. |
+| Regresión | Se repitieron autenticación básica, rotación, activación, verificación, autorización multitenant, relaciones y validación de entradas. Cada prueba concurrente usa peticiones HTTP independientes. |
+| Datos y migraciones | No se modificó el esquema ni se ejecutaron migraciones sobre bases reales. Una transacción perdedora se revierte sin cambiar cuenta ni emitir una credencial sucesora. |
+| Limitaciones | La concurrencia puede variar el orden del ganador, por lo que se valida el conjunto de estados HTTP y la cantidad final de tokens activos. Permanecen las advertencias de tooling de `QA-002`. |
+| Nuevos hallazgos | El compilador detectó que el estrechamiento nullable de `student.userId` no sobrevivía al callback transaccional; se corrigió antes de validar la entrega. |
+| Commit | `916f079` — `fix(auth): consumir tokens una sola vez` |
+
+**Pendiente de la fase:** versión de autenticación y revocación de sesiones; coordinación de renovación y logout en el frontend; separación de caché por usuario.
 
 Se documentarán aquí el consumo atómico de tokens, la revocación de sesiones y la separación de estado y caché entre cuentas.
 
