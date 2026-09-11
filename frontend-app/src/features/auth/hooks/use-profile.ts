@@ -4,7 +4,7 @@ import { useAuthStore } from "@/store/auth.store";
 
 export const useProfile = () => {
   const queryClient = useQueryClient();
-  const { setAuth, token, user } = useAuthStore();
+  const { updateUser, user } = useAuthStore();
 
   const query = useQuery({
     queryKey: ["trainer-profile"],
@@ -19,8 +19,8 @@ export const useProfile = () => {
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["trainer-profile"] });
       // Actualizar el store con los nuevos datos
-      if (user && token) {
-        setAuth(token, {
+      if (user) {
+        updateUser({
           ...user,
           profile: {
             id: user.profile?.id ?? "",

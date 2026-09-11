@@ -2,6 +2,7 @@ import axios, { CanceledError } from "axios";
 import type { InternalAxiosRequestConfig } from "axios";
 import type { AuthUser } from "@/types";
 import { useAuthStore } from "@/store/auth.store";
+import { clearPrivateQueryState } from "@/lib/query-client";
 import {
   SessionChangedError,
   SessionCoordinator,
@@ -38,7 +39,10 @@ const sessionCoordinator = new SessionCoordinator({
       useAuthStore
         .getState()
         .setTokenForSession(token, expected.userId, expected.revision),
-    clear: () => useAuthStore.getState().logout(),
+    clear: () => {
+      clearPrivateQueryState();
+      useAuthStore.getState().logout();
+    },
   },
   refresh: async (signal) => {
     const response = await axios.post<{ data: { accessToken: string } }>(

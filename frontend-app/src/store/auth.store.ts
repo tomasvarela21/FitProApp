@@ -9,6 +9,7 @@ type AuthState = {
   isInitialized: boolean;
   sessionRevision: number;
   setAuth: (token: string, user: AuthUser) => void;
+  updateUser: (user: AuthUser) => boolean;
   setTokenForSession: (token: string, userId: string, revision: number) => boolean;
   setInitialized: () => void;
   logout: () => void;
@@ -29,6 +30,12 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: true,
           sessionRevision: state.sessionRevision + 1,
         })),
+      updateUser: (user) => {
+        const state = useAuthStore.getState();
+        if (!state.isAuthenticated || state.user?.id !== user.id) return false;
+        set({ user });
+        return true;
+      },
       setTokenForSession: (token, userId, revision) => {
         const state = useAuthStore.getState();
         if (

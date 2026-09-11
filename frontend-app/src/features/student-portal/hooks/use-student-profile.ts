@@ -4,7 +4,7 @@ import { useAuthStore } from "@/store/auth.store";
 
 export const useStudentProfile = () => {
   const queryClient = useQueryClient();
-  const { token, user, setAuth } = useAuthStore();
+  const { user, updateUser } = useAuthStore();
 
   const query = useQuery({
     queryKey: ["student-profile"],
@@ -19,8 +19,8 @@ export const useStudentProfile = () => {
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["student-profile"] });
       // Actualizar el store para que el sidebar refleje el cambio
-      if (user && token) {
-        setAuth(token, {
+      if (user) {
+        updateUser({
           ...user,
           profile: {
             id: user.profile?.id ?? "",

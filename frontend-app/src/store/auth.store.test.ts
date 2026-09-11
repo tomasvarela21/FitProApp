@@ -82,4 +82,30 @@ describe("auth.store", () => {
     expect(useAuthStore.getState().token).toBe("token-b");
     expect(useAuthStore.getState().user).toEqual(secondTrainer);
   });
+
+  it("no cambia la revisión de sesión al actualizar el perfil de la misma cuenta", () => {
+    useAuthStore.getState().setAuth("access-token", trainer);
+    const revision = useAuthStore.getState().sessionRevision;
+
+    const updated = useAuthStore.getState().updateUser({
+      ...trainer,
+      profile: { ...trainer.profile!, firstName: "Ana actualizada" },
+    });
+
+    expect(updated).toBe(true);
+    expect(useAuthStore.getState().sessionRevision).toBe(revision);
+    expect(useAuthStore.getState().user?.profile?.firstName).toBe("Ana actualizada");
+  });
+
+  it("rechaza una actualización de perfil perteneciente a otra identidad", () => {
+    useAuthStore.getState().setAuth("access-token", trainer);
+    const revision = useAuthStore.getState().sessionRevision;
+    const otherTrainer = { ...trainer, id: "other-user-id" };
+
+    const updated = useAuthStore.getState().updateUser(otherTrainer);
+
+    expect(updated).toBe(false);
+    expect(useAuthStore.getState().user).toEqual(trainer);
+    expect(useAuthStore.getState().sessionRevision).toBe(revision);
+  });
 });
