@@ -21,7 +21,7 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 | Fase | Objetivo | Estado | Entregas |
 |---|---|---|---:|
 | 1 | Testing aislado y línea base | Completada con limitaciones registradas | 2/2 |
-| 2 | Autorización y validación de entradas | En progreso | 2/3 |
+| 2 | Autorización y validación de entradas | Completada | 3/3 |
 | 3 | Autenticación y aislamiento de sesiones | Pendiente | 0/4 |
 | 4 | Cobros y suscripciones | Pendiente | 0/3 |
 | 5 | Historial y migraciones | Pendiente | 0/2 |
@@ -73,8 +73,8 @@ Los hallazgos de dependencias se validarán contra su uso real antes de actualiz
 
 ## Fase 2 — Autorización y validación de entradas
 
-**Estado:** en progreso; primera entrega completada.
-**Objetivo parcial alcanzado:** las lecturas y mutaciones individuales de ejercicios y rutinas aplican el alcance del usuario autenticado y ocultan recursos inaccesibles con HTTP 404.
+**Estado:** completada.
+**Objetivo alcanzado:** los recursos y relaciones incluidos aplican el alcance del usuario autenticado, los alumnos eliminados quedan excluidos y las entradas inválidas se rechazan antes de consultar o modificar datos.
 
 ### Entrega 2.1 — Acceso autorizado a ejercicios y rutinas
 
@@ -104,7 +104,22 @@ Los hallazgos de dependencias se validarán contra su uso real antes de actualiz
 | Limitaciones | Permanecen las advertencias de tooling registradas en `QA-002`. |
 | Commit | `a3da01b` — `fix: validar relaciones de rutinas y alumnos` |
 
-**Pendiente de la fase:** aplicar esquemas uniformes a cuerpos, parámetros y queries, y comprobar la normalización de errores HTTP 400/404.
+### Entrega 2.3 — Errores de validación consistentes
+
+| Elemento | Evidencia |
+|---|---|
+| Problema | Los errores de Zod lanzados desde controladores y el JSON malformado terminaban como HTTP 500. Varios parámetros no se validaban, un filtro booleano desconocido se aceptaba y semanas o fechas inválidas llegaban hasta Prisma. |
+| Reproducción | La prueba focalizada inicial produjo 11 fallos de 12 casos: entradas inválidas respondían 500 o 404 y `isGlobal=quizas` respondía 200. El único caso correcto era el 404 de un recurso con ID válido pero inaccesible. |
+| Cambio | El manejador global convierte Zod y JSON malformado en `400 Datos inválidos`. Se añadieron esquemas compartidos para CUID, semanas y fechas, y se aplicaron a rutas, queries y relaciones de ejercicios, rutinas, alumnos, gimnasios, planes, suscripciones, lesiones y entrenamientos. |
+| Seguridad | Los errores de sintaxis JSON no reflejan el texto interno del parser. Los IDs y fechas se rechazan antes de llegar a Prisma, y un recurso con identificador válido fuera del alcance continúa ocultándose con 404. |
+| Pruebas | Integración final: 48/48 exitosas. Unitarias: 25/25 exitosas. Compilación TypeScript: exitosa. `git diff --check`: sin errores. |
+| Regresión | Se repitió toda la matriz de autenticación, autorización multitenant, relaciones anidadas, alumnos eliminados y flujos válidos sobre PostgreSQL temporal. |
+| Datos y migraciones | No se modificó el esquema, no se ejecutaron migraciones sobre bases reales y los casos inválidos no generan escrituras. |
+| Limitaciones | El primer intento focalizado posterior al cambio fue bloqueado por `spawn EPERM`; se repitió mediante el comando autorizado y la suite completa pasó. Permanecen las advertencias de tooling registradas en `QA-002`. |
+| Nuevos hallazgos | No se detectaron nuevos defectos funcionales ni de seguridad durante esta entrega. |
+| Commit | `c9d35e8` — `fix: devolver errores de validación consistentes` |
+
+**Cierre de la fase:** los escenarios cubiertos de acceso cruzado, relaciones inválidas y entradas malformadas se rechazan con la política HTTP acordada, mientras los recorridos permitidos continúan operativos.
 
 ## Fase 3 — Autenticación y aislamiento de sesiones
 
