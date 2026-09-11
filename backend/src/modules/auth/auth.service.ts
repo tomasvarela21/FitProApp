@@ -16,6 +16,7 @@ import {
 export class AuthService {
   static async activateAccount(data: ActivateAccountInput) {
     const tokenHash = hashToken(data.token);
+    const now = new Date();
 
     const invitation = await prisma.accountInvitation.findFirst({
       where: {
@@ -38,43 +39,51 @@ export class AuthService {
       throw new AppError("La invitación ya fue utilizada", 400);
     }
 
-    if (invitation.expiresAt < new Date()) {
+    if (invitation.expiresAt < now) {
       throw new AppError("La invitación expiró", 400);
     }
 
     if (!invitation.student.userId || !invitation.student.user) {
       throw new AppError("El alumno no tiene una cuenta vinculada", 500);
     }
+    const studentUserId = invitation.student.userId;
 
     const passwordHash = await hashPassword(data.password);
 
-    await prisma.$transaction([
-      prisma.user.update({
-        where: { id: invitation.student.userId },
+    await prisma.$transaction(async (tx) => {
+      const consumed = await tx.accountInvitation.updateMany({
+        where: {
+          id: invitation.id,
+          usedAt: null,
+          expiresAt: { gte: now },
+        },
+        data: { usedAt: now },
+      });
+
+      if (consumed.count !== 1) {
+        throw new AppError("La invitación ya fue utilizada o expiró", 400);
+      }
+
+      await tx.user.update({
+        where: { id: studentUserId },
         data: {
           passwordHash,
           status: "ACTIVE",
-          emailVerifiedAt: new Date(),
+          emailVerifiedAt: now,
           mustChangePassword: false,
         },
-      }),
-      prisma.student.update({
+      });
+      await tx.student.update({
         where: { id: invitation.student.id },
         data: {
           status: "ACTIVE",
-          activatedAt: new Date(),
+          activatedAt: now,
         },
-      }),
-      prisma.accountInvitation.update({
-        where: { id: invitation.id },
-        data: {
-          usedAt: new Date(),
-        },
-      }),
-    ]);
+      });
+    });
 
     return {
-      userId: invitation.student.userId,
+      userId: studentUserId,
       studentId: invitation.student.id,
       email: invitation.student.email,
       activated: true,
@@ -139,13 +148,14 @@ export class AuthService {
 
   static async refreshAccessToken(rawRefreshToken: string) {
     const tokenHash = hashToken(rawRefreshToken);
+    const now = new Date();
 
     const stored = await prisma.refreshToken.findUnique({
       where: { tokenHash },
       include: { user: { include: { trainer: true, student: true } } },
     });
 
-    if (!stored || stored.revokedAt || stored.expiresAt < new Date()) {
+    if (!stored || stored.revokedAt || stored.expiresAt < now) {
       throw new AppError("Refresh token inválido o expirado", 401);
     }
 
@@ -159,15 +169,24 @@ export class AuthService {
     const newExpiresAt = new Date();
     newExpiresAt.setDate(newExpiresAt.getDate() + 30);
 
-    await prisma.$transaction([
-      prisma.refreshToken.update({
-        where: { id: stored.id },
-        data: { revokedAt: new Date() },
-      }),
-      prisma.refreshToken.create({
+    await prisma.$transaction(async (tx) => {
+      const consumed = await tx.refreshToken.updateMany({
+        where: {
+          id: stored.id,
+          revokedAt: null,
+          expiresAt: { gte: now },
+        },
+        data: { revokedAt: now },
+      });
+
+      if (consumed.count !== 1) {
+        throw new AppError("Refresh token inválido o expirado", 401);
+      }
+
+      await tx.refreshToken.create({
         data: { userId: stored.userId, tokenHash: newTokenHash, expiresAt: newExpiresAt },
-      }),
-    ]);
+      });
+    });
 
     const accessToken = signAccessToken({
       userId: stored.user.id,
@@ -184,13 +203,10 @@ export class AuthService {
   static async logout(rawRefreshToken: string) {
     const tokenHash = hashToken(rawRefreshToken);
 
-    const stored = await prisma.refreshToken.findUnique({ where: { tokenHash } });
-    if (stored && !stored.revokedAt) {
-      await prisma.refreshToken.update({
-        where: { id: stored.id },
-        data: { revokedAt: new Date() },
-      });
-    }
+    await prisma.refreshToken.updateMany({
+      where: { tokenHash, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
 
     return { loggedOut: true };
   }
@@ -320,6 +336,7 @@ export class AuthService {
 
   static async verifyTrainerEmail(token: string) {
     const tokenHash = hashToken(token);
+    const now = new Date();
 
     const verification = await prisma.trainerVerification.findUnique({
       where: {
@@ -342,25 +359,32 @@ export class AuthService {
       throw new AppError("El email ya fue verificado", 400);
     }
 
-    if (verification.expiresAt < new Date()) {
+    if (verification.expiresAt < now) {
       throw new AppError("El token de verificación expiró", 400);
     }
 
-    await prisma.$transaction([
-      prisma.user.update({
+    await prisma.$transaction(async (tx) => {
+      const consumed = await tx.trainerVerification.updateMany({
+        where: {
+          id: verification.id,
+          usedAt: null,
+          expiresAt: { gte: now },
+        },
+        data: { usedAt: now },
+      });
+
+      if (consumed.count !== 1) {
+        throw new AppError("El email ya fue verificado o el token expiró", 400);
+      }
+
+      await tx.user.update({
         where: { id: verification.trainer.userId },
         data: {
           status: "ACTIVE",
-          emailVerifiedAt: new Date(),
+          emailVerifiedAt: now,
         },
-      }),
-      prisma.trainerVerification.update({
-        where: { id: verification.id },
-        data: {
-          usedAt: new Date(),
-        },
-      }),
-    ]);
+      });
+    });
 
     return {
       emailVerified: true,
