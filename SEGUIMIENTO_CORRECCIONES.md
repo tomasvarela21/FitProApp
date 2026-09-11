@@ -22,7 +22,7 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 |---|---|---|---:|
 | 1 | Testing aislado y línea base | Completada con limitaciones registradas | 2/2 |
 | 2 | Autorización y validación de entradas | Completada | 3/3 |
-| 3 | Autenticación y aislamiento de sesiones | En progreso | 1/4 |
+| 3 | Autenticación y aislamiento de sesiones | En progreso | 2/4 |
 | 4 | Cobros y suscripciones | Pendiente | 0/3 |
 | 5 | Historial y migraciones | Pendiente | 0/2 |
 | 6 | Planificación, entrenamientos y fechas | Pendiente | 0/4 |
@@ -39,6 +39,7 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 | `PERF-001` | Fase 1 | Media | El bundle principal del frontend alcanza aproximadamente 1,22 MB sin comprimir. | Pendiente de medición y optimización | 8 |
 | `PERF-002` | Fase 1 | Baja | `auth.api.ts` se importa de forma estática y dinámica, por lo que Vite no puede separarlo en otro chunk. | Pendiente | 8 |
 | `QA-002` | Fase 1 | Baja | Vitest/Vite informa una advertencia futura de configuración y `node-cron` genera una advertencia de source map durante las pruebas del backend. | Pendiente de revisión | 8 |
+| `QA-003` | Fase 3 | Baja | Prisma 6 advierte que `package.json#prisma` será retirado en Prisma 7 y recomienda `prisma.config.ts`. | Pendiente; no afecta la generación actual | 8 |
 
 Los hallazgos de dependencias se validarán contra su uso real antes de actualizar paquetes. No se ejecutará `npm audit fix` de forma indiscriminada.
 
@@ -140,7 +141,22 @@ Los hallazgos de dependencias se validarán contra su uso real antes de actualiz
 | Nuevos hallazgos | El compilador detectó que el estrechamiento nullable de `student.userId` no sobrevivía al callback transaccional; se corrigió antes de validar la entrega. |
 | Commit | `916f079` — `fix(auth): consumir tokens una sola vez` |
 
-**Pendiente de la fase:** versión de autenticación y revocación de sesiones; coordinación de renovación y logout en el frontend; separación de caché por usuario.
+### Entrega 3.2 — Revocación por cambio de credenciales
+
+| Elemento | Evidencia |
+|---|---|
+| Problema | Los access tokens solo validaban firma y vencimiento. Una cuenta suspendida o reseteada conservaba acceso; cambiar contraseña no revocaba refresh tokens; se confiaba en rol y email del JWT sin contrastarlos con la base; la nueva invitación de reset se creaba después de confirmar los cambios de cuenta. |
+| Reproducción | Los 6 controles nuevos fallaron inicialmente: suspensión, cambio de contraseña, reset administrativo, JWT sin versión, rol inconsistente y fallo al insertar la invitación. Este último dejó la cuenta y el alumno en `INVITED` aunque no existía un enlace nuevo. |
+| Cambio | Se agregó `User.authVersion`, se incluye en nuevos JWT y se contrasta con estado, rol, email y alumno actual en cada solicitud autenticada. Cambio y reset de contraseña incrementan la versión y revocan refresh tokens. El reset incorpora cuenta, alumno, revocación e invitación en una única transacción. |
+| Migración | Se añadió la migración `20260911093000_add_user_auth_version`, que agrega una columna `INTEGER NOT NULL DEFAULT 1`. Las cuentas creadas sin indicar versión recibieron 1 y las 21 migraciones se aplicaron desde cero en PostgreSQL temporal. No se ejecutó sobre una base real. |
+| Pruebas | Integración: 57/57 exitosas. Unitarias: 25/25 exitosas. Compilación TypeScript: exitosa. Los 6 casos que fallaban pasaron después del cambio. |
+| Atomicidad | Un trigger temporal provoca el fallo de inserción de la invitación. Tras el 500 controlado, usuario, alumno, contraseña y refresh token mantienen el estado anterior y el access token continúa válido. |
+| Compatibilidad | Los JWT emitidos antes de esta migración no contienen `authVersion` y reciben 401. Es el cierre de sesión controlado previsto por el plan. Los alumnos eliminados también reciben 401 desde autenticación. |
+| Limitaciones | `requireAuth` agrega una lectura de usuario por solicitud; su costo se medirá y optimizará en la Fase 8 sin reducir la garantía de revocación. Prisma informó que la configuración en `package.json` quedará obsoleta en Prisma 7; se registra en `QA-003`. |
+| Nuevos hallazgos | `QA-003` — advertencia deprecada de Prisma: migrar la configuración de `package.json#prisma` a `prisma.config.ts` antes de Prisma 7. |
+| Commit | `f9fa945` — `fix(auth): revocar sesiones al cambiar credenciales` |
+
+**Pendiente de la fase:** coordinación de renovación y logout en el frontend; separación de caché por usuario.
 
 Se documentarán aquí el consumo atómico de tokens, la revocación de sesiones y la separación de estado y caché entre cuentas.
 
