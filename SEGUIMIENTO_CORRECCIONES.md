@@ -22,7 +22,7 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 |---|---|---|---:|
 | 1 | Testing aislado y línea base | Completada con limitaciones registradas | 2/2 |
 | 2 | Autorización y validación de entradas | Completada | 3/3 |
-| 3 | Autenticación y aislamiento de sesiones | En progreso | 2/4 |
+| 3 | Autenticación y aislamiento de sesiones | En progreso | 3/4 |
 | 4 | Cobros y suscripciones | Pendiente | 0/3 |
 | 5 | Historial y migraciones | Pendiente | 0/2 |
 | 6 | Planificación, entrenamientos y fechas | Pendiente | 0/4 |
@@ -40,6 +40,8 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 | `PERF-002` | Fase 1 | Baja | `auth.api.ts` se importa de forma estática y dinámica, por lo que Vite no puede separarlo en otro chunk. | Pendiente | 8 |
 | `QA-002` | Fase 1 | Baja | Vitest/Vite informa una advertencia futura de configuración y `node-cron` genera una advertencia de source map durante las pruebas del backend. | Pendiente de revisión | 8 |
 | `QA-003` | Fase 3 | Baja | Prisma 6 advierte que `package.json#prisma` será retirado en Prisma 7 y recomienda `prisma.config.ts`. | Pendiente; no afecta la generación actual | 8 |
+| `SEC-001` | Fase 3 | Alta | El archivo local ignorado `backend/.env` contiene credenciales de base de datos con apariencia activa en texto plano. | Pendiente de rotación por el propietario y revisión del almacenamiento local; no se versionó ni expuso su contenido | Acción operativa / 8 |
+| `AUTH-001` | Fase 3 | Media | La política productiva de cookies no puede validarse sin conocer los dominios reales del frontend y la API. | Se conservó `SameSite=Strict`, `Secure` y la ruta existente; verificar antes del despliegue | 8 |
 
 Los hallazgos de dependencias se validarán contra su uso real antes de actualizar paquetes. No se ejecutará `npm audit fix` de forma indiscriminada.
 
@@ -124,8 +126,8 @@ Los hallazgos de dependencias se validarán contra su uso real antes de actualiz
 
 ## Fase 3 — Autenticación y aislamiento de sesiones
 
-**Estado:** en progreso; primera entrega completada.  
-**Objetivo parcial alcanzado:** las credenciales de un solo uso se consumen mediante escrituras condicionales atómicas y rechazan competidores concurrentes.
+**Estado:** en progreso; tres entregas completadas.
+**Objetivo parcial alcanzado:** las credenciales de un solo uso se consumen atómicamente, los cambios de credenciales revocan sesiones y el frontend coordina refresh y logout sin aceptar respuestas de una identidad anterior.
 
 ### Entrega 3.1 — Consumo atómico de tokens
 
@@ -156,7 +158,21 @@ Los hallazgos de dependencias se validarán contra su uso real antes de actualiz
 | Nuevos hallazgos | `QA-003` — advertencia deprecada de Prisma: migrar la configuración de `package.json#prisma` a `prisma.config.ts` antes de Prisma 7. |
 | Commit | `f9fa945` — `fix(auth): revocar sesiones al cambiar credenciales` |
 
-**Pendiente de la fase:** coordinación de renovación y logout en el frontend; separación de caché por usuario.
+### Entrega 3.3 — Coordinación de renovación y cierre de sesión
+
+| Elemento | Evidencia |
+|---|---|
+| Problema | El frontend podía iniciar renovaciones duplicadas bajo StrictMode o entre pestañas. Una respuesta tardía podía volver a guardar un token después de logout o de cambiar de cuenta. El backend también exponía y aceptaba refresh tokens en JSON. |
+| Reproducción | Dos pruebas nuevas del store fallaron inicialmente porque el token tardío se aplicaba tras logout y sobrescribía la cuenta B con una renovación de la cuenta A. Dos contratos HTTP adicionales fallaron porque login devolvía `refreshToken` y refresh aceptaba un token enviado solo en el body. |
+| Cambio | Se incorporó un coordinador con operación única por sesión y pestaña, bloqueo compartido mediante almacenamiento local, propagación por `BroadcastChannel`, timeout de 8 segundos y cancelación. Solicitudes y respuestas quedan ligadas a usuario y revisión de sesión. Login, inicialización y logout usan el coordinador; el refresh token queda restringido a la cookie `HttpOnly`. |
+| Pruebas | Backend integración: 59/59 exitosas. Backend unitarias: 25/25 exitosas. Frontend unitarias: 12/12 exitosas. E2E: 2/2 exitosas en Chromium y WebKit. ESLint dirigido: sin hallazgos. Compilaciones de backend y frontend: exitosas. |
+| Regresión | Se comprobaron una sola renovación por pestaña, coordinación entre dos pestañas, timeout, logout propagado, respuesta tardía descartada, cambio cuenta A → B, contratos de cookie y los recorridos web disponibles. |
+| Contrato | Login y refresh ya no incluyen refresh tokens en JSON; refresh y logout los leen únicamente de la cookie. La política productiva existente se mantuvo hasta verificar dominios reales. |
+| Limitaciones | Firefox continúa bloqueado por `ENV-001`. La compilación conserva `PERF-001` y `PERF-002`. No se validaron cookies sobre dominios productivos porque no están definidos en el repositorio. |
+| Nuevos hallazgos | `SEC-001` registra credenciales locales que requieren rotación operativa; `AUTH-001` registra la comprobación pendiente de dominios y cookies. Ningún secreto fue incluido en el commit. |
+| Commit | `2e8738d` — `fix(web): coordinar renovación y cierre de sesión` |
+
+**Pendiente de la fase:** cancelar consultas y separar la caché privada por identidad.
 
 Se documentarán aquí el consumo atómico de tokens, la revocación de sesiones y la separación de estado y caché entre cuentas.
 
