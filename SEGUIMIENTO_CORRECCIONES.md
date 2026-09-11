@@ -22,7 +22,7 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 |---|---|---|---:|
 | 1 | Testing aislado y línea base | Completada con limitaciones registradas | 2/2 |
 | 2 | Autorización y validación de entradas | Completada | 3/3 |
-| 3 | Autenticación y aislamiento de sesiones | En progreso | 3/4 |
+| 3 | Autenticación y aislamiento de sesiones | Completada | 4/4 |
 | 4 | Cobros y suscripciones | Pendiente | 0/3 |
 | 5 | Historial y migraciones | Pendiente | 0/2 |
 | 6 | Planificación, entrenamientos y fechas | Pendiente | 0/4 |
@@ -126,8 +126,8 @@ Los hallazgos de dependencias se validarán contra su uso real antes de actualiz
 
 ## Fase 3 — Autenticación y aislamiento de sesiones
 
-**Estado:** en progreso; tres entregas completadas.
-**Objetivo parcial alcanzado:** las credenciales de un solo uso se consumen atómicamente, los cambios de credenciales revocan sesiones y el frontend coordina refresh y logout sin aceptar respuestas de una identidad anterior.
+**Estado:** completada.
+**Objetivo alcanzado:** las credenciales de un solo uso se consumen atómicamente, los cambios de credenciales revocan sesiones y el frontend coordina refresh, logout y caché sin aceptar datos de una identidad anterior.
 
 ### Entrega 3.1 — Consumo atómico de tokens
 
@@ -172,7 +172,22 @@ Los hallazgos de dependencias se validarán contra su uso real antes de actualiz
 | Nuevos hallazgos | `SEC-001` registra credenciales locales que requieren rotación operativa; `AUTH-001` registra la comprobación pendiente de dominios y cookies. Ningún secreto fue incluido en el commit. |
 | Commit | `2e8738d` — `fix(web): coordinar renovación y cierre de sesión` |
 
-**Pendiente de la fase:** cancelar consultas y separar la caché privada por identidad.
+### Entrega 3.4 — Separación de caché por usuario
+
+| Elemento | Evidencia |
+|---|---|
+| Problema | React Query mantenía claves iguales para todas las cuentas y el logout no cancelaba ni eliminaba consultas o mutaciones privadas. Una edición de perfil reutilizaba `setAuth` e incrementaba la revisión de sesión aunque la identidad no hubiera cambiado. |
+| Reproducción | La línea base falló 5 de 17 controles: la caché sobrevivió al logout y al cambio A → B, una consulta siguió activa, la misma clave colisionó entre dos identidades y la edición de perfil cambió la revisión de sesión. |
+| Cambio | Se centralizó el `QueryClient`, se incorporó el ID autenticado al hash de todas las claves y se conectó su cancelación y limpieza al coordinador de sesión. Se añadió `updateUser`, que solo acepta la identidad activa y conserva la revisión. |
+| Pruebas | Frontend unitarias: 18/18 exitosas. ESLint dirigido: sin errores ni advertencias. Compilación de producción: exitosa. E2E: 2/2 exitosas en Chromium y WebKit. |
+| Regresión | Se verificaron datos privados eliminados tras logout, caché vacía antes de establecer B, señal de cancelación en consultas activas, espacios distintos para A y B, lectura correcta al alternar identidades y rechazo de actualizaciones de perfil ajenas. |
+| Cierre integrado | Backend unitarias: 25/25 exitosas; integración: 59/59 exitosas sobre PostgreSQL temporal; compilación: exitosa. El frontend conservó los 18 casos y los recorridos de navegador exitosos. |
+| Datos y migraciones | No se modificó el esquema ni se utilizó una base real. La limpieza afecta únicamente estado efímero del navegador. |
+| Limitaciones | Firefox continúa bloqueado por `ENV-001`. Persisten `PERF-001`, `PERF-002` y las advertencias de tooling ya registradas. |
+| Nuevos hallazgos | No se detectaron defectos adicionales durante esta entrega. |
+| Commit | `2c7dcac` — `fix(web): separar la caché por usuario` |
+
+**Cierre de la fase:** una credencial revocada no recupera acceso en los casos cubiertos, las renovaciones concurrentes consumen una sola credencial y el flujo cuenta A → logout → cuenta B no conserva datos privados en memoria o caché.
 
 Se documentarán aquí el consumo atómico de tokens, la revocación de sesiones y la separación de estado y caché entre cuentas.
 
