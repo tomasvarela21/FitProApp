@@ -49,4 +49,37 @@ describe("auth.store", () => {
     expect(persisted.state.token).toBeUndefined();
     expect(persisted.state.user).toEqual(trainer);
   });
+
+  it("descarta un token tardío después del logout", () => {
+    useAuthStore.getState().setAuth("access-token", trainer);
+    const revision = useAuthStore.getState().sessionRevision;
+    useAuthStore.getState().logout();
+
+    const applied = useAuthStore
+      .getState()
+      .setTokenForSession("refresh-tardío", trainer.id, revision);
+
+    expect(applied).toBe(false);
+    expect(useAuthStore.getState().token).toBeNull();
+  });
+
+  it("no sobrescribe la cuenta nueva con un refresh de la cuenta anterior", () => {
+    const secondTrainer = {
+      ...trainer,
+      id: "second-trainer-user-id",
+      email: "second-trainer@fitpro.test",
+    };
+    useAuthStore.getState().setAuth("token-a", trainer);
+    const revisionA = useAuthStore.getState().sessionRevision;
+    useAuthStore.getState().logout();
+    useAuthStore.getState().setAuth("token-b", secondTrainer);
+
+    const applied = useAuthStore
+      .getState()
+      .setTokenForSession("refresh-tardío-a", trainer.id, revisionA);
+
+    expect(applied).toBe(false);
+    expect(useAuthStore.getState().token).toBe("token-b");
+    expect(useAuthStore.getState().user).toEqual(secondTrainer);
+  });
 });

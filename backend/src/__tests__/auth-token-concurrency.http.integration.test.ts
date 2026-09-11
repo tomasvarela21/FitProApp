@@ -151,3 +151,33 @@ describe("consumo concurrente de credenciales de un solo uso", () => {
     ).toBe(1);
   });
 });
+
+describe("contrato web del refresh token", () => {
+  it("no expone el refresh token en el JSON de login", async () => {
+    const user = await createActiveTrainer();
+    const login = await request(app)
+      .post("/api/auth/login")
+      .send({ email: user.email, password })
+      .expect(200);
+
+    expect(login.body.data).not.toHaveProperty("refreshToken");
+    expect(login.headers["set-cookie"][0]).toContain("HttpOnly");
+  });
+
+  it("no acepta refresh tokens enviados en el body", async () => {
+    const user = await createActiveTrainer();
+    const rawToken = generateRawToken(48);
+    await prisma.refreshToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: hashToken(rawToken),
+        expiresAt: new Date(Date.now() + 60_000),
+      },
+    });
+
+    await request(app)
+      .post("/api/auth/refresh")
+      .send({ refreshToken: rawToken })
+      .expect(401);
+  });
+});

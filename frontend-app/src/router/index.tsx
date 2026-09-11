@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, type ReactNode } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useAuthStore } from "@/store/auth.store";
-import { authApi } from "@/api/auth.api";
+import { refreshSession } from "@/api/client";
 import { LoginPage } from "@/features/auth/pages/LoginPage";
 import { RegisterPage } from "@/features/auth/pages/RegisterPage";
 import { VerifyEmailPage } from "@/features/auth/pages/VerifyEmailPage";
@@ -29,7 +29,7 @@ import { StudentLayout } from "@/components/shared/StudentLayout/StudentLayout";
 // Si no hay cookie válida, limpia el estado de auth.
 const AuthInitializer = ({ children }: { children: ReactNode }) => {
   const { isAuthenticated, isInitialized } = useAuth();
-  const { setToken, setInitialized, logout } = useAuthStore.getState();
+  const { setInitialized } = useAuthStore.getState();
 
   useEffect(() => {
     if (isInitialized) return;
@@ -39,19 +39,12 @@ const AuthInitializer = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    authApi
-      .refresh()
-      .then((res) => {
-        setToken(res.data.data.accessToken);
-      })
-      .catch(() => {
-        // Cookie expirada o revocada — limpiar estado persistido
-        logout();
-      })
+    refreshSession()
+      .catch(() => undefined)
       .finally(() => {
         setInitialized();
       });
-  }, []);
+  }, [isAuthenticated, isInitialized, setInitialized]);
 
   if (!isInitialized) {
     return (

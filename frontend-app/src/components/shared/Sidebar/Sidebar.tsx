@@ -23,6 +23,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { KorexIsotipo } from "@/components/shared/KorexLogo";
 import { tenant } from "@/lib/tenant";
 import { chatApi } from "@/api/chat.api";
+import { clearLocalSession } from "@/api/client";
 
 const allNavItems = [
   { label: "Dashboard", href: "/app/dashboard", icon: LayoutDashboard },
@@ -51,7 +52,7 @@ export const Sidebar = ({
   onToggle,
   onNavigate,
 }: SidebarProps) => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const { data: convData } = useQuery({
@@ -63,13 +64,13 @@ export const Sidebar = ({
   const totalUnread = convData?.totalUnread ?? 0;
 
   const handleLogout = async () => {
+    clearLocalSession();
     try {
       const { authApi } = await import("@/api/auth.api");
       await authApi.logout();
     } catch {
       // Si falla el logout en el server, igual limpiamos localmente
     } finally {
-      logout();
       onNavigate?.();
       navigate("/login");
     }

@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { KorexIsotipo } from "@/components/shared/KorexLogo";
 import { tenant } from "@/lib/tenant";
+import { clearLocalSession } from "@/api/client";
 
 const navItems = [
   {
@@ -50,17 +51,17 @@ export const StudentSidebar = ({
   onToggle,
   onNavigate,
 }: StudentSidebarProps) => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
+    clearLocalSession();
     try {
       const { authApi } = await import("@/api/auth.api");
       await authApi.logout();
     } catch {
       // Si falla el logout en el server, igual limpiamos localmente
     } finally {
-      logout();
       onNavigate?.();
       navigate("/login");
     }

@@ -1,92 +1,132 @@
-import axios from "axios";
+import axios, { CanceledError } from "axios";
+import type { InternalAxiosRequestConfig } from "axios";
+import type { AuthUser } from "@/types";
 import { useAuthStore } from "@/store/auth.store";
+import {
+  SessionChangedError,
+  SessionCoordinator,
+  type SessionSnapshot,
+} from "@/auth/session-coordinator";
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000/api";
+
+type AuthContext = { userId: string; revision: number };
+type AuthRequestConfig = InternalAxiosRequestConfig & {
+  _retry?: boolean;
+  _authContext?: AuthContext;
+};
+
+const snapshot = (): SessionSnapshot => {
+  const state = useAuthStore.getState();
+  return {
+    userId: state.user?.id ?? null,
+    revision: state.sessionRevision,
+    isAuthenticated: state.isAuthenticated,
+  };
+};
+
+const channel =
+  typeof BroadcastChannel === "undefined"
+    ? undefined
+    : new BroadcastChannel("fitpro:auth-session");
+
+const sessionCoordinator = new SessionCoordinator({
+  port: {
+    snapshot,
+    applyToken: (token, expected) =>
+      expected.userId !== null &&
+      useAuthStore
+        .getState()
+        .setTokenForSession(token, expected.userId, expected.revision),
+    clear: () => useAuthStore.getState().logout(),
+  },
+  refresh: async (signal) => {
+    const response = await axios.post<{ data: { accessToken: string } }>(
+      `${BASE_URL}/auth/refresh`,
+      {},
+      { withCredentials: true, signal }
+    );
+    return response.data.data.accessToken;
+  },
+  storage: typeof window === "undefined" ? undefined : window.localStorage,
+  channel,
+});
+
+export const refreshSession = () => sessionCoordinator.refresh();
+export const clearLocalSession = () => sessionCoordinator.clearSession();
+
+export const establishSession = (token: string, user: AuthUser) => {
+  sessionCoordinator.clearSession();
+  useAuthStore.getState().setAuth(token, user);
+};
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
   timeout: 15000,
-  withCredentials: true, // envía la cookie HttpOnly de refresh en cada request
-  headers: {
-    "Content-Type": "application/json",
-  },
+  withCredentials: true,
+  headers: { "Content-Type": "application/json" },
 });
 
-apiClient.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().token;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// Cola de requests que fallaron con 401 mientras se estaba renovando el token
-type QueueItem = { resolve: (token: string) => void; reject: (err: unknown) => void };
-let isRefreshing = false;
-let failedQueue: QueueItem[] = [];
-
-const processQueue = (error: unknown, token: string | null = null) => {
-  failedQueue.forEach((item) => {
-    if (error) {
-      item.reject(error);
-    } else {
-      item.resolve(token!);
-    }
-  });
-  failedQueue = [];
+const isCurrentContext = (context: AuthContext | undefined) => {
+  if (!context) return true;
+  const current = snapshot();
+  return (
+    current.isAuthenticated &&
+    current.userId === context.userId &&
+    current.revision === context.revision
+  );
 };
 
-apiClient.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
+apiClient.interceptors.request.use((config) => {
+  const authConfig = config as AuthRequestConfig;
+  const state = useAuthStore.getState();
+  if (state.token && state.user) {
+    authConfig.headers.Authorization = `Bearer ${state.token}`;
+    authConfig._authContext = {
+      userId: state.user.id,
+      revision: state.sessionRevision,
+    };
+  }
+  return authConfig;
+});
 
-    // Solo interceptamos 401s que no son del propio endpoint de refresh
+apiClient.interceptors.response.use(
+  (response) => {
+    const config = response.config as AuthRequestConfig;
+    if (!isCurrentContext(config._authContext)) {
+      return Promise.reject(new CanceledError("La sesión cambió durante la solicitud"));
+    }
+    return response;
+  },
+  async (error) => {
+    const originalRequest = error.config as AuthRequestConfig | undefined;
+    if (!originalRequest || !isCurrentContext(originalRequest._authContext)) {
+      return Promise.reject(new SessionChangedError());
+    }
+
     if (
       error.response?.status !== 401 ||
       originalRequest._retry ||
       originalRequest.url?.includes("/auth/refresh") ||
-      originalRequest.url?.includes("/auth/login")
+      originalRequest.url?.includes("/auth/login") ||
+      originalRequest.url?.includes("/auth/logout")
     ) {
       return Promise.reject(error);
     }
 
-    // Si ya hay un refresh en curso, encolamos esta request y esperamos
-    if (isRefreshing) {
-      return new Promise<string>((resolve, reject) => {
-        failedQueue.push({ resolve, reject });
-      })
-        .then((token) => {
-          originalRequest.headers.Authorization = `Bearer ${token}`;
-          return apiClient(originalRequest);
-        })
-        .catch((err) => Promise.reject(err));
-    }
-
     originalRequest._retry = true;
-    isRefreshing = true;
-
     try {
-      // Llamada directa con axios para evitar que el interceptor se llame a sí mismo
-      const res = await axios.post<{ data: { accessToken: string } }>(
-        `${BASE_URL}/auth/refresh`,
-        {},
-        { withCredentials: true }
-      );
-      const { accessToken } = res.data.data;
-
-      useAuthStore.getState().setToken(accessToken);
-      processQueue(null, accessToken);
-
+      const accessToken = await refreshSession();
+      if (!isCurrentContext(originalRequest._authContext)) {
+        throw new SessionChangedError();
+      }
       originalRequest.headers.Authorization = `Bearer ${accessToken}`;
       return apiClient(originalRequest);
     } catch (refreshError) {
-      processQueue(refreshError, null);
-      useAuthStore.getState().logout();
-      window.location.href = "/login";
+      if (!useAuthStore.getState().isAuthenticated && window.location.pathname !== "/login") {
+        window.location.assign("/login");
+      }
       return Promise.reject(refreshError);
-    } finally {
-      isRefreshing = false;
     }
   }
 );

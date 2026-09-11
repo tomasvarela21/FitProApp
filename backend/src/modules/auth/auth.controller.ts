@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { CookieOptions, Request, Response } from "express";
 import { asyncHandler } from "../../shared/errors/async-handler";
 import { successResponse } from "../../shared/responses/api-response";
 import { AuthService } from "./auth.service";
@@ -6,18 +6,22 @@ import { AuthService } from "./auth.service";
 const REFRESH_COOKIE = "refreshToken";
 const IS_PROD = process.env.NODE_ENV === "production";
 
+const refreshCookieOptions: CookieOptions = {
+  httpOnly: true,
+  secure: IS_PROD,
+  sameSite: IS_PROD ? "strict" : "lax",
+  path: "/api/auth",
+};
+
 const setRefreshCookie = (res: Response, token: string) => {
   res.cookie(REFRESH_COOKIE, token, {
-    httpOnly: true,
-    secure: IS_PROD,
-    sameSite: IS_PROD ? "strict" : "lax",
-    path: "/api/auth",
-    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    ...refreshCookieOptions,
+    maxAge: 30 * 24 * 60 * 60 * 1000,
   });
 };
 
 const clearRefreshCookie = (res: Response) => {
-  res.clearCookie(REFRESH_COOKIE, { path: "/api/auth" });
+  res.clearCookie(REFRESH_COOKIE, refreshCookieOptions);
 };
 
 export class AuthController {
@@ -34,13 +38,11 @@ export class AuthController {
 
     setRefreshCookie(res, refreshToken);
 
-    // refreshToken también en el body para clientes mobile que no pueden usar cookies
-    return res.status(200).json(successResponse("Login correcto", { accessToken, refreshToken, user }));
+    return res.status(200).json(successResponse("Login correcto", { accessToken, user }));
   });
 
   static refresh = asyncHandler(async (req: Request, res: Response) => {
-    // Acepta cookie (web) o body.refreshToken (mobile)
-    const rawRefreshToken = req.cookies?.[REFRESH_COOKIE] ?? req.body?.refreshToken;
+    const rawRefreshToken = req.cookies?.[REFRESH_COOKIE];
     if (!rawRefreshToken) {
       return res.status(401).json({ ok: false, message: "No autenticado" });
     }
@@ -49,12 +51,11 @@ export class AuthController {
 
     setRefreshCookie(res, refreshToken);
 
-    return res.status(200).json(successResponse("Token renovado", { accessToken, refreshToken }));
+    return res.status(200).json(successResponse("Token renovado", { accessToken }));
   });
 
   static logout = asyncHandler(async (req: Request, res: Response) => {
-    // Acepta cookie (web) o body.refreshToken (mobile)
-    const rawRefreshToken = req.cookies?.[REFRESH_COOKIE] ?? req.body?.refreshToken;
+    const rawRefreshToken = req.cookies?.[REFRESH_COOKIE];
 
     if (rawRefreshToken) {
       await AuthService.logout(rawRefreshToken);

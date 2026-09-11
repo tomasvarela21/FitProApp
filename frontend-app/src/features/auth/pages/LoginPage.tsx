@@ -16,7 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { authApi } from "@/api/auth.api";
-import { useAuth } from "@/hooks/use-auth";
+import { establishSession } from "@/api/client";
 import { tenant } from "@/lib/tenant";
 
 const loginSchema = z.object({
@@ -28,7 +28,6 @@ type LoginForm = z.infer<typeof loginSchema>;
 
 function LoginForm() {
   const navigate = useNavigate();
-  const { setAuth } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -44,7 +43,7 @@ function LoginForm() {
     try {
       const res = await authApi.login(data);
       const { accessToken, user } = res.data.data;
-      setAuth(accessToken, user);
+      establishSession(accessToken, user);
       if (user.role === "STUDENT") {
         navigate("/student/dashboard");
       } else {
