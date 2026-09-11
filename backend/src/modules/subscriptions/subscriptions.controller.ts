@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "../../shared/errors/async-handler";
 import { successResponse } from "../../shared/responses/api-response";
+import { cuidSchema } from "../../shared/schemas/request.schema";
 import { SubscriptionsService } from "./subscriptions.service";
 
 export class SubscriptionsController {
@@ -8,7 +9,7 @@ export class SubscriptionsController {
     async (req: Request, res: Response) => {
       const result = await SubscriptionsService.getStudentSubscription(
         req.user!.userId,
-        req.params.studentId as string
+        cuidSchema.parse(req.params.studentId)
       );
       return res.status(200).json(successResponse("Suscripción obtenida", result));
     }
@@ -25,7 +26,7 @@ export class SubscriptionsController {
   static payInstallment = asyncHandler(async (req: Request, res: Response) => {
     const result = await SubscriptionsService.payInstallment(
       req.user!.userId,
-      req.params.installmentId as string,
+      cuidSchema.parse(req.params.installmentId),
       req.body
     );
     return res.status(200).json(successResponse("Pago registrado correctamente", result));
@@ -34,7 +35,7 @@ export class SubscriptionsController {
   static cancel = asyncHandler(async (req: Request, res: Response) => {
     const result = await SubscriptionsService.cancelSubscription(
       req.user!.userId,
-      req.params.subscriptionId as string
+      cuidSchema.parse(req.params.subscriptionId)
     );
     return res
       .status(200)

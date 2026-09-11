@@ -2,10 +2,15 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import { asyncHandler } from "../../shared/errors/async-handler";
 import { successResponse } from "../../shared/responses/api-response";
+import {
+  cuidSchema,
+  dateInputSchema,
+  weekNumberParamSchema,
+} from "../../shared/schemas/request.schema";
 import { WeeklyPlanService } from "./weekly-plan.service";
 
 const weekOverrideSchema = z.object({
-  routineExerciseId: z.string().min(1),
+  routineExerciseId: cuidSchema,
   suggestedWeight: z.number().min(0).nullable().optional(),
   suggestedReps: z.string().nullable().optional(),
   suggestedRpe: z.number().min(0).max(10).nullable().optional(),
@@ -14,13 +19,13 @@ const weekOverrideSchema = z.object({
 
 const weekInputSchema = z.object({
   weekNumber: z.number().int().min(1).max(52),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
+  startDate: dateInputSchema.optional(),
+  endDate: dateInputSchema.optional(),
   overrides: z.array(weekOverrideSchema).optional(),
 });
 
 const createWeeklyPlanSchema = z.object({
-  routineId: z.string().min(1),
+  routineId: cuidSchema,
   weeks: z.array(weekInputSchema).min(1).max(52),
   notes: z.string().optional(),
 });
@@ -40,33 +45,33 @@ const setActiveWeekSchema = z.object({
 
 export class WeeklyPlanController {
   static createWeeklyPlan = asyncHandler(async (req: Request, res: Response) => {
-    const studentId = req.params.studentId as string;
+    const studentId = cuidSchema.parse(req.params.studentId);
     const body = createWeeklyPlanSchema.parse(req.body);
     const result = await WeeklyPlanService.createWeeklyPlan(req.user!.userId, studentId, body);
     return res.status(201).json(successResponse("Plan semanal creado", result));
   });
 
   static getWeeklyPlan = asyncHandler(async (req: Request, res: Response) => {
-    const studentId = req.params.studentId as string;
+    const studentId = cuidSchema.parse(req.params.studentId);
     const result = await WeeklyPlanService.getWeeklyPlan(req.user!.userId, studentId);
     return res.json(successResponse("Plan semanal obtenido", result));
   });
 
   static updateWeekOverrides = asyncHandler(async (req: Request, res: Response) => {
-    const studentId = req.params.studentId as string;
-    const weekNumber = req.params.weekNumber as string;
+    const studentId = cuidSchema.parse(req.params.studentId);
+    const weekNumber = weekNumberParamSchema.parse(req.params.weekNumber);
     const { overrides } = updateWeekOverridesSchema.parse(req.body);
     const result = await WeeklyPlanService.updateWeekOverrides(
       req.user!.userId,
       studentId,
-      parseInt(weekNumber, 10),
+      weekNumber,
       overrides
     );
     return res.json(successResponse("Overrides de la semana actualizados", result));
   });
 
   static copyWeekOverrides = asyncHandler(async (req: Request, res: Response) => {
-    const studentId = req.params.studentId as string;
+    const studentId = cuidSchema.parse(req.params.studentId);
     const { fromWeek, toWeek } = copyWeekOverridesSchema.parse(req.body);
     const result = await WeeklyPlanService.copyWeekOverrides(
       req.user!.userId,
@@ -78,7 +83,7 @@ export class WeeklyPlanController {
   });
 
   static setActiveWeek = asyncHandler(async (req: Request, res: Response) => {
-    const studentId = req.params.studentId as string;
+    const studentId = cuidSchema.parse(req.params.studentId);
     const { weekNumber } = setActiveWeekSchema.parse(req.body);
     const result = await WeeklyPlanService.setActiveWeek(req.user!.userId, studentId, weekNumber);
     return res.json(successResponse("Semana activa actualizada", result));

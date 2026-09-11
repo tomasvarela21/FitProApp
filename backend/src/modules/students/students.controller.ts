@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { asyncHandler } from "../../shared/errors/async-handler";
 import { successResponse } from "../../shared/responses/api-response";
+import { cuidSchema } from "../../shared/schemas/request.schema";
 import { listStudentsQuerySchema } from "./students.schema";
 import { StudentsService } from "./students.service";
 import { StudentSummaryService } from "./student-summary.service";
@@ -28,9 +29,7 @@ export class StudentsController {
   });
 
   static getStudentById = asyncHandler(async (req: Request, res: Response) => {
-    const studentId = Array.isArray(req.params.studentId)
-      ? req.params.studentId[0]
-      : req.params.studentId;
+    const studentId = cuidSchema.parse(req.params.studentId);
 
     const result = await StudentsService.getStudentById(
       req.user!.userId,
@@ -43,9 +42,7 @@ export class StudentsController {
   });
 
   static updateStudent = asyncHandler(async (req: Request, res: Response) => {
-    const studentId = Array.isArray(req.params.studentId)
-      ? req.params.studentId[0]
-      : req.params.studentId;
+    const studentId = cuidSchema.parse(req.params.studentId);
 
     const result = await StudentsService.updateStudent(
       req.user!.userId,
@@ -59,9 +56,7 @@ export class StudentsController {
   });
 
   static resendInvitation = asyncHandler(async (req: Request, res: Response) => {
-    const studentId = Array.isArray(req.params.studentId)
-      ? req.params.studentId[0]
-      : req.params.studentId;
+    const studentId = cuidSchema.parse(req.params.studentId);
 
     const result = await StudentsService.resendInvitation(
       req.user!.userId,
@@ -74,9 +69,7 @@ export class StudentsController {
   });
 
   static deleteStudent = asyncHandler(async (req: Request, res: Response) => {
-    const studentId = Array.isArray(req.params.studentId)
-      ? req.params.studentId[0]
-      : req.params.studentId;
+    const studentId = cuidSchema.parse(req.params.studentId);
 
     const result = await StudentsService.deleteStudent(
       req.user!.userId,
@@ -89,9 +82,7 @@ export class StudentsController {
   });
 
   static resetPassword = asyncHandler(async (req: Request, res: Response) => {
-    const studentId = Array.isArray(req.params.studentId)
-      ? req.params.studentId[0]
-      : req.params.studentId;
+    const studentId = cuidSchema.parse(req.params.studentId);
 
     const result = await StudentsService.resetStudentPassword(
       req.user!.userId,
@@ -104,7 +95,7 @@ export class StudentsController {
   });
 
   static getSummary = asyncHandler(async (req: Request, res: Response) => {
-    const studentId = req.params.studentId as string;
+    const studentId = cuidSchema.parse(req.params.studentId);
     const result = await StudentSummaryService.getStudentSummary(
       req.user!.userId,
       studentId

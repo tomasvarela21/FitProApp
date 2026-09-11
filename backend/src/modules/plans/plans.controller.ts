@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "../../shared/errors/async-handler";
 import { successResponse } from "../../shared/responses/api-response";
+import { cuidSchema } from "../../shared/schemas/request.schema";
 import { PlansService } from "./plans.service";
 
 export class PlansController {
@@ -15,13 +16,13 @@ export class PlansController {
   });
 
   static update = asyncHandler(async (req: Request, res: Response) => {
-    const planId = req.params.planId as string;
+    const planId = cuidSchema.parse(req.params.planId);
     const result = await PlansService.updatePlan(req.user!.userId, planId, req.body);
     return res.status(200).json(successResponse("Plan actualizado correctamente", result));
   });
 
   static delete = asyncHandler(async (req: Request, res: Response) => {
-    const planId = req.params.planId as string;
+    const planId = cuidSchema.parse(req.params.planId);
     const result = await PlansService.deletePlan(req.user!.userId, planId);
     return res.status(200).json(successResponse("Plan eliminado correctamente", result));
   });

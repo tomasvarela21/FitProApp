@@ -1,16 +1,20 @@
 import { z } from "zod";
+import {
+  cuidSchema,
+  dateInputSchema,
+} from "../../shared/schemas/request.schema";
 
 export const createSubscriptionSchema = z.object({
-  studentId: z.string().min(1),
-  planId: z.string().min(1),
-  startDate: z.string().datetime(),
+  studentId: cuidSchema,
+  planId: cuidSchema,
+  startDate: dateInputSchema,
   totalAmount: z.number().positive("El monto total debe ser mayor a 0"),
   installmentCount: z.number().int().min(1).max(24),
   frequency: z.enum(["BIWEEKLY", "MONTHLY"]),
 });
 
 export const payInstallmentSchema = z.object({
-  paidAt: z.string().datetime().optional(),
+  paidAt: dateInputSchema.optional(),
   notes: z.string().optional(),
 });
 

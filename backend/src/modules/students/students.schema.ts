@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cuidSchema } from "../../shared/schemas/request.schema";
 
 export const createStudentSchema = z.object({
   email: z.string().email("Email inválido"),
@@ -20,7 +21,7 @@ export const updateStudentSchema = z.object({
   lastName: z.string().min(2, "El apellido es obligatorio").optional(),
   phone: z.string().optional(),
   status: z.enum(["INVITED", "ACTIVE", "PAUSED", "INACTIVE"]).optional(),
-  gymId: z.string().nullable().optional(),
+  gymId: cuidSchema.nullable().optional(),
 });
 
 export type CreateStudentInput = z.infer<typeof createStudentSchema>;

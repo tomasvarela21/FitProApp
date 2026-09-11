@@ -2,6 +2,11 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import { asyncHandler } from "../../shared/errors/async-handler";
 import { successResponse } from "../../shared/responses/api-response";
+import {
+  calendarDateSchema,
+  cuidSchema,
+  dateInputSchema,
+} from "../../shared/schemas/request.schema";
 import { WorkoutService } from "./workout.service";
 
 const workoutSetSchema = z.object({
@@ -16,13 +21,13 @@ const logWorkoutSchema = z.object({
   routineExercises: z
     .array(
       z.object({
-        routineExerciseId: z.string().min(1),
+        routineExerciseId: cuidSchema,
         sets: z.array(workoutSetSchema).min(1),
       })
     )
     .min(1),
   notes: z.string().optional(),
-  date: z.string().optional(),
+  date: dateInputSchema.optional(),
 });
 
 export class WorkoutController {
@@ -48,13 +53,13 @@ export class WorkoutController {
   });
 
   static getMyProgress = asyncHandler(async (req: Request, res: Response) => {
-    const exerciseId = req.params.exerciseId as string;
+    const exerciseId = cuidSchema.parse(req.params.exerciseId);
     const result = await WorkoutService.getMyProgress(req.user!.userId, exerciseId);
     return res.status(200).json(successResponse("Progreso obtenido", result));
   });
 
   static getMyStreak = asyncHandler(async (req: Request, res: Response) => {
-    const today = typeof req.query.today === "string" ? req.query.today : undefined;
+    const today = calendarDateSchema.optional().parse(req.query.today);
     const result = await WorkoutService.getMyStreak(req.user!.userId, today);
     return res.status(200).json(successResponse("Racha obtenida", result));
   });

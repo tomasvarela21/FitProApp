@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { z } from "zod/v4";
 import { asyncHandler } from "../../shared/errors/async-handler";
 import { successResponse } from "../../shared/responses/api-response";
+import { cuidSchema } from "../../shared/schemas/request.schema";
 import { GymsService } from "./gyms.service";
 
 const createGymSchema = z.object({
@@ -28,12 +29,14 @@ export class GymsController {
 
   static update = asyncHandler(async (req: Request, res: Response) => {
     const data = updateGymSchema.parse(req.body);
-    const gym = await GymsService.updateGym(req.user!.userId, req.params.id as string, data);
+    const gymId = cuidSchema.parse(req.params.id);
+    const gym = await GymsService.updateGym(req.user!.userId, gymId, data);
     return res.json(successResponse("Gimnasio actualizado", gym));
   });
 
   static delete = asyncHandler(async (req: Request, res: Response) => {
-    await GymsService.deleteGym(req.user!.userId, req.params.id as string);
+    const gymId = cuidSchema.parse(req.params.id);
+    await GymsService.deleteGym(req.user!.userId, gymId);
     return res.json(successResponse("Gimnasio eliminado", null));
   });
 }

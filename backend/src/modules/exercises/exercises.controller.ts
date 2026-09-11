@@ -2,15 +2,16 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import { asyncHandler } from "../../shared/errors/async-handler";
 import { successResponse } from "../../shared/responses/api-response";
+import { cuidSchema } from "../../shared/schemas/request.schema";
 import { ExercisesService } from "./exercises.service";
 
 const createExerciseSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
   description: z.string().optional(),
-  muscleGroupId: z.string().min(1, "El grupo muscular es obligatorio"),
+  muscleGroupId: cuidSchema,
   difficulty: z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED"]),
   movementType: z.enum(["PUSH", "PULL", "HINGE", "SQUAT", "CARRY", "CORE", "CARDIO", "OLYMPIC"]),
-  equipmentId: z.string().min(1).optional(),
+  equipmentId: cuidSchema.optional(),
   mediaUrl: z.string().url("URL inválida").optional(),
   mediaType: z.enum(["GIF", "YOUTUBE"]).optional(),
 });
@@ -18,33 +19,25 @@ const createExerciseSchema = z.object({
 const updateExerciseSchema = createExerciseSchema.partial();
 
 const listQuerySchema = z.object({
-  muscleGroupId: z.string().optional(),
+  muscleGroupId: cuidSchema.optional(),
   difficulty: z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED"]).optional(),
   search: z.string().optional(),
-  isGlobal: z
-    .string()
-    .transform((v) => (v === "true" ? true : v === "false" ? false : undefined))
-    .optional(),
+  isGlobal: z.enum(["true", "false"]).transform((v) => v === "true").optional(),
 });
 
 export class ExercisesController {
   static list = asyncHandler(async (req: Request, res: Response) => {
-    const { muscleGroupId, difficulty, search, isGlobal } = req.query;
+    const filters = listQuerySchema.parse(req.query);
     const result = await ExercisesService.listExercises(
       req.user!.userId,
       req.user!.role,
-      {
-        muscleGroupId: muscleGroupId as string,
-        difficulty: difficulty as string,
-        search: search as string,
-        isGlobal: isGlobal === "true" ? true : isGlobal === "false" ? false : undefined,
-      }
+      filters
     );
     return res.status(200).json(successResponse("Ejercicios obtenidos", result));
   });
 
   static getOne = asyncHandler(async (req: Request, res: Response) => {
-    const id = req.params.id as string;
+    const id = cuidSchema.parse(req.params.id);
     const result = await ExercisesService.getExercise(
       req.user!.userId,
       req.user!.role,
@@ -60,14 +53,14 @@ export class ExercisesController {
   });
 
   static update = asyncHandler(async (req: Request, res: Response) => {
-    const id = req.params.id as string;
+    const id = cuidSchema.parse(req.params.id);
     const data = updateExerciseSchema.parse(req.body);
     const result = await ExercisesService.updateExercise(req.user!.userId, id, data);
     return res.status(200).json(successResponse("Ejercicio actualizado", result));
   });
 
   static delete = asyncHandler(async (req: Request, res: Response) => {
-    const id = req.params.id as string;
+    const id = cuidSchema.parse(req.params.id);
     const result = await ExercisesService.deleteExercise(req.user!.userId, id);
     return res.status(200).json(successResponse("Ejercicio eliminado", result));
   });

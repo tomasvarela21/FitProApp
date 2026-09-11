@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from "express";
+import { ZodError } from "zod";
 import { AppError } from "../errors/app-error";
 import { errorResponse } from "../responses/api-response";
 
@@ -8,6 +9,22 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction
 ) => {
+  if (error instanceof ZodError) {
+    return res
+      .status(400)
+      .json(errorResponse("Datos inválidos", error.flatten()));
+  }
+
+  if (
+    error instanceof SyntaxError &&
+    "status" in error &&
+    error.status === 400 &&
+    "type" in error &&
+    error.type === "entity.parse.failed"
+  ) {
+    return res.status(400).json(errorResponse("Datos inválidos"));
+  }
+
   if (error instanceof AppError) {
     return res
       .status(error.statusCode)
