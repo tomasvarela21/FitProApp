@@ -59,11 +59,13 @@ beforeEach(async () => {
     userId: fixture.trainerA.userId,
     email: "trainer-a@fitpro.test",
     role: "TRAINER",
+    authVersion: 1,
   });
   studentAToken = signAccessToken({
     userId: fixture.studentA.userId!,
     email: fixture.studentA.email,
     role: "STUDENT",
+    authVersion: 1,
   });
 });
 
@@ -291,9 +293,9 @@ describe("gimnasios y alumnos eliminados", () => {
       data: { deletedAt: new Date() },
     });
 
-    await request(app).get("/api/student/profile").set(studentAuth()).expect(404);
-    await request(app).get("/api/student/subscription").set(studentAuth()).expect(404);
-    await request(app).get("/api/student/routine").set(studentAuth()).expect(404);
+    await request(app).get("/api/student/profile").set(studentAuth()).expect(401);
+    await request(app).get("/api/student/subscription").set(studentAuth()).expect(401);
+    await request(app).get("/api/student/routine").set(studentAuth()).expect(401);
     await request(app)
       .post("/api/student/workout-log")
       .set(studentAuth())
@@ -305,7 +307,7 @@ describe("gimnasios y alumnos eliminados", () => {
           },
         ],
       })
-      .expect(404);
+      .expect(401);
 
     expect(await prisma.workoutLog.count()).toBe(logsBefore);
   });

@@ -128,6 +128,7 @@ export class AuthService {
       userId: user.id,
       email: user.email,
       role: user.role,
+      authVersion: user.authVersion,
     });
 
     const rawRefreshToken = generateRawToken(48);
@@ -160,7 +161,11 @@ export class AuthService {
     }
 
     if (stored.user.status !== "ACTIVE") {
-      throw new AppError("La cuenta no está activa", 403);
+      throw new AppError("Sesión inválida o revocada", 401);
+    }
+
+    if (stored.user.role === "STUDENT" && stored.user.student?.deletedAt) {
+      throw new AppError("Sesión inválida o revocada", 401);
     }
 
     // Rotación: revoca el token actual y emite uno nuevo
@@ -192,6 +197,7 @@ export class AuthService {
       userId: stored.user.id,
       email: stored.user.email,
       role: stored.user.role,
+      authVersion: stored.user.authVersion,
     });
 
     return {
@@ -251,12 +257,23 @@ export class AuthService {
 
     const newPasswordHash = await hashPassword(data.newPassword);
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        passwordHash: newPasswordHash,
-        mustChangePassword: false,
-      },
+    const currentPasswordHash = user.passwordHash;
+    await prisma.$transaction(async (tx) => {
+      const changed = await tx.user.updateMany({
+        where: { id: userId, passwordHash: currentPasswordHash },
+        data: {
+          passwordHash: newPasswordHash,
+          mustChangePassword: false,
+          authVersion: { increment: 1 },
+        },
+      });
+      if (changed.count !== 1) {
+        throw new AppError("La sesión cambió durante la operación", 409);
+      }
+      await tx.refreshToken.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
     });
 
     return {

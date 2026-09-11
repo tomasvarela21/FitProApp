@@ -466,40 +466,41 @@ export class StudentsService {
     const tokenHash = hashToken(rawToken);
     const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24);
 
-    await prisma.$transaction([
-      // Resetear cuenta
-      prisma.user.update({
+    await prisma.$transaction(async (tx) => {
+      const resetAt = new Date();
+      await tx.user.update({
         where: { id: student.userId! },
         data: {
           passwordHash: null,
           status: "INVITED",
           emailVerifiedAt: null,
+          authVersion: { increment: 1 },
         },
-      }),
-      // Resetear alumno
-      prisma.student.update({
+      });
+      await tx.refreshToken.updateMany({
+        where: { userId: student.userId!, revokedAt: null },
+        data: { revokedAt: resetAt },
+      });
+      await tx.student.update({
         where: { id: studentId },
         data: {
           status: "INVITED",
           activatedAt: null,
         },
-      }),
-      // Invalidar invitaciones anteriores
-      prisma.accountInvitation.updateMany({
+      });
+      await tx.accountInvitation.updateMany({
         where: { studentId, usedAt: null },
-        data: { usedAt: new Date() },
-      }),
-    ]);
-
-    // Crear nueva invitación
-    await prisma.accountInvitation.create({
-      data: {
-        studentId,
-        email: student.email,
-        tokenHash,
-        expiresAt,
-        createdByTrainerId: trainer.id,
-      },
+        data: { usedAt: resetAt },
+      });
+      await tx.accountInvitation.create({
+        data: {
+          studentId,
+          email: student.email,
+          tokenHash,
+          expiresAt,
+          createdByTrainerId: trainer.id,
+        },
+      });
     });
 
     // Enviar email

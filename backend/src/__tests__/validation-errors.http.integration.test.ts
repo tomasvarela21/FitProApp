@@ -19,11 +19,13 @@ beforeAll(async () => {
     userId: fixture.trainerA.userId,
     email: "trainer-a@fitpro.test",
     role: "TRAINER",
+    authVersion: 1,
   });
   studentToken = signAccessToken({
     userId: fixture.studentA.userId!,
     email: fixture.studentA.email,
     role: "STUDENT",
+    authVersion: 1,
   });
 });
 

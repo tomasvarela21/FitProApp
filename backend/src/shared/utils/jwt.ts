@@ -5,6 +5,7 @@ type JwtPayload = {
   userId: string;
   email: string;
   role: string;
+  authVersion: number;
 };
 
 const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET;
@@ -21,7 +22,18 @@ export const signAccessToken = (payload: JwtPayload) => {
 
 export const verifyAccessToken = (token: string) => {
   try {
-    return jwt.verify(token, ACCESS_SECRET) as JwtPayload;
+    const payload = jwt.verify(token, ACCESS_SECRET);
+    if (
+      typeof payload === "string" ||
+      typeof payload.userId !== "string" ||
+      typeof payload.email !== "string" ||
+      typeof payload.role !== "string" ||
+      !Number.isInteger(payload.authVersion) ||
+      payload.authVersion < 1
+    ) {
+      throw new Error("Invalid access token payload");
+    }
+    return payload as JwtPayload;
   } catch {
     throw new AppError("Token inválido o expirado", 401);
   }
