@@ -263,7 +263,7 @@ model Subscription {
   updatedAt        DateTime           @updatedAt
 
   student      Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  plan         Plan          @relation(fields: [planId], references: [id], onDelete: Cascade)
+  plan         Plan          @relation(fields: [planId], references: [id], onDelete: Restrict)
   trainer      Trainer       @relation(fields: [trainerId], references: [id], onDelete: Cascade)
   installments Installment[]
 
@@ -368,6 +368,7 @@ model Exercise {
   mediaType     MediaType?
   isGlobal      Boolean      @default(false)
   trainerId     String?
+  archivedAt    DateTime?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
@@ -379,6 +380,7 @@ model Exercise {
   @@index([muscleGroupId])
   @@index([trainerId])
   @@index([isGlobal])
+  @@index([archivedAt])
 }
 
 model Routine {
@@ -388,6 +390,7 @@ model Routine {
   isGlobal    Boolean  @default(false)
   isTemplate  Boolean  @default(false)
   trainerId   String?
+  archivedAt  DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -398,6 +401,7 @@ model Routine {
   @@index([trainerId])
   @@index([isGlobal])
   @@index([isTemplate])
+  @@index([archivedAt])
 }
 
 model RoutineExercise {
@@ -412,15 +416,17 @@ model RoutineExercise {
   suggestedRpe    Float?
   restSeconds     Int       @default(90)
   notes           String?
+  archivedAt      DateTime?
 
   routine         Routine                  @relation(fields: [routineId], references: [id], onDelete: Cascade)
-  exercise        Exercise                 @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  exercise        Exercise                 @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
   workoutSets     WorkoutSet[]
   weeklyOverrides WeeklyExerciseOverride[]
 
   @@index([routineId])
   @@index([exerciseId])
   @@index([dayOfWeek])
+  @@index([archivedAt])
 }
 
 model StudentRoutine {
@@ -435,7 +441,7 @@ model StudentRoutine {
   endDate    DateTime?
 
   student         Student                  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  routine         Routine                  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  routine         Routine                  @relation(fields: [routineId], references: [id], onDelete: Restrict)
   workoutLogs     WorkoutLog[]
   weeklyOverrides WeeklyExerciseOverride[]
 
@@ -457,7 +463,7 @@ model WeeklyExerciseOverride {
   updatedAt         DateTime @updatedAt
 
   studentRoutine  StudentRoutine  @relation(fields: [studentRoutineId], references: [id], onDelete: Cascade)
-  routineExercise RoutineExercise @relation(fields: [routineExerciseId], references: [id], onDelete: Cascade)
+  routineExercise RoutineExercise @relation(fields: [routineExerciseId], references: [id], onDelete: Restrict)
 
   @@unique([studentRoutineId, routineExerciseId, weekNumber])
   @@index([studentRoutineId])
@@ -471,7 +477,7 @@ model WorkoutLog {
   notes            String?
   createdAt        DateTime @default(now())
 
-  studentRoutine StudentRoutine @relation(fields: [studentRoutineId], references: [id], onDelete: Cascade)
+  studentRoutine StudentRoutine @relation(fields: [studentRoutineId], references: [id], onDelete: Restrict)
   workoutSets    WorkoutSet[]
 
   @@index([studentRoutineId])
@@ -491,7 +497,7 @@ model WorkoutSet {
   createdAt         DateTime @default(now())
 
   workoutLog      WorkoutLog      @relation(fields: [workoutLogId], references: [id], onDelete: Cascade)
-  routineExercise RoutineExercise @relation(fields: [routineExerciseId], references: [id], onDelete: Cascade)
+  routineExercise RoutineExercise @relation(fields: [routineExerciseId], references: [id], onDelete: Restrict)
 
   @@index([workoutLogId])
   @@index([routineExerciseId])

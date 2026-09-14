@@ -642,7 +642,7 @@ const RoutineDetailDialog = ({ routineId, onClose }: RoutineDetailDialogProps) =
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        "Error al eliminar la rutina";
+        "Error al retirar la rutina";
       setDeleteError(message);
     } finally {
       setDeleteLoading(false);
@@ -1035,7 +1035,7 @@ const RoutineDetailDialog = ({ routineId, onClose }: RoutineDetailDialogProps) =
                         onClick={() => setConfirmDeleteOpen(true)}
                       >
                         <Trash2 className="w-4 h-4" />
-                        Eliminar rutina
+                        Retirar rutina
                       </Button>
                     </div>
                   </>
@@ -1063,7 +1063,8 @@ const RoutineDetailDialog = ({ routineId, onClose }: RoutineDetailDialogProps) =
           <DialogHeader>
             <DialogTitle>¿Quitar ejercicio?</DialogTitle>
             <DialogDescription>
-              Se quitará este ejercicio de la rutina. La rutina no se eliminará.
+              El ejercicio dejará de aparecer en la rutina. Las series ya registradas
+              se conservarán en el historial.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-3 sm:gap-3">
@@ -1086,13 +1087,15 @@ const RoutineDetailDialog = ({ routineId, onClose }: RoutineDetailDialogProps) =
         />
       )}
 
-      {/* Confirm delete routine */}
+      {/* Confirm retire routine */}
       <Dialog open={confirmDeleteOpen} onOpenChange={() => { setConfirmDeleteOpen(false); setDeleteError(null); }}>
         <DialogContent className="w-[calc(100vw-1rem)] max-w-sm max-h-[calc(100dvh-1rem)] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>¿Eliminar rutina?</DialogTitle>
+            <DialogTitle>¿Retirar rutina?</DialogTitle>
             <DialogDescription>
-              Estás por eliminar <strong>{routine?.name}</strong>. Esta acción no se puede deshacer.
+              <strong>{routine?.name}</strong> dejará de estar disponible y se desactivarán
+              sus asignaciones actuales. Si tiene historial se archivará para conservarlo;
+              si nunca fue utilizada se eliminará definitivamente.
             </DialogDescription>
           </DialogHeader>
           {deleteError && (
@@ -1105,7 +1108,7 @@ const RoutineDetailDialog = ({ routineId, onClose }: RoutineDetailDialogProps) =
               Cancelar
             </Button>
             <Button variant="destructive" className="flex-1" onClick={handleDeleteRoutine} disabled={deleteLoading}>
-              {deleteLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Eliminando...</> : "Sí, eliminar"}
+              {deleteLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Retirando...</> : "Sí, retirar"}
             </Button>
           </DialogFooter>
         </DialogContent>

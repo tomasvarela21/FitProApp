@@ -24,6 +24,6 @@ export class PlansController {
   static delete = asyncHandler(async (req: Request, res: Response) => {
     const planId = cuidSchema.parse(req.params.planId);
     const result = await PlansService.deletePlan(req.user!.userId, planId);
-    return res.status(200).json(successResponse("Plan eliminado correctamente", result));
+    return res.status(200).json(successResponse("Plan retirado correctamente", result));
   });
 }

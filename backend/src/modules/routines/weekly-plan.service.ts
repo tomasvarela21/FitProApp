@@ -53,7 +53,7 @@ export class WeeklyPlanService {
 
   private static async getActiveStudentRoutine(studentId: string) {
     const studentRoutine = await prisma.studentRoutine.findFirst({
-      where: { studentId, isActive: true },
+      where: { studentId, isActive: true, routine: { archivedAt: null } },
     });
     if (!studentRoutine) throw new AppError("El alumno no tiene una rutina activa", 404);
     return studentRoutine;
@@ -67,7 +67,12 @@ export class WeeklyPlanService {
     if (exerciseIds.length === 0) return;
 
     const count = await prisma.routineExercise.count({
-      where: { id: { in: exerciseIds }, routineId },
+      where: {
+        id: { in: exerciseIds },
+        routineId,
+        archivedAt: null,
+        exercise: { archivedAt: null },
+      },
     });
     if (count !== exerciseIds.length) {
       throw new AppError("Ejercicio de rutina no encontrado", 404);
@@ -162,11 +167,12 @@ export class WeeklyPlanService {
     await this.getOwnedStudent(trainer.id, studentId);
 
     const studentRoutine = await prisma.studentRoutine.findFirst({
-      where: { studentId, isActive: true },
+      where: { studentId, isActive: true, routine: { archivedAt: null } },
       include: {
         routine: {
           include: {
             routineExercises: {
+              where: { archivedAt: null, exercise: { archivedAt: null } },
               include: { exercise: { include: { muscleGroup: true, equipment: true } } },
               orderBy: { order: "asc" },
             },

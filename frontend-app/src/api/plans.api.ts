@@ -23,5 +23,5 @@ export const plansApi = {
     apiClient.patch<ApiSuccess<Plan>>(`/plans/${id}`, payload),
 
   delete: (id: string) =>
-    apiClient.delete<ApiSuccess<{ deleted: boolean }>>(`/plans/${id}`),
+    apiClient.delete<ApiSuccess<{ id: string; archived: boolean; deleted: boolean }>>(`/plans/${id}`),
 };

@@ -36,6 +36,7 @@ const routineExerciseInclude = {
 
 const routineInclude = {
   routineExercises: {
+    where: { archivedAt: null, exercise: { archivedAt: null } },
     include: routineExerciseInclude,
     orderBy: { order: "asc" as const },
   },
@@ -105,7 +106,10 @@ export class RoutinesService {
     const trainer = await this.getTrainer(trainerUserId);
 
     const routines = await prisma.routine.findMany({
-      where: { OR: [{ isGlobal: true }, { trainerId: trainer.id }] },
+      where: {
+        archivedAt: null,
+        OR: [{ isGlobal: true }, { trainerId: trainer.id }],
+      },
       include: routineInclude,
       orderBy: [{ isGlobal: "desc" }, { name: "asc" }],
     });
@@ -151,9 +155,33 @@ export class RoutinesService {
   static async deleteRoutine(trainerUserId: string, id: string) {
     await this.getOwnedRoutine(trainerUserId, id);
 
+    const [assignmentCount, historicalExerciseCount] = await Promise.all([
+      prisma.studentRoutine.count({ where: { routineId: id } }),
+      prisma.routineExercise.count({
+        where: {
+          routineId: id,
+          OR: [{ workoutSets: { some: {} } }, { weeklyOverrides: { some: {} } }],
+        },
+      }),
+    ]);
+
+    if (assignmentCount > 0 || historicalExerciseCount > 0) {
+      await prisma.$transaction([
+        prisma.studentRoutine.updateMany({
+          where: { routineId: id, isActive: true },
+          data: { isActive: false },
+        }),
+        prisma.routine.update({
+          where: { id },
+          data: { archivedAt: new Date(), isTemplate: false },
+        }),
+      ]);
+      return { id, archived: true, deleted: false };
+    }
+
     await prisma.routine.delete({ where: { id } });
 
-    return { id };
+    return { id, archived: false, deleted: true };
   }
 
   static async addExerciseToRoutine(trainerUserId: string, routineId: string, data: AddExerciseData) {
@@ -207,7 +235,7 @@ export class RoutinesService {
     await this.getOwnedRoutine(trainerUserId, routineId);
 
     const routineExercise = await prisma.routineExercise.findFirst({
-      where: { id: routineExerciseId, routineId },
+      where: { id: routineExerciseId, routineId, archivedAt: null },
     });
     if (!routineExercise) throw new AppError("Ejercicio de rutina no encontrado", 404);
 
@@ -225,13 +253,26 @@ export class RoutinesService {
     await this.getOwnedRoutine(trainerUserId, routineId);
 
     const routineExercise = await prisma.routineExercise.findFirst({
-      where: { id: routineExerciseId, routineId },
+      where: { id: routineExerciseId, routineId, archivedAt: null },
     });
     if (!routineExercise) throw new AppError("Ejercicio de rutina no encontrado", 404);
 
+    const [setCount, overrideCount] = await Promise.all([
+      prisma.workoutSet.count({ where: { routineExerciseId } }),
+      prisma.weeklyExerciseOverride.count({ where: { routineExerciseId } }),
+    ]);
+
+    if (setCount > 0 || overrideCount > 0) {
+      await prisma.routineExercise.update({
+        where: { id: routineExerciseId },
+        data: { archivedAt: new Date() },
+      });
+      return { id: routineExerciseId, archived: true, deleted: false };
+    }
+
     await prisma.routineExercise.delete({ where: { id: routineExerciseId } });
 
-    return { id: routineExerciseId };
+    return { id: routineExerciseId, archived: false, deleted: true };
   }
 
   static async toggleTemplate(trainerUserId: string, routineId: string) {
@@ -359,7 +400,7 @@ export class RoutinesService {
     if (!student) throw new AppError("Alumno no encontrado", 404);
 
     const studentRoutine = await prisma.studentRoutine.findFirst({
-      where: { studentId, isActive: true },
+      where: { studentId, isActive: true, routine: { archivedAt: null } },
       include: {
         routine: { include: routineInclude },
       },

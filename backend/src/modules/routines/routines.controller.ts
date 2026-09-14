@@ -69,7 +69,7 @@ export class RoutinesController {
   static delete = asyncHandler(async (req: Request, res: Response) => {
     const id = cuidSchema.parse(req.params.id);
     const result = await RoutinesService.deleteRoutine(req.user!.userId, id);
-    return res.status(200).json(successResponse("Rutina eliminada", result));
+    return res.status(200).json(successResponse("Rutina retirada", result));
   });
 
   static addExercise = asyncHandler(async (req: Request, res: Response) => {
@@ -104,7 +104,7 @@ export class RoutinesController {
       id,
       routineExerciseId
     );
-    return res.status(200).json(successResponse("Ejercicio eliminado de la rutina", result));
+    return res.status(200).json(successResponse("Ejercicio retirado de la rutina", result));
   });
 
   static toggleTemplate = asyncHandler(async (req: Request, res: Response) => {

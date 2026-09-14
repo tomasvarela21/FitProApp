@@ -70,6 +70,7 @@ export class ExercisesService {
       const exercises = await prisma.exercise.findMany({
         where: {
           isGlobal: true,
+          archivedAt: null,
           ...(filters.muscleGroupId ? { muscleGroupId: filters.muscleGroupId } : {}),
           ...(filters.difficulty ? { difficulty: filters.difficulty as Difficulty } : {}),
           ...(filters.search ? { name: { contains: filters.search, mode: "insensitive" } } : {}),
@@ -93,6 +94,7 @@ export class ExercisesService {
 
     const where: Prisma.ExerciseWhereInput = {
       AND: [
+        { archivedAt: null },
         scopeFilter,
         ...(filters.muscleGroupId ? [{ muscleGroupId: filters.muscleGroupId }] : []),
         ...(filters.difficulty ? [{ difficulty: filters.difficulty as Difficulty }] : []),
@@ -153,9 +155,21 @@ export class ExercisesService {
     const exercise = await prisma.exercise.findFirst({ where, select: { id: true } });
     if (!exercise) throw new AppError("Ejercicio no encontrado", 404);
 
+    const relationCount = await prisma.routineExercise.count({
+      where: { exerciseId: id },
+    });
+
+    if (relationCount > 0) {
+      await prisma.exercise.update({
+        where: { id },
+        data: { archivedAt: new Date() },
+      });
+      return { id, archived: true, deleted: false };
+    }
+
     await prisma.exercise.delete({ where: { id } });
 
-    return { id };
+    return { id, archived: false, deleted: true };
   }
 
   static async listMuscleGroups() {

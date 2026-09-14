@@ -77,17 +77,16 @@ export class PlansService {
     });
     if (!existing) throw new AppError("Plan no encontrado", 404);
 
-    const hasSubscriptions = await prisma.subscription.count({
-      where: { planId, status: { in: ["ACTIVE", "EXPIRED"] } },
-    });
+    const hasSubscriptions = await prisma.subscription.count({ where: { planId } });
     if (hasSubscriptions > 0) {
-      throw new AppError(
-        "No se puede eliminar un plan con suscripciones activas o vencidas",
-        400
-      );
+      await prisma.plan.update({
+        where: { id: planId },
+        data: { isActive: false },
+      });
+      return { id: planId, archived: true, deleted: false };
     }
 
     await prisma.plan.delete({ where: { id: planId } });
-    return { deleted: true };
+    return { id: planId, archived: false, deleted: true };
   }
 }

@@ -359,18 +359,18 @@ export const PlansPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Eliminar */}
+      {/* Dialog Retirar */}
       <Dialog
         open={!!deletingPlan}
         onOpenChange={() => setDeletingPlan(null)}
       >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>¿Eliminar plan?</DialogTitle>
+            <DialogTitle>¿Retirar plan?</DialogTitle>
             <DialogDescription>
-              Estás por eliminar{" "}
-              <strong>{deletingPlan?.name}</strong>. Esta acción no se puede
-              deshacer.
+              <strong>{deletingPlan?.name}</strong> dejará de estar disponible.
+              Si tiene cobros asociados se archivará para conservarlos; si nunca
+              fue utilizado se eliminará definitivamente.
             </DialogDescription>
           </DialogHeader>
           {error && (
@@ -395,7 +395,7 @@ export const PlansPage = () => {
               {isDeleting ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                "Sí, eliminar"
+                "Sí, retirar"
               )}
             </Button>
           </DialogFooter>

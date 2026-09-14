@@ -96,7 +96,7 @@ const DeleteExerciseDialog = ({ exercise, onClose, slug }: DeleteDialogProps) =>
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        "Error al eliminar el ejercicio";
+        "Error al retirar el ejercicio";
       setError(message);
     } finally {
       setIsLoading(false);
@@ -107,10 +107,11 @@ const DeleteExerciseDialog = ({ exercise, onClose, slug }: DeleteDialogProps) =>
     <Dialog open={!!exercise} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>¿Eliminar ejercicio?</DialogTitle>
+          <DialogTitle>¿Retirar ejercicio?</DialogTitle>
           <DialogDescription>
-            Estás por eliminar <strong>{exercise?.name}</strong>. Esta acción no se puede
-            deshacer.
+            <strong>{exercise?.name}</strong> dejará de estar disponible para nuevas
+            rutinas. Si tiene historial se archivará para conservarlo; si nunca fue
+            utilizado se eliminará definitivamente.
           </DialogDescription>
         </DialogHeader>
         {error && (
@@ -131,10 +132,10 @@ const DeleteExerciseDialog = ({ exercise, onClose, slug }: DeleteDialogProps) =>
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Eliminando...
+                Retirando...
               </>
             ) : (
-              "Sí, eliminar"
+              "Sí, retirar"
             )}
           </Button>
         </DialogFooter>
@@ -490,7 +491,7 @@ export const ExerciseGroupPage = () => {
                       onClick={() => setDeletingExercise(exercise)}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                      Eliminar
+                      Retirar
                     </Button>
                   </div>
                 )}

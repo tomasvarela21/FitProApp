@@ -42,6 +42,7 @@ const studentRoutineInclude = {
   routine: {
     include: {
       routineExercises: {
+        where: { archivedAt: null, exercise: { archivedAt: null } },
         include: {
           exercise: {
             include: {
@@ -131,7 +132,7 @@ export class WorkoutService {
     const student = await this.getStudent(userId);
 
     const studentRoutine = await prisma.studentRoutine.findFirst({
-      where: { studentId: student.id, isActive: true },
+      where: { studentId: student.id, isActive: true, routine: { archivedAt: null } },
       include: studentRoutineInclude,
     });
 
@@ -145,12 +146,16 @@ export class WorkoutService {
     const student = await this.getStudent(userId);
 
     const studentRoutine = await prisma.studentRoutine.findFirst({
-      where: { studentId: student.id, isActive: true },
+      where: { studentId: student.id, isActive: true, routine: { archivedAt: null } },
       include: {
         routine: {
           include: {
             routineExercises: {
-              where: { dayOfWeek: getTodayDayOfWeek() },
+              where: {
+                dayOfWeek: getTodayDayOfWeek(),
+                archivedAt: null,
+                exercise: { archivedAt: null },
+              },
               include: routineExerciseInclude,
               orderBy: { order: "asc" },
             },
@@ -214,7 +219,7 @@ export class WorkoutService {
     if (!student) throw new AppError("Alumno no encontrado", 404);
 
     const studentRoutine = await prisma.studentRoutine.findFirst({
-      where: { studentId: student.id, isActive: true },
+      where: { studentId: student.id, isActive: true, routine: { archivedAt: null } },
     });
     if (!studentRoutine) throw new AppError("No tienes una rutina activa asignada", 404);
 
@@ -226,6 +231,8 @@ export class WorkoutService {
         where: {
           id: { in: routineExerciseIds },
           routineId: studentRoutine.routineId,
+          archivedAt: null,
+          exercise: { archivedAt: null },
         },
       });
       if (validExerciseCount !== routineExerciseIds.length) {

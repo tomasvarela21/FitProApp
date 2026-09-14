@@ -32,6 +32,7 @@ export class ResourceAccessService {
       const trainerId = await this.getTrainerId(userId);
       return {
         id: exerciseId,
+        archivedAt: null,
         OR: [{ isGlobal: true }, { trainerId }],
       };
     }
@@ -43,13 +44,16 @@ export class ResourceAccessService {
     const studentId = await this.getActiveStudentId(userId);
     return {
       id: exerciseId,
+      archivedAt: null,
       OR: [
         { isGlobal: true },
         {
           routineExercises: {
             some: {
+              archivedAt: null,
               routine: {
-                studentRoutines: { some: { studentId } },
+                archivedAt: null,
+                studentRoutines: { some: { studentId, isActive: true } },
               },
             },
           },
@@ -65,6 +69,7 @@ export class ResourceAccessService {
     const trainerId = await this.getTrainerId(trainerUserId);
     return {
       id: exerciseId,
+      archivedAt: null,
       OR: [{ isGlobal: true }, { trainerId }],
     };
   }
@@ -74,7 +79,7 @@ export class ResourceAccessService {
     exerciseId: string,
   ): Promise<Prisma.ExerciseWhereInput> {
     const trainerId = await this.getTrainerId(trainerUserId);
-    return { id: exerciseId, trainerId, isGlobal: false };
+    return { id: exerciseId, trainerId, isGlobal: false, archivedAt: null };
   }
 
   static async trainerReadableRoutineWhere(
@@ -84,6 +89,7 @@ export class ResourceAccessService {
     const trainerId = await this.getTrainerId(trainerUserId);
     return {
       id: routineId,
+      archivedAt: null,
       OR: [{ isGlobal: true }, { trainerId }],
     };
   }
@@ -93,6 +99,6 @@ export class ResourceAccessService {
     routineId: string,
   ): Promise<Prisma.RoutineWhereInput> {
     const trainerId = await this.getTrainerId(trainerUserId);
-    return { id: routineId, trainerId, isGlobal: false };
+    return { id: routineId, trainerId, isGlobal: false, archivedAt: null };
   }
 }

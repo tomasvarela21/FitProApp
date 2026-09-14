@@ -62,7 +62,7 @@ export class ExercisesController {
   static delete = asyncHandler(async (req: Request, res: Response) => {
     const id = cuidSchema.parse(req.params.id);
     const result = await ExercisesService.deleteExercise(req.user!.userId, id);
-    return res.status(200).json(successResponse("Ejercicio eliminado", result));
+    return res.status(200).json(successResponse("Ejercicio retirado", result));
   });
 
   static getMuscleGroups = asyncHandler(async (_req: Request, res: Response) => {
