@@ -23,7 +23,7 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 | 1 | Testing aislado y línea base | Completada con limitaciones registradas | 2/2 |
 | 2 | Autorización y validación de entradas | Completada | 3/3 |
 | 3 | Autenticación y aislamiento de sesiones | Completada | 4/4 |
-| 4 | Cobros y suscripciones | En progreso | 1/3 |
+| 4 | Cobros y suscripciones | En progreso | 2/3 |
 | 5 | Historial y migraciones | Pendiente | 0/2 |
 | 6 | Planificación, entrenamientos y fechas | Pendiente | 0/4 |
 | 7 | Comunicaciones y procesos programados | Pendiente | 0/2 |
@@ -193,7 +193,7 @@ Se documentarán aquí el consumo atómico de tokens, la revocación de sesiones
 
 ## Fase 4 — Cobros y suscripciones
 
-**Estado:** en progreso; primera entrega completada.
+**Estado:** en progreso; dos entregas completadas.
 
 ### Entrega 4.1 — Consultas de cobros sin efectos laterales
 
@@ -210,7 +210,22 @@ Se documentarán aquí el consumo atómico de tokens, la revocación de sesiones
 | Limitaciones | Permanecen las advertencias de tooling registradas en `QA-002`; no afectan el resultado. |
 | Commit | `7eb3847` — `fix(cobros): evitar cambios de estado desde consultas` |
 
-**Pendiente de la fase:** reemplazo atómico y unicidad de suscripción activa; concurrencia de pagos y sincronización de vistas.
+### Entrega 4.2 — Reemplazo atómico de suscripciones
+
+| Elemento | Evidencia |
+|---|---|
+| Problema | Reemplazar una suscripción cancelaba la anterior antes de iniciar la transacción, dejaba sus cuotas pendientes cobrables y permitía dos altas activas concurrentes. Un fallo al crear cuotas podía dejar al alumno sin suscripción activa. También se admitían alumnos eliminados. |
+| Reproducción | La matriz inicial falló 5/5 casos: cuota anterior pendiente, cancelación parcial ante fallo controlado, dos respuestas 201 concurrentes, duplicado directo aceptado por PostgreSQL y alta para un alumno eliminado. |
+| Cambio | La comprobación de alumno y plan, la cancelación de cuotas y suscripción anteriores, y la creación de la nueva suscripción y sus cuotas se ejecutan en una única transacción. El cliente identifica la suscripción que espera reemplazar; un estado ausente o desactualizado responde 409. La primera asignación continúa admitiéndose sin ese identificador. |
+| Integridad | Se añadió un índice único parcial para una sola suscripción `ACTIVE` por alumno. La migración comprueba duplicados existentes y aborta con una explicación; no borra ni modifica registros para forzar la restricción. Las cuotas usan centavos enteros y el residuo se conserva en la última cuota. |
+| Pruebas | Integración focalizada: 7/7 exitosas. Integración completa: 73/73 exitosas sobre PostgreSQL temporal. Backend: 28/28 unitarias y compilación exitosa. Frontend: 18/18 unitarias, lint dirigido y compilación de producción exitosos. |
+| Regresión | Se verificaron reemplazo normal, rollback ante un trigger que rechaza cuotas, dos reemplazos simultáneos, contrato faltante, primera asignación, restricción directa de PostgreSQL y alumno eliminado. |
+| Datos y migraciones | Las 21 migraciones se aplicaron desde cero en la base descartable. No se ejecutó la migración sobre una base real. Una base poblada con duplicados activos será rechazada para permitir una resolución manual que preserve datos. |
+| Limitaciones | El primer intento focalizado fue bloqueado por `spawn EPERM` y se repitió con el comando autorizado. Persisten las advertencias de tooling de `QA-002` y las de bundle de `PERF-001`/`PERF-002`. |
+| Nuevos hallazgos | No se detectaron nuevos defectos funcionales o de seguridad fuera del alcance de esta entrega. |
+| Commit | `0adeda0` — `fix(cobros): reemplazar suscripciones de forma atómica` |
+
+**Pendiente de la fase:** concurrencia de pagos y cancelaciones, validación monetaria y sincronización de vistas.
 
 Se documentarán aquí las transiciones concurrentes, la atomicidad de suscripciones, la precisión monetaria y la sincronización de vistas.
 
