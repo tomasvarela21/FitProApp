@@ -5,6 +5,11 @@ import type {
   CreateSubscriptionInput,
   PayInstallmentInput,
 } from "./subscriptions.schema";
+import {
+  daysUntilExpiry,
+  effectiveInstallmentStatus,
+  effectiveSubscriptionStatus,
+} from "./billing-status";
 
 const DURATION_DAYS: Record<string, number> = {
   MONTHLY: 30,
@@ -22,12 +27,6 @@ function addDays(date: Date, days: number): Date {
   const result = new Date(date);
   result.setDate(result.getDate() + days);
   return result;
-}
-
-function getDaysUntilExpiry(endDate: Date): number {
-  const now = new Date();
-  const diff = endDate.getTime() - now.getTime();
-  return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
 export class SubscriptionsService {
@@ -58,23 +57,7 @@ export class SubscriptionsService {
 
     if (!subscription) return null;
 
-    // Actualizar cuotas vencidas
     const now = new Date();
-    const overdueIds = subscription.installments
-      .filter((i) => i.status === "PENDING" && i.dueDate < now)
-      .map((i) => i.id);
-
-    if (overdueIds.length > 0) {
-      await prisma.installment.updateMany({
-        where: { id: { in: overdueIds } },
-        data: { status: "OVERDUE" },
-      });
-      overdueIds.forEach((id) => {
-        const inst = subscription.installments.find((i) => i.id === id);
-        if (inst) inst.status = "OVERDUE";
-      });
-    }
-
     const totalAmount = Number(subscription.totalAmount);
     const paidAmount = subscription.installments
       .filter((i) => i.status === "PAID")
@@ -92,10 +75,10 @@ export class SubscriptionsService {
       installmentCount: subscription.installmentCount,
       paidAmount,
       pendingAmount: totalAmount - paidAmount,
-      status: subscription.status,
+      status: effectiveSubscriptionStatus(subscription.status, subscription.endDate, now),
       startDate: subscription.startDate,
       endDate: subscription.endDate,
-      daysUntilExpiry: getDaysUntilExpiry(subscription.endDate),
+      daysUntilExpiry: daysUntilExpiry(subscription.endDate, now),
       createdAt: subscription.createdAt,
       installments: subscription.installments.map((i) => ({
         id: i.id,
@@ -103,7 +86,7 @@ export class SubscriptionsService {
         amount: Number(i.amount),
         dueDate: i.dueDate,
         paidAt: i.paidAt,
-        status: i.status,
+        status: effectiveInstallmentStatus(i.status, i.dueDate, now),
         notes: i.notes,
       })),
     };
@@ -277,7 +260,7 @@ export class SubscriptionsService {
       prisma.subscription.findMany({
         where: {
           trainerId: trainer.id,
-          status: "ACTIVE",
+          status: { in: ["ACTIVE", "EXPIRED"] },
           endDate: { lt: now },
         },
         include: { student: true, plan: true },
@@ -286,13 +269,6 @@ export class SubscriptionsService {
       }),
     ]);
 
-    if (expired.length > 0) {
-      await prisma.subscription.updateMany({
-        where: { id: { in: expired.map((s) => s.id) } },
-        data: { status: "EXPIRED" },
-      });
-    }
-
     return {
       expiringSoon: expiringSoon.map((s) => ({
         subscriptionId: s.id,
@@ -300,7 +276,7 @@ export class SubscriptionsService {
         studentName: `${s.student.firstName} ${s.student.lastName}`,
         planName: s.plan.name,
         endDate: s.endDate,
-        daysUntilExpiry: getDaysUntilExpiry(s.endDate),
+        daysUntilExpiry: daysUntilExpiry(s.endDate, now),
       })),
       expired: expired.map((s) => ({
         subscriptionId: s.id,
@@ -308,7 +284,7 @@ export class SubscriptionsService {
         studentName: `${s.student.firstName} ${s.student.lastName}`,
         planName: s.plan.name,
         endDate: s.endDate,
-        daysUntilExpiry: getDaysUntilExpiry(s.endDate),
+        daysUntilExpiry: daysUntilExpiry(s.endDate, now),
       })),
     };
   }

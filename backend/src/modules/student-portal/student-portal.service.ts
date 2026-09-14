@@ -1,5 +1,10 @@
 import { prisma } from "../../infrastructure/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
+import {
+  daysUntilExpiry,
+  effectiveInstallmentStatus,
+  effectiveSubscriptionStatus,
+} from "../subscriptions/billing-status";
 
 export class StudentPortalService {
   static async getMyProfile(userId: string) {
@@ -82,30 +87,15 @@ export class StudentPortalService {
 
     const now = new Date();
 
-    // Marcar vencidas
-    const overdueIds = subscription.installments
-      .filter((i) => i.status === "PENDING" && i.dueDate < now)
-      .map((i) => i.id);
-
-    if (overdueIds.length > 0) {
-      await prisma.installment.updateMany({
-        where: { id: { in: overdueIds } },
-        data: { status: "OVERDUE" },
-      });
-      overdueIds.forEach((id) => {
-        const inst = subscription.installments.find((i) => i.id === id);
-        if (inst) inst.status = "OVERDUE";
-      });
-    }
-
     const totalAmount = Number(subscription.totalAmount);
     const paidAmount = subscription.installments
       .filter((i) => i.status === "PAID")
       .reduce((sum, i) => sum + Number(i.amount), 0);
 
-    const nextInstallment = subscription.installments.find(
-      (i) => i.status === "PENDING" || i.status === "OVERDUE"
-    ) ?? null;
+    const nextInstallment = subscription.installments.find((i) => {
+      const status = effectiveInstallmentStatus(i.status, i.dueDate, now);
+      return status === "PENDING" || status === "OVERDUE";
+    }) ?? null;
 
     return {
       id: subscription.id,
@@ -116,20 +106,21 @@ export class StudentPortalService {
       installmentCount: subscription.installmentCount,
       paidAmount,
       pendingAmount: totalAmount - paidAmount,
-      status: subscription.status,
+      status: effectiveSubscriptionStatus(subscription.status, subscription.endDate, now),
       startDate: subscription.startDate,
       endDate: subscription.endDate,
-      daysUntilExpiry: Math.ceil(
-        (subscription.endDate.getTime() - now.getTime()) /
-          (1000 * 60 * 60 * 24)
-      ),
+      daysUntilExpiry: daysUntilExpiry(subscription.endDate, now),
       nextInstallment: nextInstallment
         ? {
             id: nextInstallment.id,
             number: nextInstallment.number,
             amount: Number(nextInstallment.amount),
             dueDate: nextInstallment.dueDate,
-            status: nextInstallment.status,
+            status: effectiveInstallmentStatus(
+              nextInstallment.status,
+              nextInstallment.dueDate,
+              now
+            ),
           }
         : null,
       installments: subscription.installments.map((i) => ({
@@ -138,7 +129,7 @@ export class StudentPortalService {
         amount: Number(i.amount),
         dueDate: i.dueDate,
         paidAt: i.paidAt,
-        status: i.status,
+        status: effectiveInstallmentStatus(i.status, i.dueDate, now),
         notes: i.notes,
       })),
     };

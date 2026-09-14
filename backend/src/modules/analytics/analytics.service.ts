@@ -1,4 +1,8 @@
 import { prisma } from "../../infrastructure/db/prisma";
+import {
+  effectiveInstallmentStatus,
+  effectiveSubscriptionStatus,
+} from "../subscriptions/billing-status";
 
 export class AnalyticsService {
   static async getBusinessAnalytics(trainerUserId: string) {
@@ -31,7 +35,7 @@ export class AnalyticsService {
       }),
       prisma.subscription.findMany({
         where: { trainerId },
-        select: { id: true, status: true, studentId: true },
+        select: { id: true, status: true, studentId: true, endDate: true },
       }),
       prisma.plan.findMany({
         where: { trainerId },
@@ -57,25 +61,26 @@ export class AnalyticsService {
 
     const monthlyMap: Record<string, number> = {};
 
+    const now = new Date();
     for (const inst of installments) {
       const amount = Number(inst.amount);
-      if (inst.status === "PAID") {
+      const status = effectiveInstallmentStatus(inst.status, inst.dueDate, now);
+      if (status === "PAID") {
         totalCollected += amount;
         // Group by paid month
         const key = inst.paidAt
           ? inst.paidAt.toISOString().slice(0, 7)
           : inst.dueDate.toISOString().slice(0, 7);
         monthlyMap[key] = (monthlyMap[key] ?? 0) + amount;
-      } else if (inst.status === "OVERDUE") {
+      } else if (status === "OVERDUE") {
         totalOverdue += amount;
-      } else if (inst.status === "PENDING") {
+      } else if (status === "PENDING") {
         totalPending += amount;
       }
     }
 
     // Last 12 months — fill gaps with 0
     const monthlyRevenue: { month: string; amount: number }[] = [];
-    const now = new Date();
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -106,8 +111,8 @@ export class AnalyticsService {
       CANCELLED: 0,
     };
     for (const sub of subscriptions) {
-      subscriptionsByStatus[sub.status] =
-        (subscriptionsByStatus[sub.status] ?? 0) + 1;
+      const status = effectiveSubscriptionStatus(sub.status, sub.endDate, now);
+      subscriptionsByStatus[status] = (subscriptionsByStatus[status] ?? 0) + 1;
     }
 
     // ── Plans summary ────────────────────────────────────────────────────────

@@ -1,6 +1,11 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../infrastructure/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
+import {
+  daysUntilExpiry,
+  effectiveInstallmentStatus,
+  effectiveSubscriptionStatus,
+} from "../subscriptions/billing-status";
 
 // ─── Mappers ──────────────────────────────────────────────────────────────────
 
@@ -15,8 +20,10 @@ function mapSubscription(sub: SubscriptionWithRelations) {
     .filter((i) => i.status === "PAID")
     .reduce((sum, i) => sum + Number(i.amount), 0);
 
-  const nextInstallment =
-    sub.installments.find((i) => i.status === "PENDING" || i.status === "OVERDUE") ?? null;
+  const nextInstallment = sub.installments.find((i) => {
+    const status = effectiveInstallmentStatus(i.status, i.dueDate, now);
+    return status === "PENDING" || status === "OVERDUE";
+  }) ?? null;
 
   return {
     id: sub.id,
@@ -27,19 +34,21 @@ function mapSubscription(sub: SubscriptionWithRelations) {
     installmentCount: sub.installmentCount,
     paidAmount,
     pendingAmount: totalAmount - paidAmount,
-    status: sub.status,
+    status: effectiveSubscriptionStatus(sub.status, sub.endDate, now),
     startDate: sub.startDate,
     endDate: sub.endDate,
-    daysUntilExpiry: Math.ceil(
-      (sub.endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-    ),
+    daysUntilExpiry: daysUntilExpiry(sub.endDate, now),
     nextInstallment: nextInstallment
       ? {
           id: nextInstallment.id,
           number: nextInstallment.number,
           amount: Number(nextInstallment.amount),
           dueDate: nextInstallment.dueDate,
-          status: nextInstallment.status,
+          status: effectiveInstallmentStatus(
+            nextInstallment.status,
+            nextInstallment.dueDate,
+            now
+          ),
         }
       : null,
     installments: sub.installments.map((i) => ({
@@ -48,7 +57,7 @@ function mapSubscription(sub: SubscriptionWithRelations) {
       amount: Number(i.amount),
       dueDate: i.dueDate,
       paidAt: i.paidAt,
-      status: i.status,
+      status: effectiveInstallmentStatus(i.status, i.dueDate, now),
       notes: i.notes,
     })),
   };
@@ -142,25 +151,6 @@ export class StudentSummaryService {
       take: 30,
       select: { weight: true },
     });
-
-    // Mark overdue installments inline (no extra round-trip)
-    if (subscription) {
-      const now = new Date();
-      const overdueIds = subscription.installments
-        .filter((i) => i.status === "PENDING" && i.dueDate < now)
-        .map((i) => i.id);
-
-      if (overdueIds.length > 0) {
-        // Fire-and-forget — doesn't block the response
-        prisma.installment
-          .updateMany({ where: { id: { in: overdueIds } }, data: { status: "OVERDUE" } })
-          .catch(() => undefined);
-        overdueIds.forEach((id) => {
-          const inst = subscription.installments.find((i) => i.id === id);
-          if (inst) inst.status = "OVERDUE";
-        });
-      }
-    }
 
     // Sessions by month
     const sessionsByMonth: Record<string, number> = {};

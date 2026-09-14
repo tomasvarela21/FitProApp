@@ -9,6 +9,7 @@ import {
   ListStudentsQueryInput,
   UpdateStudentInput,
 } from "./students.schema";
+import { effectiveInstallmentStatus } from "../subscriptions/billing-status";
 
 export class StudentsService {
   static async createStudent(trainerUserId: string, data: CreateStudentInput) {
@@ -398,8 +399,7 @@ export class StudentsService {
 
         if (sub) {
           const hasOverdue = sub.installments.some(
-            (i) => i.status === "OVERDUE" ||
-            (i.status === "PENDING" && i.dueDate < now)
+            (i) => effectiveInstallmentStatus(i.status, i.dueDate, now) === "OVERDUE"
           );
           const hasExpiringSoon = sub.installments.some(
             (i) =>

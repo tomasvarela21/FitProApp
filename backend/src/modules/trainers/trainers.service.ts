@@ -4,6 +4,10 @@ import { AppError } from "../../shared/errors/app-error";
 import { hashPassword } from "../../shared/utils/hash";
 import { TrainersMapper } from "./trainers.mapper";
 import { CreateTrainerInput, ListSubscriptionsQueryInput } from "./trainers.schema";
+import {
+  effectiveInstallmentStatus,
+  effectiveSubscriptionStatus,
+} from "../subscriptions/billing-status";
 
 const DASHBOARD_RECENT_LIMIT = 5;
 
@@ -156,18 +160,6 @@ export class TrainersService {
     const invited = countByStatus("INVITED");
     const paused = countByStatus("PAUSED");
     const inactive = countByStatus("INACTIVE");
-
-    // Marcar cuotas pendientes vencidas como OVERDUE (fire-and-forget, no bloquea)
-    const pendingOverdueIds = overdueInstallments
-      .filter((i) => i.status === "PENDING")
-      .map((i) => i.id);
-
-    if (pendingOverdueIds.length > 0) {
-      prisma.installment.updateMany({
-        where: { id: { in: pendingOverdueIds } },
-        data: { status: "OVERDUE" },
-      }).catch(() => {});
-    }
 
     // Deduplicar por alumno
     const seenStudentsOverdue = new Set<string>();
@@ -350,7 +342,7 @@ export class TrainersService {
       .map((sub) => {
         const installments = sub.installments;
         const hasOverdue = installments.some(
-          (i) => i.status === "OVERDUE" || (i.status === "PENDING" && i.dueDate < now)
+          (i) => effectiveInstallmentStatus(i.status, i.dueDate, now) === "OVERDUE"
         );
         const hasExpiringSoon = installments.some(
           (i) => i.status === "PENDING" && i.dueDate >= now && i.dueDate <= in7Days
@@ -365,7 +357,7 @@ export class TrainersService {
 
         const paidCount = installments.filter((i) => i.status === "PAID").length;
         const overdueCount = installments.filter(
-          (i) => i.status === "OVERDUE" || (i.status === "PENDING" && i.dueDate < now)
+          (i) => effectiveInstallmentStatus(i.status, i.dueDate, now) === "OVERDUE"
         ).length;
         const pendingFuture = installments.filter(
           (i) => i.status === "PENDING" && i.dueDate >= now
@@ -384,7 +376,7 @@ export class TrainersService {
           totalAmount: Number(sub.totalAmount),
           installmentCount: sub.installmentCount,
           frequency: sub.frequency,
-          subscriptionStatus: sub.status,
+          subscriptionStatus: effectiveSubscriptionStatus(sub.status, sub.endDate, now),
           paymentStatus,
           paidCount,
           overdueCount,
