@@ -13,7 +13,7 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 - El archivo `Presupuesto De La Rosa.pdf` permanece fuera de los commits.
 - Publicaciones, despliegues, push y migraciones sobre bases reales requieren autorización independiente.
 
-**Última actualización:** 11 de septiembre de 2026  
+**Última actualización:** 14 de septiembre de 2026
 **Commit inicial del plan:** `8a9f261`
 
 ## Estado general
@@ -23,7 +23,7 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 | 1 | Testing aislado y línea base | Completada con limitaciones registradas | 2/2 |
 | 2 | Autorización y validación de entradas | Completada | 3/3 |
 | 3 | Autenticación y aislamiento de sesiones | Completada | 4/4 |
-| 4 | Cobros y suscripciones | Pendiente | 0/3 |
+| 4 | Cobros y suscripciones | En progreso | 1/3 |
 | 5 | Historial y migraciones | Pendiente | 0/2 |
 | 6 | Planificación, entrenamientos y fechas | Pendiente | 0/4 |
 | 7 | Comunicaciones y procesos programados | Pendiente | 0/2 |
@@ -193,8 +193,24 @@ Se documentarán aquí el consumo atómico de tokens, la revocación de sesiones
 
 ## Fase 4 — Cobros y suscripciones
 
-**Estado:** pendiente.  
-**Registro de entregas:** todavía no iniciado.
+**Estado:** en progreso; primera entrega completada.
+
+### Entrega 4.1 — Consultas de cobros sin efectos laterales
+
+| Elemento | Evidencia |
+|---|---|
+| Problema | Consultar suscripciones, portal, resumen o dashboard convertía cuotas a `OVERDUE`; consultar vencimientos convertía suscripciones a `EXPIRED`. Dos rutas lanzaban escrituras sin esperarlas y analíticas dependía de que otra pantalla hubiera ejecutado primero esas mutaciones. |
+| Reproducción | La matriz inicial falló 6/6 casos: cuatro consultas modificaron cuotas, una modificó la suscripción y analíticas clasificó $100 vencidos como pendientes. |
+| Cambio | Se centralizaron los estados efectivos de cuota y suscripción y el cálculo de días. Las respuestas derivan `OVERDUE` y `EXPIRED` desde fecha, estado persistido y un único reloj, sin escrituras. Dashboard, alumnos, cobros, resumen, portal y analíticas consumen las mismas reglas. |
+| Compatibilidad | La consulta de vencidas incluye registros `EXPIRED` creados por el comportamiento anterior y produce el mismo resultado en llamadas repetidas. Los estados transaccionales `PAID` y `CANCELLED` no se reinterpretan. |
+| Pruebas | Integración focalizada: 7/7 exitosas. Integración completa: 66/66 exitosas sobre PostgreSQL temporal. Unitarias: 28/28 exitosas. Compilación TypeScript: exitosa. |
+| Regresión | Se verificaron respuestas de entrenador y alumno, resumen, dashboard, vencimientos repetidos, datos `EXPIRED` heredados, analíticas y conservación de `ACTIVE/PENDING` en PostgreSQL. |
+| Datos y migraciones | No se modificó el esquema ni se ejecutaron migraciones. Las pruebas reconstruyeron exclusivamente la base local identificada como testing. |
+| Hallazgo durante testing | El cálculo podía producir `-0` para vencimientos inferiores a un día. Se normalizó a `0` y quedó cubierto con una prueba de límite. |
+| Limitaciones | Permanecen las advertencias de tooling registradas en `QA-002`; no afectan el resultado. |
+| Commit | `7eb3847` — `fix(cobros): evitar cambios de estado desde consultas` |
+
+**Pendiente de la fase:** reemplazo atómico y unicidad de suscripción activa; concurrencia de pagos y sincronización de vistas.
 
 Se documentarán aquí las transiciones concurrentes, la atomicidad de suscripciones, la precisión monetaria y la sincronización de vistas.
 
