@@ -24,7 +24,7 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 | 2 | Autorización y validación de entradas | Completada | 3/3 |
 | 3 | Autenticación y aislamiento de sesiones | Completada | 4/4 |
 | 4 | Cobros y suscripciones | Completada | 3/3 |
-| 5 | Historial y migraciones | Pendiente | 0/2 |
+| 5 | Historial y migraciones | En progreso | 1/2 |
 | 6 | Planificación, entrenamientos y fechas | Pendiente | 0/4 |
 | 7 | Comunicaciones y procesos programados | Pendiente | 0/2 |
 | 8 | Rendimiento, regresiones y entrega | Pendiente | 0/3 |
@@ -42,6 +42,7 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 | `QA-003` | Fase 3 | Baja | Prisma 6 advierte que `package.json#prisma` será retirado en Prisma 7 y recomienda `prisma.config.ts`. | Pendiente; no afecta la generación actual | 8 |
 | `SEC-001` | Fase 3 | Alta | El archivo local ignorado `backend/.env` contiene credenciales de base de datos con apariencia activa en texto plano. | Pendiente de rotación por el propietario y revisión del almacenamiento local; no se versionó ni expuso su contenido | Acción operativa / 8 |
 | `AUTH-001` | Fase 3 | Media | La política productiva de cookies no puede validarse sin conocer los dominios reales del frontend y la API. | Se conservó `SameSite=Strict`, `Secure` y la ruta existente; verificar antes del despliegue | 8 |
+| `MIG-001` | Fase 5 | Media | Reemplazar claves foráneas por restricciones `RESTRICT` requiere bloqueos de esquema cuya duración dependerá del volumen real. | Ensayar con una copia representativa y definir ventana y timeout antes del despliegue | 8 |
 
 Los hallazgos de dependencias se validarán contra su uso real antes de actualizar paquetes. No se ejecutará `npm audit fix` de forma indiscriminada.
 
@@ -246,8 +247,24 @@ Se documentarán aquí el consumo atómico de tokens, la revocación de sesiones
 
 ## Fase 5 — Historial y migraciones
 
-**Estado:** pendiente.  
-**Registro de entregas:** todavía no iniciado.
+**Estado:** en progreso; primera entrega completada.
+
+### Entrega 5.1 — Retiro de recursos sin pérdida histórica
+
+| Elemento | Evidencia |
+|---|---|
+| Problema | Los borrados de planes cancelados, rutinas, ejercicios y ejercicios de rutina seguían claves foráneas en cascada. Podían desaparecer suscripciones, cuotas pagadas, asignaciones, sesiones y series. |
+| Reproducción | La matriz inicial falló 7/7 controles: las cuatro rutas destruían relaciones históricas o no informaban archivado y PostgreSQL permitía borrar directamente planes, rutinas y ejercicios utilizados. |
+| Cambio | Los recursos relacionados se archivan y dejan de estar disponibles para nuevas asignaciones o entrenamientos; los recursos sin uso se eliminan físicamente. Retirar una rutina desactiva sus asignaciones actuales. La interfaz explica ambos resultados antes de confirmar. |
+| Restricciones | Se añadieron marcas de archivado a ejercicio, rutina y ejercicio de rutina. Seis relaciones históricas cambiaron de cascada a `RESTRICT`, protegiendo plan, ejercicio, rutina, ejercicio de rutina y asignación frente a borrados directos. |
+| Migración | La migración `20260914190000_archive_historical_resources` pasó desde una base vacía y sobre un esquema anterior poblado con suscripción, cuota, asignación, override, sesión y serie. Los conteos y referencias se conservaron y cinco borrados directos fueron rechazados. |
+| Pruebas | Focalizadas: 10/10 de comportamiento y 1/1 de migración poblada. Integración completa: 96/96. Backend: 28/28 unitarias, build y validación Prisma exitosos. Frontend: 20/20 unitarias, build y lint dirigido de planes/ejercicios exitosos. E2E: 2/2 en Chromium y WebKit. |
+| Regresión | Se comprobó archivado de recursos usados, eliminación definitiva de cuatro recursos nuevos sin uso, conservación de cuotas pagadas y series, ocultamiento en API, desactivación de rutina y rechazo de entrenamientos futuros con ejercicio retirado. |
+| Datos reales | No se ejecutaron migraciones ni escrituras sobre una base real. Prisma solo regeneró el cliente local y validó el esquema. |
+| Limitaciones | `RoutinesPage.tsx` conserva dos errores y tres advertencias preexistentes de React incluidos en `QA-001`. La sustitución de claves foráneas puede requerir bloqueos en producción; se registra como `MIG-001`. |
+| Commit | `2124526` — `fix: conservar el historial al retirar recursos` |
+
+**Pendiente de la fase:** guardar snapshots verificables de planes y entrenamientos y consumirlos en historial y progreso.
 
 Se documentarán aquí el archivado, la conservación de relaciones históricas y las comprobaciones de migración sobre bases vacías y pobladas.
 
