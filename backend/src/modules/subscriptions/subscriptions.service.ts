@@ -214,8 +214,39 @@ export class SubscriptionsService {
     });
     if (!trainer) throw new AppError("Entrenador no encontrado", 404);
 
-    const installment = await prisma.installment.findFirst({
-      where: { id: installmentId, trainerId: trainer.id },
+    const paidAt = data.paidAt ? new Date(data.paidAt) : new Date();
+    const claimed = await prisma.installment.updateMany({
+      where: {
+        id: installmentId,
+        trainerId: trainer.id,
+        status: { in: ["PENDING", "OVERDUE"] },
+        subscription: {
+          status: "ACTIVE",
+          student: { deletedAt: null },
+        },
+      },
+      data: {
+        status: "PAID",
+        paidAt,
+        notes: data.notes,
+      },
+    });
+
+    if (claimed.count !== 1) {
+      const inaccessible = await prisma.installment.findFirst({
+        where: {
+          id: installmentId,
+          trainerId: trainer.id,
+          subscription: { student: { deletedAt: null } },
+        },
+        select: { id: true },
+      });
+      if (!inaccessible) throw new AppError("Cuota no encontrada", 404);
+      throw new AppError("La cuota cambió de estado durante la operación", 409);
+    }
+
+    const updated = await prisma.installment.findUniqueOrThrow({
+      where: { id: installmentId },
       include: {
         subscription: {
           include: {
@@ -225,34 +256,13 @@ export class SubscriptionsService {
         },
       },
     });
-    if (!installment) throw new AppError("Cuota no encontrada", 404);
-
-    if (installment.status === "PAID") {
-      throw new AppError("Esta cuota ya fue pagada", 400);
-    }
-
-    if (installment.subscription.status !== "ACTIVE") {
-      throw new AppError(
-        "No se puede registrar un pago en una suscripción inactiva",
-        400
-      );
-    }
-
-    const updated = await prisma.installment.update({
-      where: { id: installmentId },
-      data: {
-        status: "PAID",
-        paidAt: data.paidAt ? new Date(data.paidAt) : new Date(),
-        notes: data.notes,
-      },
-    });
 
     // Notify student
-    if (installment.subscription.student.userId) {
-      NotificationService.sendNotification(installment.subscription.student.userId, {
+    if (updated.subscription.student.userId) {
+      NotificationService.sendNotification(updated.subscription.student.userId, {
         title: "Pago registrado 💳",
-        body: `Tu entrenador registró el pago de la cuota Nº ${installment.number} de ${installment.subscription.plan.name}.`,
-        data: { type: "PAYMENT_RECORDED", installmentId: installment.id },
+        body: `Tu entrenador registró el pago de la cuota Nº ${updated.number} de ${updated.subscription.plan.name}.`,
+        data: { type: "PAYMENT_RECORDED", installmentId: updated.id },
       }).catch((err) => {
         console.error("[SubscriptionsService] Error enviando notificación push:", err);
       });
@@ -329,24 +339,29 @@ export class SubscriptionsService {
     });
     if (!trainer) throw new AppError("Entrenador no encontrado", 404);
 
-    const subscription = await prisma.subscription.findFirst({
-      where: { id: subscriptionId, trainerId: trainer.id },
-    });
-    if (!subscription) throw new AppError("Suscripción no encontrada", 404);
+    await prisma.$transaction(async (tx) => {
+      const claimed = await tx.subscription.updateMany({
+        where: { id: subscriptionId, trainerId: trainer.id, status: "ACTIVE" },
+        data: { status: "CANCELLED" },
+      });
 
-    await prisma.$transaction([
-      prisma.installment.updateMany({
+      if (claimed.count !== 1) {
+        const exists = await tx.subscription.findFirst({
+          where: { id: subscriptionId, trainerId: trainer.id },
+          select: { id: true },
+        });
+        if (!exists) throw new AppError("Suscripción no encontrada", 404);
+        throw new AppError("La suscripción cambió de estado durante la operación", 409);
+      }
+
+      await tx.installment.updateMany({
         where: {
           subscriptionId,
           status: { in: ["PENDING", "OVERDUE"] },
         },
         data: { status: "CANCELLED" },
-      }),
-      prisma.subscription.update({
-        where: { id: subscriptionId },
-        data: { status: "CANCELLED" },
-      }),
-    ]);
+      });
+    });
 
     return { cancelled: true };
   }

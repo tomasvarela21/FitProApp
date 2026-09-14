@@ -1,5 +1,16 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { subscriptionsApi } from "@/api/subscriptions.api";
+
+export const invalidateBillingQueries = (queryClient: QueryClient, studentId: string) =>
+  Promise.all([
+    queryClient.invalidateQueries({ queryKey: ["subscription", studentId] }),
+    queryClient.invalidateQueries({ queryKey: ["student-summary", studentId] }),
+    queryClient.invalidateQueries({ queryKey: ["students"] }),
+    queryClient.invalidateQueries({ queryKey: ["payments"] }),
+    queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] }),
+    queryClient.invalidateQueries({ queryKey: ["analytics-business"] }),
+    queryClient.invalidateQueries({ queryKey: ["student-subscription"] }),
+  ]);
 
 export const useStudentSubscription = (studentId: string) => {
   const queryClient = useQueryClient();
@@ -15,10 +26,7 @@ export const useStudentSubscription = (studentId: string) => {
 
   const createMutation = useMutation({
     mutationFn: subscriptionsApi.create,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["subscription", studentId] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
-    },
+    onSuccess: () => invalidateBillingQueries(queryClient, studentId),
   });
 
   const payInstallmentMutation = useMutation({
@@ -27,17 +35,12 @@ export const useStudentSubscription = (studentId: string) => {
       ...data
     }: { installmentId: string } & Parameters<typeof subscriptionsApi.payInstallment>[1]) =>
       subscriptionsApi.payInstallment(installmentId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["subscription", studentId] });
-    },
+    onSuccess: () => invalidateBillingQueries(queryClient, studentId),
   });
 
   const cancelMutation = useMutation({
     mutationFn: subscriptionsApi.cancel,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["subscription", studentId] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
-    },
+    onSuccess: () => invalidateBillingQueries(queryClient, studentId),
   });
 
   return {

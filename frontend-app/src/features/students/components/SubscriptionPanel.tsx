@@ -59,16 +59,33 @@ const DURATION_DAYS: Record<string, number> = {
   ANNUAL: 365,
 };
 
-const assignSchema = z.object({
-  planId: z.string().min(1, "Seleccioná un plan"),
-  startDate: z.string().min(1, "Seleccioná una fecha"),
-  totalAmount: z.number().positive("El monto debe ser mayor a 0"),
-  installmentCount: z.number().int().min(1).max(24),
-  frequency: z.enum(["BIWEEKLY", "MONTHLY"]),
-});
+const assignSchema = z
+  .object({
+    planId: z.string().min(1, "Seleccioná un plan"),
+    startDate: z.string().min(1, "Seleccioná una fecha"),
+    totalAmount: z
+      .number()
+      .positive("El monto debe ser mayor a 0")
+      .max(99_999_999.99, "El monto excede el límite permitido")
+      .refine(
+        (value) => Math.abs(value * 100 - Math.round(value * 100)) < 1e-7,
+        "El monto admite hasta 2 decimales"
+      ),
+    installmentCount: z.number().int().min(1).max(24),
+    frequency: z.enum(["BIWEEKLY", "MONTHLY"]),
+  })
+  .superRefine(({ totalAmount, installmentCount }, context) => {
+    if (Math.round(totalAmount * 100) < installmentCount) {
+      context.addIssue({
+        code: "custom",
+        path: ["totalAmount"],
+        message: "Cada cuota debe valer al menos 0,01",
+      });
+    }
+  });
 
 const paySchema = z.object({
-  notes: z.string().optional(),
+  notes: z.string().max(1000, "Las notas no pueden superar 1000 caracteres").optional(),
 });
 
 type AssignForm = z.infer<typeof assignSchema>;
