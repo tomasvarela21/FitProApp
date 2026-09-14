@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
@@ -134,9 +134,12 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
     resolver: zodResolver(paySchema),
   });
 
-  const selectedPlanId = assignForm.watch("planId");
+  const [selectedPlanId, watchedStartDate, watchedTotalAmount, watchedInstallmentCount, watchedFrequency] =
+    useWatch({
+      control: assignForm.control,
+      name: ["planId", "startDate", "totalAmount", "installmentCount", "frequency"],
+    });
   const selectedPlan = activePlans.find((p: Plan) => p.id === selectedPlanId);
-  const watchedStartDate = assignForm.watch("startDate");
 
   const previewEndDate =
     selectedPlan && watchedStartDate
@@ -180,6 +183,7 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
       await createSubscription({
         studentId,
         planId: data.planId,
+        replacesSubscriptionId: subscription?.id,
         startDate: `${data.startDate}T12:00:00`,
         totalAmount: data.totalAmount,
         installmentCount: data.installmentCount,
@@ -477,7 +481,7 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
               <div className="space-y-1.5">
                 <Label>Frecuencia</Label>
                 <Select
-                  value={assignForm.watch("frequency")}
+                  value={watchedFrequency}
                   onValueChange={(val) =>
                     assignForm.setValue("frequency", val as "BIWEEKLY" | "MONTHLY")
                   }
@@ -494,21 +498,21 @@ export const SubscriptionPanel = ({ studentId }: SubscriptionPanelProps) => {
             </div>
 
             {/* Preview de cuotas */}
-            {assignForm.watch("totalAmount") > 0 &&
-              assignForm.watch("installmentCount") > 0 && (
+            {watchedTotalAmount > 0 &&
+              watchedInstallmentCount > 0 && (
                 <div className="rounded-md bg-muted/40 border border-border px-3 py-2">
                   <p className="text-xs text-muted-foreground">
-                    {assignForm.watch("installmentCount")} cuota
-                    {assignForm.watch("installmentCount") > 1 ? "s" : ""} de{" "}
+                    {watchedInstallmentCount} cuota
+                    {watchedInstallmentCount > 1 ? "s" : ""} de{" "}
                     <strong>
                       $
                       {(
-                        assignForm.watch("totalAmount") /
-                        assignForm.watch("installmentCount")
+                        watchedTotalAmount /
+                        watchedInstallmentCount
                       ).toLocaleString("es-AR", { maximumFractionDigits: 2 })}
                     </strong>{" "}
                     {FREQUENCY_LABELS[
-                      assignForm.watch("frequency")
+                      watchedFrequency
                     ]?.toLowerCase()}
                     es
                   </p>

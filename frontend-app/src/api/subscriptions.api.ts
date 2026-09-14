@@ -4,6 +4,7 @@ import type { ApiSuccess, Subscription, Installment } from "@/types";
 type CreateSubscriptionPayload = {
   studentId: string;
   planId: string;
+  replacesSubscriptionId?: string;
   startDate: string;
   totalAmount: number;
   installmentCount: number;

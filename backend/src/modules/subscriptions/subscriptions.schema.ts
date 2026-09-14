@@ -7,6 +7,7 @@ import {
 export const createSubscriptionSchema = z.object({
   studentId: cuidSchema,
   planId: cuidSchema,
+  replacesSubscriptionId: cuidSchema.optional(),
   startDate: dateInputSchema,
   totalAmount: z.number().positive("El monto total debe ser mayor a 0"),
   installmentCount: z.number().int().min(1).max(24),

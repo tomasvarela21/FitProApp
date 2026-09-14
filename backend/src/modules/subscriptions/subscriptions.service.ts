@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../../infrastructure/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
 import { NotificationService } from "../notifications/notifications.service";
@@ -101,29 +102,7 @@ export class SubscriptionsService {
     });
     if (!trainer) throw new AppError("Entrenador no encontrado", 404);
 
-    const student = await prisma.student.findFirst({
-      where: { id: data.studentId, trainerId: trainer.id },
-    });
-    if (!student) throw new AppError("Alumno no encontrado", 404);
-
-    const plan = await prisma.plan.findFirst({
-      where: { id: data.planId, trainerId: trainer.id, isActive: true },
-    });
-    if (!plan) throw new AppError("Plan no encontrado o inactivo", 404);
-
-    // Cancelar suscripción activa anterior
-    await prisma.subscription.updateMany({
-      where: {
-        studentId: data.studentId,
-        trainerId: trainer.id,
-        status: "ACTIVE",
-      },
-      data: { status: "CANCELLED" },
-    });
-
     const startDate = new Date(data.startDate);
-    const days = DURATION_DAYS[plan.duration] ?? 30;
-    const endDate = addDays(startDate, days);
     const freqDays = FREQUENCY_DAYS[data.frequency] ?? 30;
 
     // Aritmética entera en centavos para evitar errores de punto flotante.
@@ -132,43 +111,95 @@ export class SubscriptionsService {
     const baseCents = Math.floor(totalCents / data.installmentCount);
     const remainderCents = totalCents - baseCents * data.installmentCount;
 
-    const subscription = await prisma.$transaction(async (tx) => {
-      const sub = await tx.subscription.create({
-        data: {
-          studentId: data.studentId,
-          planId: data.planId,
-          trainerId: trainer.id,
-          startDate,
-          endDate,
-          status: "ACTIVE",
-          totalAmount: data.totalAmount,
-          installmentCount: data.installmentCount,
-          frequency: data.frequency,
-        },
-        include: { plan: true, student: true },
-      });
+    try {
+      await prisma.$transaction(async (tx) => {
+        const [student, plan] = await Promise.all([
+          tx.student.findFirst({
+            where: { id: data.studentId, trainerId: trainer.id, deletedAt: null },
+            select: { id: true },
+          }),
+          tx.plan.findFirst({
+            where: { id: data.planId, trainerId: trainer.id, isActive: true },
+          }),
+        ]);
+        if (!student) throw new AppError("Alumno no encontrado", 404);
+        if (!plan) throw new AppError("Plan no encontrado o inactivo", 404);
 
-      // Generar cuotas con montos exactos que suman al total
-      const installments = Array.from(
-        { length: data.installmentCount },
-        (_, i) => {
-          const isLast = i === data.installmentCount - 1;
-          const amountCents = isLast ? baseCents + remainderCents : baseCents;
-          return {
-            subscriptionId: sub.id,
+        const activeSubscriptions = await tx.subscription.findMany({
+          where: {
+            studentId: data.studentId,
             trainerId: trainer.id,
-            number: i + 1,
-            amount: amountCents / 100,
-            dueDate: addDays(startDate, freqDays * i),
-            status: "PENDING" as const,
-          };
+            status: "ACTIVE",
+          },
+          select: { id: true },
+        });
+        const activeIds = activeSubscriptions.map(({ id }) => id);
+        const currentActiveId = activeIds[0];
+
+        if (
+          (currentActiveId && data.replacesSubscriptionId !== currentActiveId) ||
+          (!currentActiveId && data.replacesSubscriptionId)
+        ) {
+          throw new AppError("La suscripción cambió durante la operación", 409);
         }
-      );
 
-      await tx.installment.createMany({ data: installments });
+        if (activeIds.length > 0) {
+          await tx.installment.updateMany({
+            where: {
+              subscriptionId: { in: activeIds },
+              status: { in: ["PENDING", "OVERDUE"] },
+            },
+            data: { status: "CANCELLED" },
+          });
+          await tx.subscription.updateMany({
+            where: { id: { in: activeIds }, status: "ACTIVE" },
+            data: { status: "CANCELLED" },
+          });
+        }
 
-      return sub;
-    });
+        const days = DURATION_DAYS[plan.duration] ?? 30;
+        const endDate = addDays(startDate, days);
+        const sub = await tx.subscription.create({
+          data: {
+            studentId: data.studentId,
+            planId: data.planId,
+            trainerId: trainer.id,
+            startDate,
+            endDate,
+            status: "ACTIVE",
+            totalAmount: data.totalAmount,
+            installmentCount: data.installmentCount,
+            frequency: data.frequency,
+          },
+        });
+
+        const installments = Array.from(
+          { length: data.installmentCount },
+          (_, i) => {
+            const isLast = i === data.installmentCount - 1;
+            const amountCents = isLast ? baseCents + remainderCents : baseCents;
+            return {
+              subscriptionId: sub.id,
+              trainerId: trainer.id,
+              number: i + 1,
+              amount: amountCents / 100,
+              dueDate: addDays(startDate, freqDays * i),
+              status: "PENDING" as const,
+            };
+          }
+        );
+
+        await tx.installment.createMany({ data: installments });
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        (error.code === "P2002" || error.code === "P2034")
+      ) {
+        throw new AppError("La suscripción cambió durante la operación", 409);
+      }
+      throw error;
+    }
 
     return this.getStudentSubscription(trainerUserId, data.studentId);
   }
