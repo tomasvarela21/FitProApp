@@ -23,7 +23,7 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 | 1 | Testing aislado y línea base | Completada con limitaciones registradas | 2/2 |
 | 2 | Autorización y validación de entradas | Completada | 3/3 |
 | 3 | Autenticación y aislamiento de sesiones | Completada | 4/4 |
-| 4 | Cobros y suscripciones | En progreso | 2/3 |
+| 4 | Cobros y suscripciones | Completada | 3/3 |
 | 5 | Historial y migraciones | Pendiente | 0/2 |
 | 6 | Planificación, entrenamientos y fechas | Pendiente | 0/4 |
 | 7 | Comunicaciones y procesos programados | Pendiente | 0/2 |
@@ -193,7 +193,8 @@ Se documentarán aquí el consumo atómico de tokens, la revocación de sesiones
 
 ## Fase 4 — Cobros y suscripciones
 
-**Estado:** en progreso; dos entregas completadas.
+**Estado:** completada.
+**Objetivo alcanzado:** las consultas no modifican cobros, las suscripciones se reemplazan atómicamente y las transiciones de pago y cancelación tienen un único resultado válido bajo concurrencia.
 
 ### Entrega 4.1 — Consultas de cobros sin efectos laterales
 
@@ -225,9 +226,23 @@ Se documentarán aquí el consumo atómico de tokens, la revocación de sesiones
 | Nuevos hallazgos | No se detectaron nuevos defectos funcionales o de seguridad fuera del alcance de esta entrega. |
 | Commit | `0adeda0` — `fix(cobros): reemplazar suscripciones de forma atómica` |
 
-**Pendiente de la fase:** concurrencia de pagos y cancelaciones, validación monetaria y sincronización de vistas.
+### Entrega 4.3 — Pagos concurrentes y vistas sincronizadas
 
-Se documentarán aquí las transiciones concurrentes, la atomicidad de suscripciones, la precisión monetaria y la sincronización de vistas.
+| Elemento | Evidencia |
+|---|---|
+| Problema | Pago y cancelación comprobaban el estado antes de escribirlo, por lo que la decisión no estaba ligada atómicamente a la transición. Dos cancelaciones devolvían éxito. Los conflictos usaban 400, montos fuera de `Decimal(10,2)` llegaban a Prisma, podían generarse cuotas de valor cero y las vistas de cobros, alumno y analíticas quedaban desactualizadas. |
+| Reproducción | La matriz inicial falló 7 de 9 casos: doble cancelación `200/200`, conflictos como 400, montos con tres decimales aceptados, exceso de rango convertido en 500, cuotas de valor cero y notas de más de 1000 caracteres. |
+| Cambio | El pago usa una actualización condicional por entrenador, cuota cobrable, suscripción activa y alumno vigente. La cancelación reclama la suscripción activa y cancela cuotas en una transacción. Solo un contendiente obtiene éxito y solo un pago genera notificación. Los estados ya consumidos responden 409 y los recursos inaccesibles 404. |
+| Validación monetaria | API e interfaz limitan el total a dos decimales y `99.999.999,99`, exigen al menos un centavo por cuota y limitan las notas de pago a 1000 caracteres. Las entradas inválidas responden 400 antes de escribir. |
+| Sincronización web | Crear, pagar o cancelar invalida suscripción, resumen individual, listado de alumnos, cobros, dashboard, analíticas y portal del alumno. Dos pruebas unitarias verifican las siete familias y evitan invalidar el resumen de otro alumno. |
+| Pruebas | Focalizadas de integración: 12/12 exitosas. Integración completa: 85/85 exitosas sobre PostgreSQL temporal. Backend: 28/28 unitarias y build exitoso. Frontend: 20/20 unitarias, lint dirigido y build exitosos. E2E: 2/2 en Chromium y WebKit. |
+| Regresión | Se cubrieron pago y lectura simultáneos, pago frente a cancelación, doble pago, doble cancelación, rollback inducido, estados ya cancelados, alumno eliminado, entrenador ajeno y conservación del único estado final permitido. |
+| Datos y migraciones | Esta entrega no añadió migraciones. Las pruebas limpiaron y reconstruyeron solo la base local de testing; no se utilizó una base real ni proveedores externos. |
+| Limitaciones | El primer build web recibió `spawn EPERM` dentro del sandbox y pasó al repetirlo con el comando autorizado. Firefox continúa bloqueado por `ENV-001`; permanecen `QA-002`, `PERF-001` y `PERF-002`. |
+| Nuevos hallazgos | No se detectaron nuevos defectos funcionales o de seguridad fuera del alcance de esta entrega. |
+| Commit | `8edbd9f` — `fix(cobros): proteger pagos y actualizar sus vistas` |
+
+**Cierre de la fase:** los escenarios concurrentes cubiertos no producen pagos duplicados, cancelaciones parciales ni estados contradictorios. Los importes se validan antes de persistirse y las pantallas relacionadas se marcan como obsoletas tras cada mutación.
 
 ## Fase 5 — Historial y migraciones
 
