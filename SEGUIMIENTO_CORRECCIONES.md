@@ -25,7 +25,7 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 | 3 | Autenticación y aislamiento de sesiones | Completada | 4/4 |
 | 4 | Cobros y suscripciones | Completada | 3/3 |
 | 5 | Historial y migraciones | Completada | 2/2 |
-| 6 | Planificación, entrenamientos y fechas | En progreso | 2/4 |
+| 6 | Planificación, entrenamientos y fechas | En progreso | 3/4 |
 | 7 | Comunicaciones y procesos programados | Pendiente | 0/2 |
 | 8 | Rendimiento, regresiones y entrega | Pendiente | 0/3 |
 
@@ -284,7 +284,7 @@ Se documentarán aquí el consumo atómico de tokens, la revocación de sesiones
 
 ## Fase 6 — Planificación, entrenamientos y fechas
 
-**Estado:** en progreso; dos entregas completadas.
+**Estado:** en progreso; tres entregas completadas.
 
 ### Entrega 6.1 — Semanas y ajustes persistentes
 
@@ -314,6 +314,21 @@ Se documentarán aquí el consumo atómico de tokens, la revocación de sesiones
 | Limitaciones | El lint dirigido conserva el error y la advertencia preexistentes de `QA-001` en el efecto de apertura de `RoutinePanel.tsx`; los archivos nuevos no agregaron hallazgos. El primer build web recibió `spawn EPERM` dentro del sandbox y pasó al repetirlo con ejecución autorizada. Persisten `ENV-001`, `PERF-001`, `PERF-002` y `MIG-001`. |
 | Nuevos hallazgos | No se detectaron defectos funcionales o de seguridad adicionales fuera del alcance de esta entrega. |
 | Commit | `543b318` — `fix(rutinas): evitar sobrescrituras al guardar` |
+
+### Entrega 6.3 — Sesiones idempotentes y rutina activa única
+
+| Elemento | Evidencia |
+|---|---|
+| Problema | Reenviar un entrenamiento creaba otra sesión y otras series. Si el entrenador cambiaba la rutina antes del reintento, la misma operación recibía 404. PostgreSQL también permitía varias asignaciones activas para un alumno. |
+| Reproducción | La línea base falló 4/4 casos: dos IDs para la misma clave, 404 tras cambiar de rutina, clave reutilizada con contenido diferente aceptada y segunda asignación activa creada directamente. |
+| Cambio | `POST /student/workout-log` exige una clave UUID en `Idempotency-Key`. La sesión conserva alumno, clave y hash del contenido; un replay idéntico devuelve el registro original aun después de cambiar la rutina, mientras que otro contenido responde 409. El formulario genera una clave por montaje y la conserva tras errores de red. Solo la creación efectiva dispara la notificación. |
+| Integridad concurrente | Índices únicos parciales garantizan una sesión por alumno y clave y una sola asignación activa por alumno. Las rutas de asignación simple y semanal traducen conflictos de Prisma a HTTP 409. Dos asignaciones simultáneas terminaron con un único registro activo y sin respuestas 500. |
+| Migración | `20260914230000_idempotent_workouts_single_active_routine` comprueba duplicados y sesiones huérfanas antes de modificar el esquema, recupera `studentId` desde la asignación histórica y agrega restricciones de identidad e idempotencia. Una base con activos duplicados abortó antes de agregar columnas y conservó 2 asignaciones y 1 sesión. No se ejecutó sobre una base real. |
+| Pruebas | Línea base: 4/4 fallos esperados. Matriz focalizada con regresiones: 31/31; focal final: 8/8. Integración completa final: 115/115 sobre PostgreSQL temporal. Backend: 28/28 unitarias y build exitoso. Frontend: 24/24 unitarias, lint dirigido y build exitosos. E2E: 2/2 en Chromium y WebKit. |
+| Regresión | Se comprobaron solicitudes simultáneas, replay tras cambio de rutina, conflicto por contenido distinto, clave ausente, asignaciones concurrentes, historial, snapshots, archivado, autorización y todas las fases anteriores. |
+| Limitaciones | Persisten las advertencias conocidas `QA-002`, `QA-003`, `ENV-001`, `PERF-001`, `PERF-002` y el ensayo con volumen de `MIG-001`. El primer intento de Prisma necesitó acceso autorizado para comprobar binarios y el primer Vitest web fue bloqueado por `spawn EPERM`; ambos pasaron al repetirse fuera del sandbox. |
+| Nuevos hallazgos | No se detectaron defectos funcionales o de seguridad adicionales fuera del alcance de esta entrega. |
+| Commit | `1c47f42` — `fix(entrenamientos): evitar registros duplicados` |
 
 Se documentarán aquí las semanas persistentes, conflictos de versión, idempotencia de sesiones, fechas de negocio y rachas.
 
