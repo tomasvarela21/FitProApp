@@ -25,7 +25,7 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 | 3 | Autenticación y aislamiento de sesiones | Completada | 4/4 |
 | 4 | Cobros y suscripciones | Completada | 3/3 |
 | 5 | Historial y migraciones | Completada | 2/2 |
-| 6 | Planificación, entrenamientos y fechas | En progreso | 1/4 |
+| 6 | Planificación, entrenamientos y fechas | En progreso | 2/4 |
 | 7 | Comunicaciones y procesos programados | Pendiente | 0/2 |
 | 8 | Rendimiento, regresiones y entrega | Pendiente | 0/3 |
 
@@ -284,7 +284,7 @@ Se documentarán aquí el consumo atómico de tokens, la revocación de sesiones
 
 ## Fase 6 — Planificación, entrenamientos y fechas
 
-**Estado:** en progreso; primera entrega completada.
+**Estado:** en progreso; dos entregas completadas.
 
 ### Entrega 6.1 — Semanas y ajustes persistentes
 
@@ -300,6 +300,20 @@ Se documentarán aquí el consumo atómico de tokens, la revocación de sesiones
 | Limitaciones | El lint de `RoutinePanel.tsx` conserva el error y la advertencia preexistentes de `QA-001`; las líneas nuevas no agregaron hallazgos. Firefox permanece bloqueado por `ENV-001`. La migración debe ensayarse con volumen representativo según `MIG-001`. |
 | Hallazgo durante testing | El primer build detectó que el tipo interno del override omitía `notes`; se corrigió y ambos builds posteriores pasaron. También se reemplazó la conversión directa de fechas UTC por `parseLocalDate`. |
 | Commit | `77b86d8` — `fix(rutinas): conservar semanas y ajustes` |
+
+### Entrega 6.2 — Conflictos explícitos al guardar semanas
+
+| Elemento | Evidencia |
+|---|---|
+| Problema | Dos pestañas o guardados rápidos podían leer el mismo plan y reemplazar sus overrides sin detectar que otra edición se había confirmado entre ambas solicitudes. La actualización optimista tampoco restauraba el contenido visible si la escritura fallaba. |
+| Reproducción | La prueba HTTP inicial creó dos ediciones concurrentes con la misma versión y falló porque la API no devolvía versión ni rechazaba la segunda escritura. Las pruebas web ejercitaron un conflicto y una secuencia de guardados donde la primera operación falla. |
+| Cambio | Cada semana tiene una versión positiva. Editar o copiar reclama atómicamente la versión esperada, la incrementa y modifica los overrides en la misma transacción. Una versión desactualizada responde HTTP 409 y conserva la edición ganadora. La interfaz serializa guardados de una misma pestaña, actualiza la caché de forma optimista y la restaura y recarga cuando el servidor rechaza el cambio. |
+| Migración | `20260914220000_add_week_version` asigna versión 1 a todas las semanas existentes y agrega una restricción que impide valores menores a uno. La prueba de migración poblada verificó el valor recuperado y el rechazo de una versión inválida. No se ejecutó sobre una base real. |
+| Pruebas | Conflictos, migración, relaciones y persistencia: 19/19. Integración completa: 107/107 sobre PostgreSQL temporal. Backend: 28/28 unitarias y build exitoso. Frontend: 22/22 unitarias y build exitoso. E2E: 2/2 en Chromium y WebKit. Prisma validó y generó el cliente. |
+| Regresión | Se cubrieron edición concurrente, reintento obsoleto, conservación de la escritura ganadora, rollback y recarga de caché, orden de guardados rápidos aun cuando uno falla, copia semanal y las fases anteriores. |
+| Limitaciones | El lint dirigido conserva el error y la advertencia preexistentes de `QA-001` en el efecto de apertura de `RoutinePanel.tsx`; los archivos nuevos no agregaron hallazgos. El primer build web recibió `spawn EPERM` dentro del sandbox y pasó al repetirlo con ejecución autorizada. Persisten `ENV-001`, `PERF-001`, `PERF-002` y `MIG-001`. |
+| Nuevos hallazgos | No se detectaron defectos funcionales o de seguridad adicionales fuera del alcance de esta entrega. |
+| Commit | `543b318` — `fix(rutinas): evitar sobrescrituras al guardar` |
 
 Se documentarán aquí las semanas persistentes, conflictos de versión, idempotencia de sesiones, fechas de negocio y rachas.
 
