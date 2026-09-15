@@ -25,7 +25,7 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 | 3 | Autenticación y aislamiento de sesiones | Completada | 4/4 |
 | 4 | Cobros y suscripciones | Completada | 3/3 |
 | 5 | Historial y migraciones | Completada | 2/2 |
-| 6 | Planificación, entrenamientos y fechas | Pendiente | 0/4 |
+| 6 | Planificación, entrenamientos y fechas | En progreso | 1/4 |
 | 7 | Comunicaciones y procesos programados | Pendiente | 0/2 |
 | 8 | Rendimiento, regresiones y entrega | Pendiente | 0/3 |
 
@@ -284,8 +284,22 @@ Se documentarán aquí el consumo atómico de tokens, la revocación de sesiones
 
 ## Fase 6 — Planificación, entrenamientos y fechas
 
-**Estado:** pendiente.  
-**Registro de entregas:** todavía no iniciado.
+**Estado:** en progreso; primera entrega completada.
+
+### Entrega 6.1 — Semanas y ajustes persistentes
+
+| Elemento | Evidencia |
+|---|---|
+| Problema | Las semanas solo existían si tenían overrides. Las fechas de todas las semanas se descartaban salvo las de la semana 1, se aceptaban números duplicados e intervalos inválidos, podía activarse una semana inexistente y el portal ignoraba las notas semanales del ejercicio. |
+| Reproducción | La matriz inicial falló 5/5 casos: un plan de tres semanas regresó vacío, duplicados e intervalos inválidos respondieron 201, la semana 8 inexistente se activó y la nota semanal llegó como `null` al alumno. |
+| Cambio | Se agregó `WeeklyPlanWeek` para persistir cada número, fecha inicial y fecha final sin depender de overrides. La API exige semana 1, números únicos, pares completos de fechas, orden válido e intervalos sin superposición. Solo permite editar, copiar o activar semanas persistidas y sincroniza las fechas heredadas de la semana activa. |
+| Portal e interfaz | El alumno recibe la nota del override activo. El formulario web permite cargar inicio y fin para cada semana, muestra el intervalo sin desplazamiento UTC y genera pestañas solo para semanas persistidas. Las asignaciones simples crean explícitamente su semana 1. |
+| Migración | `20260914210000_persist_weekly_plan_weeks` recupera la semana activa de cada asignación y todos los números presentes en overrides. Solo asocia las fechas antiguas a la semana activa conocida; no inventa fechas de otras semanas. Añade restricciones de rango, par y orden de fechas. |
+| Pruebas | Línea base: 5/5 fallos esperados. Focalizadas y migración: 7/7 exitosas. Integración completa: 106/106. Backend: 28/28 unitarias y build exitoso. Frontend: 20/20 unitarias y build exitoso. E2E: 2/2 en Chromium y WebKit. Prisma validó el esquema. |
+| Regresión | Se cubrieron semanas sin overrides, fechas distintas, duplicados, intervalos incompletos/invertidos/superpuestos, semana inexistente, activación válida, notas del portal, asignación simple y las fases anteriores. |
+| Limitaciones | El lint de `RoutinePanel.tsx` conserva el error y la advertencia preexistentes de `QA-001`; las líneas nuevas no agregaron hallazgos. Firefox permanece bloqueado por `ENV-001`. La migración debe ensayarse con volumen representativo según `MIG-001`. |
+| Hallazgo durante testing | El primer build detectó que el tipo interno del override omitía `notes`; se corrigió y ambos builds posteriores pasaron. También se reemplazó la conversión directa de fechas UTC por `parseLocalDate`. |
+| Commit | `77b86d8` — `fix(rutinas): conservar semanas y ajustes` |
 
 Se documentarán aquí las semanas persistentes, conflictos de versión, idempotencia de sesiones, fechas de negocio y rachas.
 
