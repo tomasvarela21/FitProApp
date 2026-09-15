@@ -24,7 +24,7 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 | 2 | Autorización y validación de entradas | Completada | 3/3 |
 | 3 | Autenticación y aislamiento de sesiones | Completada | 4/4 |
 | 4 | Cobros y suscripciones | Completada | 3/3 |
-| 5 | Historial y migraciones | En progreso | 1/2 |
+| 5 | Historial y migraciones | Completada | 2/2 |
 | 6 | Planificación, entrenamientos y fechas | Pendiente | 0/4 |
 | 7 | Comunicaciones y procesos programados | Pendiente | 0/2 |
 | 8 | Rendimiento, regresiones y entrega | Pendiente | 0/3 |
@@ -247,7 +247,8 @@ Se documentarán aquí el consumo atómico de tokens, la revocación de sesiones
 
 ## Fase 5 — Historial y migraciones
 
-**Estado:** en progreso; primera entrega completada.
+**Estado:** completada.
+**Objetivo alcanzado:** retirar o editar recursos ya utilizados no elimina relaciones ni reescribe la representación histórica de suscripciones y entrenamientos.
 
 ### Entrega 5.1 — Retiro de recursos sin pérdida histórica
 
@@ -264,9 +265,22 @@ Se documentarán aquí el consumo atómico de tokens, la revocación de sesiones
 | Limitaciones | `RoutinesPage.tsx` conserva dos errores y tres advertencias preexistentes de React incluidos en `QA-001`. La sustitución de claves foráneas puede requerir bloqueos en producción; se registra como `MIG-001`. |
 | Commit | `2124526` — `fix: conservar el historial al retirar recursos` |
 
-**Pendiente de la fase:** guardar snapshots verificables de planes y entrenamientos y consumirlos en historial y progreso.
+### Entrega 5.2 — Datos históricos de suscripciones y entrenamientos
 
-Se documentarán aquí el archivado, la conservación de relaciones históricas y las comprobaciones de migración sobre bases vacías y pobladas.
+| Elemento | Evidencia |
+|---|---|
+| Problema | Las suscripciones, sesiones y series conservaban IDs históricos, pero las respuestas volvían a leer nombres, duración, orden y ejercicio desde recursos editables. Editar un plan cambiaba retroactivamente el contrato mostrado; mover un ejercicio de rutina reescribía el historial y atribuía el progreso al ejercicio nuevo. |
+| Reproducción | La prueba inicial falló 2/2 casos. Tras editar un plan, cinco endpoints devolvieron el nombre y duración nuevos. Tras registrar una sesión y modificar rutina, ejercicio, grupo muscular y ejercicio de rutina, los tres historiales mostraron los valores nuevos y el progreso cambió de ejercicio. |
+| Cambio | La suscripción guarda nombre y duración contratados. Cada sesión guarda identidad y nombre de rutina; cada serie conserva identidad y nombre del ejercicio, grupo muscular, día, orden y prescripción completa. Las altas capturan estos valores en la misma transacción y las consultas de entrenador, alumno, dashboard, cobros, historial, resumen y progreso leen los snapshots. |
+| Migración | `20260914200000_add_historical_snapshots` agrega columnas, recupera valores mediante las relaciones existentes, exige que los datos obligatorios queden completos y crea una referencia `RESTRICT` desde la serie al ejercicio original. No inventa valores sin una fuente verificable. |
+| Conservación | El ensayo sobre un esquema anterior poblado confirmó nombre y duración del plan, rutina, ejercicio, grupo muscular y los ocho campos de prescripción. La identidad directa del ejercicio quedó protegida y los conteos históricos no se alteraron. No se ejecutó la migración sobre una base real. |
+| Pruebas | Regresión de snapshots: 2/2. Migración poblada: 1/1. Integración completa: 99/99 sobre PostgreSQL local de testing. Backend: 28/28 unitarias y build exitoso. Frontend: 20/20 unitarias y build exitoso. E2E: 2/2 en Chromium y WebKit. Prisma validó el esquema. |
+| Regresión | Se repitieron autenticación, autorización, concurrencia de cobros, archivado, altas y reemplazos de suscripciones. El progreso permanece asociado al ejercicio registrado y el portal muestra el nombre histórico de la rutina. |
+| Limitaciones | El lint dirigido de `RoutinePanel.tsx` conserva un error y una advertencia preexistentes en el efecto de apertura, registrados en `QA-001`; las líneas nuevas no agregaron hallazgos. El primer build web fue bloqueado por `spawn EPERM` dentro del sandbox y pasó al repetirlo con ejecución autorizada. Firefox continúa bloqueado por `ENV-001`. |
+| Nuevos hallazgos | `MIG-001` también aplica a las columnas obligatorias y la nueva clave foránea: deben medirse los bloqueos sobre una copia con volumen representativo antes del despliegue. |
+| Commit | `5472b2d` — `feat: guardar datos históricos de entrenamientos` |
+
+**Cierre de la fase:** los recursos utilizados quedan protegidos frente a borrados destructivos y las vistas históricas conservan los valores verificables existentes al contratar o registrar. Las dos migraciones de la fase pasaron desde cero y sobre esquemas anteriores poblados en PostgreSQL descartable.
 
 ## Fase 6 — Planificación, entrenamientos y fechas
 
