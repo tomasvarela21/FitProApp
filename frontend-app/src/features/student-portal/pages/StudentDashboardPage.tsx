@@ -514,7 +514,7 @@ const TodayTab = () => {
       </div>
 
       {alreadyLogged && todayLog ? (
-        <AlreadyLogged log={todayLog} routineName={routineData.routine.name} />
+        <AlreadyLogged log={todayLog} />
       ) : (
         <WorkoutForm
           key={resolvedDay}
@@ -552,10 +552,8 @@ const NoTrainingToday = ({ hasRoutine }: { hasRoutine: boolean }) => {
 
 const AlreadyLogged = ({
   log,
-  routineName,
 }: {
   log: StudentWorkoutLog;
-  routineName: string;
 }) => {
   const exerciseMap = log.sets.reduce<Record<string, { name: string; sets: typeof log.sets }>>(
     (acc, s) => {
@@ -573,7 +571,7 @@ const AlreadyLogged = ({
         <CheckCircle2 className="w-5 h-5 text-yellow-500 shrink-0" />
         <div>
           <p className="text-sm font-medium text-yellow-600">Ya registraste tu entrenamiento de hoy</p>
-          <p className="text-xs text-muted-foreground">{routineName} — {log.sets.length} sets totales</p>
+          <p className="text-xs text-muted-foreground">{log.routine.name} — {log.sets.length} sets totales</p>
         </div>
       </div>
       <div className="space-y-3">

@@ -47,7 +47,6 @@ export class SubscriptionsService {
         status: { in: ["ACTIVE", "EXPIRED"] },
       },
       include: {
-        plan: true,
         student: true,
         installments: {
           orderBy: { number: "asc" },
@@ -69,8 +68,8 @@ export class SubscriptionsService {
       studentId: subscription.studentId,
       studentName: `${subscription.student.firstName} ${subscription.student.lastName}`,
       planId: subscription.planId,
-      planName: subscription.plan.name,
-      planDuration: subscription.plan.duration,
+      planName: subscription.planName,
+      planDuration: subscription.planDuration,
       frequency: subscription.frequency,
       totalAmount,
       installmentCount: subscription.installmentCount,
@@ -163,6 +162,8 @@ export class SubscriptionsService {
           data: {
             studentId: data.studentId,
             planId: data.planId,
+            planName: plan.name,
+            planDuration: plan.duration,
             trainerId: trainer.id,
             startDate,
             endDate,
@@ -251,7 +252,6 @@ export class SubscriptionsService {
         subscription: {
           include: {
             student: true,
-            plan: true,
           },
         },
       },
@@ -261,7 +261,7 @@ export class SubscriptionsService {
     if (updated.subscription.student.userId) {
       NotificationService.sendNotification(updated.subscription.student.userId, {
         title: "Pago registrado 💳",
-        body: `Tu entrenador registró el pago de la cuota Nº ${updated.number} de ${updated.subscription.plan.name}.`,
+        body: `Tu entrenador registró el pago de la cuota Nº ${updated.number} de ${updated.subscription.planName}.`,
         data: { type: "PAYMENT_RECORDED", installmentId: updated.id },
       }).catch((err) => {
         console.error("[SubscriptionsService] Error enviando notificación push:", err);
@@ -295,7 +295,7 @@ export class SubscriptionsService {
           status: "ACTIVE",
           endDate: { gte: now, lte: in7Days },
         },
-        include: { student: true, plan: true },
+        include: { student: true },
         orderBy: { endDate: "asc" },
       }),
       prisma.subscription.findMany({
@@ -304,7 +304,7 @@ export class SubscriptionsService {
           status: { in: ["ACTIVE", "EXPIRED"] },
           endDate: { lt: now },
         },
-        include: { student: true, plan: true },
+        include: { student: true },
         orderBy: { endDate: "desc" },
         take: 10,
       }),
@@ -315,7 +315,7 @@ export class SubscriptionsService {
         subscriptionId: s.id,
         studentId: s.studentId,
         studentName: `${s.student.firstName} ${s.student.lastName}`,
-        planName: s.plan.name,
+        planName: s.planName,
         endDate: s.endDate,
         daysUntilExpiry: daysUntilExpiry(s.endDate, now),
       })),
@@ -323,7 +323,7 @@ export class SubscriptionsService {
         subscriptionId: s.id,
         studentId: s.studentId,
         studentName: `${s.student.firstName} ${s.student.lastName}`,
-        planName: s.plan.name,
+        planName: s.planName,
         endDate: s.endDate,
         daysUntilExpiry: daysUntilExpiry(s.endDate, now),
       })),

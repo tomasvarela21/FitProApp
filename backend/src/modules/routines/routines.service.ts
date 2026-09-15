@@ -430,11 +430,6 @@ export class RoutinesService {
       where: { studentRoutine: { studentId } },
       include: {
         workoutSets: {
-          include: {
-            routineExercise: {
-              include: { exercise: true },
-            },
-          },
           orderBy: [{ routineExerciseId: "asc" }, { setNumber: "asc" }],
         },
       },
@@ -447,6 +442,7 @@ export class RoutinesService {
       date: log.date,
       notes: log.notes,
       createdAt: log.createdAt,
+      routine: { id: log.routineId, name: log.routineName },
       sets: log.workoutSets.map((s) => ({
         id: s.id,
         setNumber: s.setNumber,
@@ -455,9 +451,12 @@ export class RoutinesService {
         rpe: s.rpe,
         notes: s.notes,
         exercise: {
-          id: s.routineExercise.exercise.id,
-          name: s.routineExercise.exercise.name,
-          order: s.routineExercise.order,
+          id: s.exerciseId,
+          name: s.exerciseName,
+          order: s.exerciseOrder,
+          muscleGroup: s.exerciseMuscleGroupName
+            ? { name: s.exerciseMuscleGroupName }
+            : null,
         },
       })),
     }));

@@ -10,7 +10,7 @@ import {
 // ─── Mappers ──────────────────────────────────────────────────────────────────
 
 type SubscriptionWithRelations = Prisma.SubscriptionGetPayload<{
-  include: { plan: true; installments: { orderBy: { number: "asc" } } };
+  include: { installments: { orderBy: { number: "asc" } } };
 }>;
 
 function mapSubscription(sub: SubscriptionWithRelations) {
@@ -27,8 +27,8 @@ function mapSubscription(sub: SubscriptionWithRelations) {
 
   return {
     id: sub.id,
-    planName: sub.plan.name,
-    planDuration: sub.plan.duration,
+    planName: sub.planName,
+    planDuration: sub.planDuration,
     frequency: sub.frequency,
     totalAmount,
     installmentCount: sub.installmentCount,
@@ -65,11 +65,6 @@ function mapSubscription(sub: SubscriptionWithRelations) {
 
 const workoutLogInclude = {
   workoutSets: {
-    include: {
-      routineExercise: {
-        include: { exercise: true },
-      },
-    },
     orderBy: [
       { routineExerciseId: "asc" as const },
       { setNumber: "asc" as const },
@@ -87,6 +82,7 @@ function mapWorkoutLog(log: WorkoutLogWithSets) {
     date: log.date,
     notes: log.notes,
     createdAt: log.createdAt,
+    routine: { id: log.routineId, name: log.routineName },
     sets: log.workoutSets.map((s) => ({
       id: s.id,
       setNumber: s.setNumber,
@@ -95,9 +91,12 @@ function mapWorkoutLog(log: WorkoutLogWithSets) {
       rpe: s.rpe,
       notes: s.notes,
       exercise: {
-        id: s.routineExercise.exercise.id,
-        name: s.routineExercise.exercise.name,
-        order: s.routineExercise.order,
+        id: s.exerciseId,
+        name: s.exerciseName,
+        order: s.exerciseOrder,
+        muscleGroup: s.exerciseMuscleGroupName
+          ? { name: s.exerciseMuscleGroupName }
+          : null,
       },
     })),
   };
@@ -118,7 +117,7 @@ export class StudentSummaryService {
 
     const subscription = await prisma.subscription.findFirst({
       where: { studentId, status: { in: ["ACTIVE", "EXPIRED"] } },
-      include: { plan: true, installments: { orderBy: { number: "asc" } } },
+      include: { installments: { orderBy: { number: "asc" } } },
       orderBy: { createdAt: "desc" },
     });
 

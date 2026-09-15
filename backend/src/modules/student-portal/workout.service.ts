@@ -220,6 +220,7 @@ export class WorkoutService {
 
     const studentRoutine = await prisma.studentRoutine.findFirst({
       where: { studentId: student.id, isActive: true, routine: { archivedAt: null } },
+      include: { routine: { select: { id: true, name: true } } },
     });
     if (!studentRoutine) throw new AppError("No tienes una rutina activa asignada", 404);
 
@@ -227,31 +228,47 @@ export class WorkoutService {
       const routineExerciseIds = [
         ...new Set(data.routineExercises.map((exercise) => exercise.routineExerciseId)),
       ];
-      const validExerciseCount = await tx.routineExercise.count({
+      const validExercises = await tx.routineExercise.findMany({
         where: {
           id: { in: routineExerciseIds },
           routineId: studentRoutine.routineId,
           archivedAt: null,
           exercise: { archivedAt: null },
         },
+        include: { exercise: { include: { muscleGroup: true } } },
       });
-      if (validExerciseCount !== routineExerciseIds.length) {
+      if (validExercises.length !== routineExerciseIds.length) {
         throw new AppError("Ejercicio de rutina no encontrado", 404);
       }
+      const exerciseById = new Map(validExercises.map((exercise) => [exercise.id, exercise]));
 
       const log = await tx.workoutLog.create({
         data: {
           studentRoutineId: studentRoutine.id,
+          routineId: studentRoutine.routine.id,
+          routineName: studentRoutine.routine.name,
           date: data.date ? new Date(data.date) : new Date(),
           notes: data.notes,
         },
       });
 
       for (const exerciseData of data.routineExercises) {
+        const routineExercise = exerciseById.get(exerciseData.routineExerciseId)!;
         await tx.workoutSet.createMany({
           data: exerciseData.sets.map((s) => ({
             workoutLogId: log.id,
             routineExerciseId: exerciseData.routineExerciseId,
+            exerciseId: routineExercise.exercise.id,
+            exerciseName: routineExercise.exercise.name,
+            exerciseOrder: routineExercise.order,
+            exerciseMuscleGroupName: routineExercise.exercise.muscleGroup?.name ?? null,
+            routineDayOfWeek: routineExercise.dayOfWeek,
+            prescribedSets: routineExercise.sets,
+            prescribedReps: routineExercise.reps,
+            prescribedWeight: routineExercise.suggestedWeight,
+            prescribedRpe: routineExercise.suggestedRpe,
+            prescribedRestSeconds: routineExercise.restSeconds,
+            prescribedNotes: routineExercise.notes,
             setNumber: s.setNumber,
             reps: s.reps,
             weight: s.weight ?? null,
@@ -285,11 +302,6 @@ export class WorkoutService {
       where: { studentRoutine: { studentId: student.id } },
       include: {
         workoutSets: {
-          include: {
-            routineExercise: {
-              include: { exercise: { include: { muscleGroup: true } } },
-            },
-          },
           orderBy: [{ routineExerciseId: "asc" }, { setNumber: "asc" }],
         },
       },
@@ -302,6 +314,7 @@ export class WorkoutService {
       date: log.date,
       notes: log.notes,
       createdAt: log.createdAt,
+      routine: { id: log.routineId, name: log.routineName },
       sets: log.workoutSets.map((s) => ({
         id: s.id,
         setNumber: s.setNumber,
@@ -310,11 +323,11 @@ export class WorkoutService {
         rpe: s.rpe,
         notes: s.notes,
         exercise: {
-          id: s.routineExercise.exercise.id,
-          name: s.routineExercise.exercise.name,
-          order: s.routineExercise.order,
-          muscleGroup: s.routineExercise.exercise.muscleGroup
-            ? { name: s.routineExercise.exercise.muscleGroup.name }
+          id: s.exerciseId,
+          name: s.exerciseName,
+          order: s.exerciseOrder,
+          muscleGroup: s.exerciseMuscleGroupName
+            ? { name: s.exerciseMuscleGroupName }
             : null,
         },
       })),
@@ -342,7 +355,7 @@ export class WorkoutService {
     const workoutSets = await prisma.workoutSet.findMany({
       where: {
         workoutLog: { studentRoutine: { studentId: student.id } },
-        routineExercise: { exerciseId },
+        exerciseId,
       },
       include: {
         workoutLog: { select: { date: true } },

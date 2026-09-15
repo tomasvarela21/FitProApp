@@ -38,8 +38,8 @@ model User {
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
-  trainer Trainer?
-  student Student?
+  trainer           Trainer?
+  student           Student?
   pushSubscriptions PushSubscription[]
   refreshTokens     RefreshToken[]
 }
@@ -61,21 +61,21 @@ model Trainer {
   createdAt          DateTime                  @default(now())
   updatedAt          DateTime                  @updatedAt
 
-  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  students        Student[]
-  gyms            Gym[]
-  sentInvitations AccountInvitation[]   @relation("TrainerSentInvitations")
-  plans           Plan[]
-  subscriptions   Subscription[]
-  installments    Installment[]
-  exercises       Exercise[]
-  routines        Routine[]
-  verifications   TrainerVerification[]
+  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  students          Student[]
+  gyms              Gym[]
+  sentInvitations   AccountInvitation[]   @relation("TrainerSentInvitations")
+  plans             Plan[]
+  subscriptions     Subscription[]
+  installments      Installment[]
+  exercises         Exercise[]
+  routines          Routine[]
+  verifications     TrainerVerification[]
   telegramLink      TelegramLink?
   telegramLinkCodes TelegramLinkCode[]
-  studentNotes    StudentNote[]
-  studentInjuries StudentInjury[]
-  conversations   Conversation[]
+  studentNotes      StudentNote[]
+  studentInjuries   StudentInjury[]
+  conversations     Conversation[]
 }
 
 model Gym {
@@ -126,7 +126,6 @@ model TrainerVerification {
 
   @@index([trainerId])
 }
-
 
 model Student {
   id          String        @id @default(cuid())
@@ -249,10 +248,12 @@ model Plan {
 }
 
 model Subscription {
-  id          String             @id @default(cuid())
-  studentId   String
-  planId      String
-  trainerId   String
+  id               String             @id @default(cuid())
+  studentId        String
+  planId           String
+  planName         String
+  planDuration     PlanDuration
+  trainerId        String
   status           SubscriptionStatus @default(ACTIVE)
   startDate        DateTime
   endDate          DateTime
@@ -372,10 +373,11 @@ model Exercise {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
-  muscleGroup      MuscleGroup       @relation(fields: [muscleGroupId], references: [id])
-  equipment        Equipment?        @relation(fields: [equipmentId], references: [id])
-  trainer          Trainer?          @relation(fields: [trainerId], references: [id], onDelete: Cascade)
-  routineExercises RoutineExercise[]
+  muscleGroup           MuscleGroup       @relation(fields: [muscleGroupId], references: [id])
+  equipment             Equipment?        @relation(fields: [equipmentId], references: [id])
+  trainer               Trainer?          @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  routineExercises      RoutineExercise[]
+  historicalWorkoutSets WorkoutSet[]
 
   @@index([muscleGroupId])
   @@index([trainerId])
@@ -384,15 +386,15 @@ model Exercise {
 }
 
 model Routine {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
   description String?
-  isGlobal    Boolean  @default(false)
-  isTemplate  Boolean  @default(false)
+  isGlobal    Boolean   @default(false)
+  isTemplate  Boolean   @default(false)
   trainerId   String?
   archivedAt  DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   trainer          Trainer?          @relation(fields: [trainerId], references: [id], onDelete: Cascade)
   routineExercises RoutineExercise[]
@@ -473,6 +475,8 @@ model WeeklyExerciseOverride {
 model WorkoutLog {
   id               String   @id @default(cuid())
   studentRoutineId String
+  routineId        String
+  routineName      String
   date             DateTime @default(now())
   notes            String?
   createdAt        DateTime @default(now())
@@ -486,28 +490,41 @@ model WorkoutLog {
 }
 
 model WorkoutSet {
-  id                String   @id @default(cuid())
-  workoutLogId      String
-  routineExerciseId String
-  setNumber         Int
-  reps              Int
-  weight            Float?
-  rpe               Float?
-  notes             String?
-  createdAt         DateTime @default(now())
+  id                      String    @id @default(cuid())
+  workoutLogId            String
+  routineExerciseId       String
+  exerciseId              String
+  exerciseName            String
+  exerciseOrder           Int
+  exerciseMuscleGroupName String?
+  routineDayOfWeek        DayOfWeek
+  prescribedSets          Int
+  prescribedReps          String
+  prescribedWeight        Float?
+  prescribedRpe           Float?
+  prescribedRestSeconds   Int
+  prescribedNotes         String?
+  setNumber               Int
+  reps                    Int
+  weight                  Float?
+  rpe                     Float?
+  notes                   String?
+  createdAt               DateTime  @default(now())
 
   workoutLog      WorkoutLog      @relation(fields: [workoutLogId], references: [id], onDelete: Cascade)
   routineExercise RoutineExercise @relation(fields: [routineExerciseId], references: [id], onDelete: Restrict)
+  exercise        Exercise        @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
 
   @@index([workoutLogId])
   @@index([routineExerciseId])
+  @@index([exerciseId])
 }
 
 model AlertLog {
   id            String   @id @default(cuid())
   installmentId String
-  alertType     String   // "7d" | "1d" | "today" | "overdue_Nd" | "trainer_weekly"
-  sentDate      String   // YYYY-MM-DD — un registro por cuota+tipo+día garantiza idempotencia
+  alertType     String // "7d" | "1d" | "today" | "overdue_Nd" | "trainer_weekly"
+  sentDate      String // YYYY-MM-DD — un registro por cuota+tipo+día garantiza idempotencia
   createdAt     DateTime @default(now())
 
   @@unique([installmentId, alertType, sentDate])
@@ -531,7 +548,7 @@ model RefreshToken {
 model PushSubscription {
   id        String   @id @default(cuid())
   userId    String
-  type      String   // "WEB" o "EXPO"
+  type      String // "WEB" o "EXPO"
   endpoint  String?
   p256dh    String?
   auth      String?

@@ -188,6 +188,8 @@ describe("reemplazo atómico de suscripciones", () => {
           trainerId: fixture.trainerA.id,
           studentId: fixture.studentA.id,
           planId: fixture.plan.id,
+          planName: fixture.plan.name,
+          planDuration: fixture.plan.duration,
           startDate: new Date("2026-09-14T12:00:00.000Z"),
           endDate: new Date("2026-10-14T12:00:00.000Z"),
           totalAmount: 100,

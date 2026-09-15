@@ -70,6 +70,7 @@ type WorkoutHistory = {
   id: string;
   date: string;
   notes: string | null;
+  routine: { id: string; name: string };
   sets: WorkoutSet[];
 };
 
@@ -1576,7 +1577,7 @@ export const RoutinePanel = ({ studentId }: Props) => {
                           <div>
                             <p className="text-sm font-medium">{formatDate(log.date)}</p>
                             <p className="text-xs text-muted-foreground">
-                              {log.sets.length} set{log.sets.length !== 1 ? "s" : ""} registrado{log.sets.length !== 1 ? "s" : ""}
+                              {log.routine.name} · {log.sets.length} set{log.sets.length !== 1 ? "s" : ""} registrado{log.sets.length !== 1 ? "s" : ""}
                             </p>
                           </div>
                           {isExpanded

@@ -328,6 +328,7 @@ export type StudentWorkoutLog = {
   date: string;
   notes: string | null;
   createdAt: string;
+  routine: { id: string; name: string };
   sets: {
     id: string;
     setNumber: number;
@@ -398,6 +399,7 @@ export type StudentSummary = {
     date: string;
     notes: string | null;
     createdAt: string;
+    routine: { id: string; name: string };
     sets: {
       id: string;
       setNumber: number;
@@ -405,7 +407,12 @@ export type StudentSummary = {
       weight: number | null;
       rpe: number | null;
       notes: string | null;
-      exercise: { id: string; name: string; order: number };
+      exercise: {
+        id: string;
+        name: string;
+        order: number;
+        muscleGroup: { name: string } | null;
+      };
     }[];
   }[];
   weeklyPlan: {

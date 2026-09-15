@@ -371,7 +371,6 @@ export class StudentsService {
             orderBy: { createdAt: "desc" },
             take: 1,
             include: {
-              plan: true,
               installments: {
                 orderBy: { number: "asc" },
               },
@@ -428,7 +427,7 @@ export class StudentsService {
           subscription: sub
             ? {
                 id: sub.id,
-                planName: sub.plan.name,
+                planName: sub.planName,
                 endDate: sub.endDate,
                 subscriptionStatus,
               }

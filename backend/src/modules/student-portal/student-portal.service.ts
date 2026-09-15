@@ -77,7 +77,6 @@ export class StudentPortalService {
         status: { in: ["ACTIVE", "EXPIRED"] },
       },
       include: {
-        plan: true,
         installments: { orderBy: { number: "asc" } },
       },
       orderBy: { createdAt: "desc" },
@@ -99,8 +98,8 @@ export class StudentPortalService {
 
     return {
       id: subscription.id,
-      planName: subscription.plan.name,
-      planDuration: subscription.plan.duration,
+      planName: subscription.planName,
+      planDuration: subscription.planDuration,
       frequency: subscription.frequency,
       totalAmount,
       installmentCount: subscription.installmentCount,

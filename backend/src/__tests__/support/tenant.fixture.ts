@@ -119,10 +119,23 @@ export async function createTenantFixture(prisma: PrismaClient) {
   const workoutLog = await prisma.workoutLog.create({
     data: {
       studentRoutineId: studentRoutine.id,
+      routineId: routineA.id,
+      routineName: routineA.name,
       date: new Date("2026-01-15T12:00:00.000Z"),
       workoutSets: {
         create: {
           routineExerciseId: routineA.routineExercises[0].id,
+          exerciseId: privateExerciseA.id,
+          exerciseName: privateExerciseA.name,
+          exerciseOrder: routineA.routineExercises[0].order,
+          exerciseMuscleGroupName: muscleGroup.name,
+          routineDayOfWeek: routineA.routineExercises[0].dayOfWeek,
+          prescribedSets: routineA.routineExercises[0].sets,
+          prescribedReps: routineA.routineExercises[0].reps,
+          prescribedWeight: routineA.routineExercises[0].suggestedWeight,
+          prescribedRpe: routineA.routineExercises[0].suggestedRpe,
+          prescribedRestSeconds: routineA.routineExercises[0].restSeconds,
+          prescribedNotes: routineA.routineExercises[0].notes,
           setNumber: 1,
           reps: 10,
           weight: 20,
@@ -145,6 +158,8 @@ export async function createTenantFixture(prisma: PrismaClient) {
       trainerId: tenantA.trainer!.id,
       studentId: studentAUser.student!.id,
       planId: plan.id,
+      planName: plan.name,
+      planDuration: plan.duration,
       startDate: new Date("2026-01-01T12:00:00.000Z"),
       endDate: new Date("2026-01-31T12:00:00.000Z"),
       totalAmount: 100,
