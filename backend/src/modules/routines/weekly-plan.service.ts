@@ -1,4 +1,4 @@
-import { WeeklyExerciseOverride } from "@prisma/client";
+import { Prisma, WeeklyExerciseOverride } from "@prisma/client";
 import { prisma } from "../../infrastructure/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
 import { ResourceAccessService } from "../../shared/services/resource-access.service";
@@ -101,48 +101,59 @@ export class WeeklyPlanService {
 
     const week1 = data.weeks.find((w) => w.weekNumber === 1);
 
-    const studentRoutine = await prisma.$transaction(async (tx) => {
-      await tx.studentRoutine.updateMany({
-        where: { studentId, isActive: true },
-        data: { isActive: false },
-      });
-
-      const sr = await tx.studentRoutine.create({
-        data: {
-          studentId,
-          routineId: data.routineId,
-          isActive: true,
-          notes: data.notes,
-          weekNumber: 1,
-          startDate: week1?.startDate ? new Date(week1.startDate) : undefined,
-          endDate: week1?.endDate ? new Date(week1.endDate) : undefined,
-          weeklyPlanWeeks: {
-            create: data.weeks.map((week) => ({
-              weekNumber: week.weekNumber,
-              startDate: week.startDate ? new Date(week.startDate) : null,
-              endDate: week.endDate ? new Date(week.endDate) : null,
-            })),
-          },
-        },
-      });
-
-      for (const week of data.weeks) {
-        if (!week.overrides?.length) continue;
-        await tx.weeklyExerciseOverride.createMany({
-          data: week.overrides.map((o) => ({
-            studentRoutineId: sr.id,
-            routineExerciseId: o.routineExerciseId,
-            weekNumber: week.weekNumber,
-            suggestedWeight: o.suggestedWeight ?? null,
-            suggestedReps: o.suggestedReps ?? null,
-            suggestedRpe: o.suggestedRpe ?? null,
-            notes: o.notes ?? null,
-          })),
+    let studentRoutine;
+    try {
+      studentRoutine = await prisma.$transaction(async (tx) => {
+        await tx.studentRoutine.updateMany({
+          where: { studentId, isActive: true },
+          data: { isActive: false },
         });
-      }
 
-      return sr;
-    });
+        const sr = await tx.studentRoutine.create({
+          data: {
+            studentId,
+            routineId: data.routineId,
+            isActive: true,
+            notes: data.notes,
+            weekNumber: 1,
+            startDate: week1?.startDate ? new Date(week1.startDate) : undefined,
+            endDate: week1?.endDate ? new Date(week1.endDate) : undefined,
+            weeklyPlanWeeks: {
+              create: data.weeks.map((week) => ({
+                weekNumber: week.weekNumber,
+                startDate: week.startDate ? new Date(week.startDate) : null,
+                endDate: week.endDate ? new Date(week.endDate) : null,
+              })),
+            },
+          },
+        });
+
+        for (const week of data.weeks) {
+          if (!week.overrides?.length) continue;
+          await tx.weeklyExerciseOverride.createMany({
+            data: week.overrides.map((o) => ({
+              studentRoutineId: sr.id,
+              routineExerciseId: o.routineExerciseId,
+              weekNumber: week.weekNumber,
+              suggestedWeight: o.suggestedWeight ?? null,
+              suggestedReps: o.suggestedReps ?? null,
+              suggestedRpe: o.suggestedRpe ?? null,
+              notes: o.notes ?? null,
+            })),
+          });
+        }
+
+        return sr;
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        (error.code === "P2002" || error.code === "P2034")
+      ) {
+        throw new AppError("La rutina activa cambió durante la asignación", 409);
+      }
+      throw error;
+    }
 
     const allOverrides = await prisma.weeklyExerciseOverride.findMany({
       where: { studentRoutineId: studentRoutine.id },

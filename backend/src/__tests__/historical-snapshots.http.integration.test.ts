@@ -99,6 +99,7 @@ describe("snapshots históricos", () => {
     await request(app)
       .post("/api/student/workout-log")
       .set(studentAuth())
+      .set("Idempotency-Key", "b9740777-82f5-4f79-a255-6f73ce4bf62c")
       .send({
         date: "2026-09-14T12:00:00.000Z",
         notes: "Sesión histórica",

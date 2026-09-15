@@ -1,4 +1,5 @@
 import { Prisma, DayOfWeek } from "@prisma/client";
+import { createHash } from "node:crypto";
 import { prisma } from "../../infrastructure/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
 import { NotificationService } from "../notifications/notifications.service";
@@ -209,7 +210,7 @@ export class WorkoutService {
     return toRoutineDto(studentRoutine, overrideMap, lastSetsMap);
   }
 
-  static async logWorkout(userId: string, data: LogWorkoutData) {
+  static async logWorkout(userId: string, idempotencyKey: string, data: LogWorkoutData) {
     const student = await prisma.student.findFirst({
       where: { userId, deletedAt: null },
       include: {
@@ -223,71 +224,110 @@ export class WorkoutService {
 
     if (!student) throw new AppError("Alumno no encontrado", 404);
 
+    const idempotencyHash = createHash("sha256")
+      .update(JSON.stringify(data))
+      .digest("hex");
+    const existingLog = await prisma.workoutLog.findFirst({
+      where: { studentId: student.id, idempotencyKey },
+      select: { id: true, date: true, idempotencyHash: true },
+    });
+    if (existingLog) {
+      if (existingLog.idempotencyHash !== idempotencyHash) {
+        throw new AppError("La clave de idempotencia ya fue utilizada con otros datos", 409);
+      }
+      return { id: existingLog.id, date: existingLog.date };
+    }
+
     const studentRoutine = await prisma.studentRoutine.findFirst({
       where: { studentId: student.id, isActive: true, routine: { archivedAt: null } },
       include: { routine: { select: { id: true, name: true } } },
     });
     if (!studentRoutine) throw new AppError("No tienes una rutina activa asignada", 404);
 
-    const workoutLog = await prisma.$transaction(async (tx) => {
-      const routineExerciseIds = [
-        ...new Set(data.routineExercises.map((exercise) => exercise.routineExerciseId)),
-      ];
-      const validExercises = await tx.routineExercise.findMany({
-        where: {
-          id: { in: routineExerciseIds },
-          routineId: studentRoutine.routineId,
-          archivedAt: null,
-          exercise: { archivedAt: null },
-        },
-        include: { exercise: { include: { muscleGroup: true } } },
-      });
-      if (validExercises.length !== routineExerciseIds.length) {
-        throw new AppError("Ejercicio de rutina no encontrado", 404);
-      }
-      const exerciseById = new Map(validExercises.map((exercise) => [exercise.id, exercise]));
-
-      const log = await tx.workoutLog.create({
-        data: {
-          studentRoutineId: studentRoutine.id,
-          routineId: studentRoutine.routine.id,
-          routineName: studentRoutine.routine.name,
-          date: data.date ? new Date(data.date) : new Date(),
-          notes: data.notes,
-        },
-      });
-
-      for (const exerciseData of data.routineExercises) {
-        const routineExercise = exerciseById.get(exerciseData.routineExerciseId)!;
-        await tx.workoutSet.createMany({
-          data: exerciseData.sets.map((s) => ({
-            workoutLogId: log.id,
-            routineExerciseId: exerciseData.routineExerciseId,
-            exerciseId: routineExercise.exercise.id,
-            exerciseName: routineExercise.exercise.name,
-            exerciseOrder: routineExercise.order,
-            exerciseMuscleGroupName: routineExercise.exercise.muscleGroup?.name ?? null,
-            routineDayOfWeek: routineExercise.dayOfWeek,
-            prescribedSets: routineExercise.sets,
-            prescribedReps: routineExercise.reps,
-            prescribedWeight: routineExercise.suggestedWeight,
-            prescribedRpe: routineExercise.suggestedRpe,
-            prescribedRestSeconds: routineExercise.restSeconds,
-            prescribedNotes: routineExercise.notes,
-            setNumber: s.setNumber,
-            reps: s.reps,
-            weight: s.weight ?? null,
-            rpe: s.rpe ?? null,
-            notes: s.notes,
-          })),
+    let workoutLog: { id: string; date: Date };
+    let created = false;
+    try {
+      workoutLog = await prisma.$transaction(async (tx) => {
+        const routineExerciseIds = [
+          ...new Set(data.routineExercises.map((exercise) => exercise.routineExerciseId)),
+        ];
+        const validExercises = await tx.routineExercise.findMany({
+          where: {
+            id: { in: routineExerciseIds },
+            routineId: studentRoutine.routineId,
+            archivedAt: null,
+            exercise: { archivedAt: null },
+          },
+          include: { exercise: { include: { muscleGroup: true } } },
         });
-      }
+        if (validExercises.length !== routineExerciseIds.length) {
+          throw new AppError("Ejercicio de rutina no encontrado", 404);
+        }
+        const exerciseById = new Map(validExercises.map((exercise) => [exercise.id, exercise]));
 
-      return log;
-    });
+        const log = await tx.workoutLog.create({
+          data: {
+            studentId: student.id,
+            studentRoutineId: studentRoutine.id,
+            routineId: studentRoutine.routine.id,
+            routineName: studentRoutine.routine.name,
+            idempotencyKey,
+            idempotencyHash,
+            date: data.date ? new Date(data.date) : new Date(),
+            notes: data.notes,
+          },
+        });
+
+        for (const exerciseData of data.routineExercises) {
+          const routineExercise = exerciseById.get(exerciseData.routineExerciseId)!;
+          await tx.workoutSet.createMany({
+            data: exerciseData.sets.map((s) => ({
+              workoutLogId: log.id,
+              routineExerciseId: exerciseData.routineExerciseId,
+              exerciseId: routineExercise.exercise.id,
+              exerciseName: routineExercise.exercise.name,
+              exerciseOrder: routineExercise.order,
+              exerciseMuscleGroupName: routineExercise.exercise.muscleGroup?.name ?? null,
+              routineDayOfWeek: routineExercise.dayOfWeek,
+              prescribedSets: routineExercise.sets,
+              prescribedReps: routineExercise.reps,
+              prescribedWeight: routineExercise.suggestedWeight,
+              prescribedRpe: routineExercise.suggestedRpe,
+              prescribedRestSeconds: routineExercise.restSeconds,
+              prescribedNotes: routineExercise.notes,
+              setNumber: s.setNumber,
+              reps: s.reps,
+              weight: s.weight ?? null,
+              rpe: s.rpe ?? null,
+              notes: s.notes,
+            })),
+          });
+        }
+
+        return log;
+      });
+      created = true;
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        const replay = await prisma.workoutLog.findFirst({
+          where: { studentId: student.id, idempotencyKey },
+          select: { id: true, date: true, idempotencyHash: true },
+        });
+        if (replay) {
+          if (replay.idempotencyHash !== idempotencyHash) {
+            throw new AppError("La clave de idempotencia ya fue utilizada con otros datos", 409);
+          }
+          workoutLog = replay;
+        } else {
+          throw error;
+        }
+      } else {
+        throw error;
+      }
+    }
 
     // Notify trainer
-    if (student.trainer?.user) {
+    if (created && student.trainer?.user) {
       NotificationService.sendNotification(student.trainer.userId, {
         title: "Rutina completada 🏃‍♂️",
         body: `${student.firstName} ${student.lastName} completó su entrenamiento de hoy.`,

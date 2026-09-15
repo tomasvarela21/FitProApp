@@ -357,25 +357,36 @@ export class RoutinesService {
     const routine = await prisma.routine.findFirst({ where: routineWhere });
     if (!routine) throw new AppError("Rutina no encontrada", 404);
 
-    const studentRoutine = await prisma.$transaction(async (tx) => {
-      await tx.studentRoutine.updateMany({
-        where: { studentId, isActive: true },
-        data: { isActive: false },
-      });
+    let studentRoutine;
+    try {
+      studentRoutine = await prisma.$transaction(async (tx) => {
+        await tx.studentRoutine.updateMany({
+          where: { studentId, isActive: true },
+          data: { isActive: false },
+        });
 
-      return tx.studentRoutine.create({
-        data: {
-          studentId,
-          routineId,
-          isActive: true,
-          notes,
-          weeklyPlanWeeks: { create: { weekNumber: 1 } },
-        },
-        include: {
-          routine: { include: routineInclude },
-        },
+        return tx.studentRoutine.create({
+          data: {
+            studentId,
+            routineId,
+            isActive: true,
+            notes,
+            weeklyPlanWeeks: { create: { weekNumber: 1 } },
+          },
+          include: {
+            routine: { include: routineInclude },
+          },
+        });
       });
-    });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        (error.code === "P2002" || error.code === "P2034")
+      ) {
+        throw new AppError("La rutina activa cambió durante la asignación", 409);
+      }
+      throw error;
+    }
 
     if (student.userId) {
       NotificationService.sendNotification(student.userId, {

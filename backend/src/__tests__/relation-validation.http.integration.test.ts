@@ -199,6 +199,7 @@ describe("relaciones de entrenamientos", () => {
     await request(app)
       .post("/api/student/workout-log")
       .set(studentAuth())
+      .set("Idempotency-Key", "239fdb18-e643-468d-a005-c951f57c3620")
       .send({
         routineExercises: [
           {
@@ -223,6 +224,7 @@ describe("relaciones de entrenamientos", () => {
     await request(app)
       .post("/api/student/workout-log")
       .set(studentAuth())
+      .set("Idempotency-Key", "0e531a70-c62d-498c-b86a-ef80894ef4c0")
       .send({
         routineExercises: [
           {
@@ -301,6 +303,7 @@ describe("gimnasios y alumnos eliminados", () => {
     await request(app)
       .post("/api/student/workout-log")
       .set(studentAuth())
+      .set("Idempotency-Key", "38a8c64a-0214-439a-bce3-04ecc3ff1e98")
       .send({
         routineExercises: [
           {

@@ -120,6 +120,7 @@ describe("retiro de recursos con historial", () => {
     await request(app)
       .post("/api/student/workout-log")
       .set({ Authorization: `Bearer ${studentToken}` })
+      .set("Idempotency-Key", "9375d593-3a23-4a5e-b89a-0ec282d1cb02")
       .send({
         date: "2026-09-14T12:00:00.000Z",
         routineExercises: [

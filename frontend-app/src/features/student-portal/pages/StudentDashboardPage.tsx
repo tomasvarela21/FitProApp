@@ -32,6 +32,7 @@ import { PageHeader } from "@/components/shared/PageHeader/PageHeader";
 import { useStudentSubscription } from "@/features/student-portal/hooks/use-student-subscription";
 import { useStudentProfile } from "@/features/student-portal/hooks/use-student-profile";
 import { studentPortalApi } from "@/api/student-portal.api";
+import { createWorkoutSubmitter } from "@/features/student-portal/lib/workout-submission";
 import type {
   StudentRoutineExercise,
   StudentWorkoutLog,
@@ -168,9 +169,10 @@ const WorkoutForm = ({ exercises, routineName }: {
   );
   const [success, setSuccess] = useState(false);
   const [tutorialExercise, setTutorialExercise] = useState<TutorialExercise | null>(null);
+  const [submitWorkout] = useState(() => createWorkoutSubmitter(studentPortalApi.logWorkout));
 
   const mutation = useMutation({
-    mutationFn: studentPortalApi.logWorkout,
+    mutationFn: submitWorkout,
     onSuccess: () => {
       setSuccess(true);
       queryClient.invalidateQueries({ queryKey: ["student-today"] });

@@ -33,8 +33,10 @@ export const studentPortalApi = {
   getTodayWorkout: () =>
     apiClient.get<ApiSuccess<StudentWorkoutRoutine | null>>("/student/today"),
 
-  logWorkout: (data: WorkoutLogInput) =>
-    apiClient.post<ApiSuccess<{ id: string }>>("/student/workout-log", data),
+  logWorkout: (data: WorkoutLogInput, idempotencyKey: string) =>
+    apiClient.post<ApiSuccess<{ id: string }>>("/student/workout-log", data, {
+      headers: { "Idempotency-Key": idempotencyKey },
+    }),
 
   getWorkoutHistory: () =>
     apiClient.get<ApiSuccess<StudentWorkoutLog[]>>("/student/workout-history"),

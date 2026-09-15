@@ -30,6 +30,8 @@ const logWorkoutSchema = z.object({
   date: dateInputSchema.optional(),
 });
 
+const idempotencyKeySchema = z.uuid();
+
 export class WorkoutController {
   static getMyRoutine = asyncHandler(async (req: Request, res: Response) => {
     const result = await WorkoutService.getMyRoutine(req.user!.userId);
@@ -43,7 +45,8 @@ export class WorkoutController {
 
   static logWorkout = asyncHandler(async (req: Request, res: Response) => {
     const data = logWorkoutSchema.parse(req.body);
-    const result = await WorkoutService.logWorkout(req.user!.userId, data);
+    const idempotencyKey = idempotencyKeySchema.parse(req.get("Idempotency-Key"));
+    const result = await WorkoutService.logWorkout(req.user!.userId, idempotencyKey, data);
     return res.status(201).json(successResponse("Entrenamiento registrado", result));
   });
 

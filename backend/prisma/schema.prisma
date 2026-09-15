@@ -150,6 +150,7 @@ model Student {
   accountInvitations AccountInvitation[]
   subscriptions      Subscription[]
   studentRoutines    StudentRoutine[]
+  workoutLogs        WorkoutLog[]
   notes              StudentNote[]
   injuries           StudentInjury[]
   conversations      Conversation[]
@@ -492,16 +493,21 @@ model WeeklyExerciseOverride {
 
 model WorkoutLog {
   id               String   @id @default(cuid())
+  studentId        String
   studentRoutineId String
   routineId        String
   routineName      String
+  idempotencyKey   String?
+  idempotencyHash  String?
   date             DateTime @default(now())
   notes            String?
   createdAt        DateTime @default(now())
 
+  student        Student        @relation(fields: [studentId], references: [id], onDelete: Restrict)
   studentRoutine StudentRoutine @relation(fields: [studentRoutineId], references: [id], onDelete: Restrict)
   workoutSets    WorkoutSet[]
 
+  @@index([studentId])
   @@index([studentRoutineId])
   @@index([date])
   @@index([studentRoutineId, date])

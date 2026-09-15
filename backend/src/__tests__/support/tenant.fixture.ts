@@ -119,6 +119,7 @@ export async function createTenantFixture(prisma: PrismaClient) {
 
   const workoutLog = await prisma.workoutLog.create({
     data: {
+      studentId: studentAUser.student!.id,
       studentRoutineId: studentRoutine.id,
       routineId: routineA.id,
       routineName: routineA.name,
