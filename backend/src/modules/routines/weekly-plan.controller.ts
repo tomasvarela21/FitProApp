@@ -28,6 +28,56 @@ const createWeeklyPlanSchema = z.object({
   routineId: cuidSchema,
   weeks: z.array(weekInputSchema).min(1).max(52),
   notes: z.string().optional(),
+}).superRefine(({ weeks }, ctx) => {
+  const weekNumbers = new Set<number>();
+  for (const [index, week] of weeks.entries()) {
+    if (weekNumbers.has(week.weekNumber)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["weeks", index, "weekNumber"],
+        message: "El número de semana está duplicado",
+      });
+    }
+    weekNumbers.add(week.weekNumber);
+
+    if (Boolean(week.startDate) !== Boolean(week.endDate)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["weeks", index],
+        message: "La semana debe indicar fecha de inicio y fin",
+      });
+    } else if (week.startDate && week.endDate && week.startDate > week.endDate) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["weeks", index, "endDate"],
+        message: "La fecha de fin debe ser igual o posterior al inicio",
+      });
+    }
+  }
+
+  const datedWeeks = weeks
+    .filter((week): week is typeof week & { startDate: string; endDate: string } =>
+      Boolean(week.startDate && week.endDate)
+    )
+    .sort((a, b) => a.startDate.localeCompare(b.startDate));
+  for (let index = 1; index < datedWeeks.length; index++) {
+    if (datedWeeks[index].startDate <= datedWeeks[index - 1].endDate) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["weeks"],
+        message: "Los intervalos de semanas no pueden superponerse",
+      });
+      break;
+    }
+  }
+
+  if (!weekNumbers.has(1)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["weeks"],
+      message: "El plan debe incluir la semana 1",
+    });
+  }
 });
 
 const updateWeekOverridesSchema = z.object({

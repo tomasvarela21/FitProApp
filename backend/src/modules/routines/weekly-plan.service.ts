@@ -116,6 +116,13 @@ export class WeeklyPlanService {
           weekNumber: 1,
           startDate: week1?.startDate ? new Date(week1.startDate) : undefined,
           endDate: week1?.endDate ? new Date(week1.endDate) : undefined,
+          weeklyPlanWeeks: {
+            create: data.weeks.map((week) => ({
+              weekNumber: week.weekNumber,
+              startDate: week.startDate ? new Date(week.startDate) : null,
+              endDate: week.endDate ? new Date(week.endDate) : null,
+            })),
+          },
         },
       });
 
@@ -141,8 +148,10 @@ export class WeeklyPlanService {
       where: { studentRoutineId: studentRoutine.id },
       orderBy: [{ weekNumber: "asc" }],
     });
-
-    const weekNumbers = [...new Set(allOverrides.map((o) => o.weekNumber))].sort((a, b) => a - b);
+    const persistedWeeks = await prisma.weeklyPlanWeek.findMany({
+      where: { studentRoutineId: studentRoutine.id },
+      orderBy: { weekNumber: "asc" },
+    });
 
     return {
       studentRoutine: {
@@ -155,9 +164,13 @@ export class WeeklyPlanService {
         endDate: studentRoutine.endDate,
         notes: studentRoutine.notes,
       },
-      weeks: weekNumbers.map((wn) => ({
-        weekNumber: wn,
-        overrides: allOverrides.filter((o) => o.weekNumber === wn).map(toOverrideDto),
+      weeks: persistedWeeks.map((week) => ({
+        weekNumber: week.weekNumber,
+        startDate: week.startDate,
+        endDate: week.endDate,
+        overrides: allOverrides
+          .filter((o) => o.weekNumber === week.weekNumber)
+          .map(toOverrideDto),
       })),
     };
   }
@@ -179,14 +192,11 @@ export class WeeklyPlanService {
           },
         },
         weeklyOverrides: { orderBy: [{ weekNumber: "asc" }] },
+        weeklyPlanWeeks: { orderBy: { weekNumber: "asc" } },
       },
     });
 
     if (!studentRoutine) throw new AppError("El alumno no tiene una rutina activa", 404);
-
-    const weekNumbers = [
-      ...new Set(studentRoutine.weeklyOverrides.map((o) => o.weekNumber)),
-    ].sort((a, b) => a - b);
 
     return {
       studentRoutine: {
@@ -225,12 +235,12 @@ export class WeeklyPlanService {
           })),
         },
       },
-      weeks: weekNumbers.map((wn) => ({
-        weekNumber: wn,
-        startDate: wn === studentRoutine.weekNumber ? studentRoutine.startDate : null,
-        endDate: wn === studentRoutine.weekNumber ? studentRoutine.endDate : null,
+      weeks: studentRoutine.weeklyPlanWeeks.map((week) => ({
+        weekNumber: week.weekNumber,
+        startDate: week.startDate,
+        endDate: week.endDate,
         overrides: studentRoutine.weeklyOverrides
-          .filter((o) => o.weekNumber === wn)
+          .filter((o) => o.weekNumber === week.weekNumber)
           .map(toOverrideDto),
       })),
     };
@@ -246,6 +256,14 @@ export class WeeklyPlanService {
     await this.getOwnedStudent(trainer.id, studentId);
 
     const studentRoutine = await this.getActiveStudentRoutine(studentId);
+
+    const weekExists = await prisma.weeklyPlanWeek.findUnique({
+      where: {
+        studentRoutineId_weekNumber: { studentRoutineId: studentRoutine.id, weekNumber },
+      },
+      select: { id: true },
+    });
+    if (!weekExists) throw new AppError("Semana no encontrada", 404);
 
     await this.assertRoutineExercises(studentRoutine.routineId, overrides);
 
@@ -286,6 +304,15 @@ export class WeeklyPlanService {
     await this.getOwnedStudent(trainer.id, studentId);
 
     const studentRoutine = await this.getActiveStudentRoutine(studentId);
+
+    const persistedWeeks = await prisma.weeklyPlanWeek.findMany({
+      where: { studentRoutineId: studentRoutine.id, weekNumber: { in: [fromWeek, toWeek] } },
+      select: { weekNumber: true },
+    });
+    const persistedWeekNumbers = new Set(persistedWeeks.map((week) => week.weekNumber));
+    if (!persistedWeekNumbers.has(fromWeek) || !persistedWeekNumbers.has(toWeek)) {
+      throw new AppError("Semana no encontrada", 404);
+    }
 
     const sourceOverrides = await prisma.weeklyExerciseOverride.findMany({
       where: { studentRoutineId: studentRoutine.id, weekNumber: fromWeek },
@@ -328,9 +355,16 @@ export class WeeklyPlanService {
 
     const studentRoutine = await this.getActiveStudentRoutine(studentId);
 
+    const week = await prisma.weeklyPlanWeek.findUnique({
+      where: {
+        studentRoutineId_weekNumber: { studentRoutineId: studentRoutine.id, weekNumber },
+      },
+    });
+    if (!week) throw new AppError("Semana no encontrada", 404);
+
     const updated = await prisma.studentRoutine.update({
       where: { id: studentRoutine.id },
-      data: { weekNumber },
+      data: { weekNumber, startDate: week.startDate, endDate: week.endDate },
     });
 
     return {

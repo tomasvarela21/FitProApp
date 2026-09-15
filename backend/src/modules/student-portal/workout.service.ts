@@ -73,7 +73,12 @@ type LastSet = { setNumber: number; reps: number; weight: number | null; rpe: nu
 
 function toRoutineDto(
   sr: StudentRoutineWithRelations,
-  overrideMap: Map<string, { suggestedWeight: number | null; suggestedReps: string | null; suggestedRpe: number | null }>,
+  overrideMap: Map<string, {
+    suggestedWeight: number | null;
+    suggestedReps: string | null;
+    suggestedRpe: number | null;
+    notes: string | null;
+  }>,
   lastSetsMap?: Map<string, LastSet[]>
 ) {
   const routine = sr.routine;
@@ -98,7 +103,7 @@ function toRoutineDto(
           suggestedWeight: override?.suggestedWeight ?? re.suggestedWeight,
           suggestedRpe: override?.suggestedRpe ?? re.suggestedRpe,
           restSeconds: re.restSeconds,
-          notes: re.notes,
+          notes: override?.notes ?? re.notes,
           lastSets: lastSetsMap?.get(re.id) ?? null,
           exercise: {
             id: re.exercise.id,

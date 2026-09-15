@@ -364,7 +364,13 @@ export class RoutinesService {
       });
 
       return tx.studentRoutine.create({
-        data: { studentId, routineId, isActive: true, notes },
+        data: {
+          studentId,
+          routineId,
+          isActive: true,
+          notes,
+          weeklyPlanWeeks: { create: { weekNumber: 1 } },
+        },
         include: {
           routine: { include: routineInclude },
         },

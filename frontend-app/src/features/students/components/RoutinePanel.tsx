@@ -29,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import { cn, parseLocalDate } from "@/lib/utils";
 import { tenant } from "@/lib/tenant";
 import { routinesApi } from "@/api/routines.api";
 import { exercisesApi } from "@/api/exercises.api";
@@ -53,6 +53,13 @@ const DAY_SHORT: Record<string, string> = {
 
 const DAY_ORDER = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
 const DAY_OPTIONS = DAY_ORDER.map((d) => ({ value: d, label: DAY_LABELS[d] }));
+
+const formatDate = (date: string) =>
+  parseLocalDate(date).toLocaleDateString("es-AR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -463,6 +470,7 @@ const CreateWeeklyPlanDialog = ({
   const [routineId, setRoutineId] = useState("");
   const [weekCount, setWeekCount] = useState(4);
   const [startDates, setStartDates] = useState<string[]>(Array(12).fill(""));
+  const [endDates, setEndDates] = useState<string[]>(Array(12).fill(""));
   const [notes, setNotes] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -477,6 +485,7 @@ const CreateWeeklyPlanDialog = ({
     setRoutineId("");
     setWeekCount(4);
     setStartDates(Array(12).fill(""));
+    setEndDates(Array(12).fill(""));
     setNotes("");
     setError(null);
     onClose();
@@ -492,6 +501,7 @@ const CreateWeeklyPlanDialog = ({
         weeks: Array.from({ length: weekCount }, (_, i) => ({
           weekNumber: i + 1,
           startDate: startDates[i] || undefined,
+          endDate: endDates[i] || undefined,
         })),
         notes: notes || undefined,
       });
@@ -551,20 +561,34 @@ const CreateWeeklyPlanDialog = ({
           </div>
 
           {Array.from({ length: weekCount }, (_, i) => (
-            <div key={i} className="space-y-1.5">
-              <Label>
-                Inicio semana {i + 1}{" "}
-                <span className="text-muted-foreground text-xs font-normal">(opcional)</span>
-              </Label>
-              <Input
-                type="date"
-                value={startDates[i] ?? ""}
-                onChange={(e) => {
-                  const next = [...startDates];
-                  next[i] = e.target.value;
-                  setStartDates(next);
-                }}
-              />
+            <div key={i} className="space-y-1.5 rounded-md border border-border p-3">
+              <Label>Semana {i + 1}</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground">Inicio</span>
+                  <Input
+                    type="date"
+                    value={startDates[i] ?? ""}
+                    onChange={(e) => {
+                      const next = [...startDates];
+                      next[i] = e.target.value;
+                      setStartDates(next);
+                    }}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground">Fin</span>
+                  <Input
+                    type="date"
+                    value={endDates[i] ?? ""}
+                    onChange={(e) => {
+                      const next = [...endDates];
+                      next[i] = e.target.value;
+                      setEndDates(next);
+                    }}
+                  />
+                </div>
+              </div>
             </div>
           ))}
 
@@ -676,12 +700,13 @@ const WeeklyPlanTabContent = ({ studentId }: { studentId: string }) => {
 
   const routine = weeklyPlan.studentRoutine.routine;
   const activeWeek = weeklyPlan.studentRoutine.weekNumber;
-  const maxWeekInOverrides = weeklyPlan.weeks.reduce((max, w) => Math.max(max, w.weekNumber), 0);
-  const totalWeeks = Math.max(4, maxWeekInOverrides);
+  const maxPersistedWeek = weeklyPlan.weeks.reduce((max, w) => Math.max(max, w.weekNumber), 0);
+  const totalWeeks = Math.max(1, maxPersistedWeek);
   const weekTabs = Array.from({ length: totalWeeks }, (_, i) => i + 1);
 
   const currentOverrides =
     weeklyPlan.weeks.find((w) => w.weekNumber === selectedWeek)?.overrides ?? [];
+  const currentWeek = weeklyPlan.weeks.find((w) => w.weekNumber === selectedWeek);
   const overrideMap = new Map(currentOverrides.map((o) => [o.routineExerciseId, o]));
 
   const exercisesByDay = DAY_ORDER.reduce<
@@ -816,6 +841,12 @@ const WeeklyPlanTabContent = ({ studentId }: { studentId: string }) => {
           </button>
         ))}
       </div>
+
+      {currentWeek?.startDate && currentWeek.endDate && (
+        <p className="text-xs text-muted-foreground">
+          {formatDate(currentWeek.startDate)} al {formatDate(currentWeek.endDate)}
+        </p>
+      )}
 
       {/* Mobile cards */}
       <div className="space-y-3 md:hidden">
@@ -1116,13 +1147,6 @@ export const RoutinePanel = ({ studentId }: Props) => {
       setDeletingId(null);
     }
   };
-
-  const formatDate = (date: string) =>
-    new Date(date).toLocaleDateString("es-AR", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
 
   return (
     <>

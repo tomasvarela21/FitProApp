@@ -446,10 +446,27 @@ model StudentRoutine {
   routine         Routine                  @relation(fields: [routineId], references: [id], onDelete: Restrict)
   workoutLogs     WorkoutLog[]
   weeklyOverrides WeeklyExerciseOverride[]
+  weeklyPlanWeeks WeeklyPlanWeek[]
 
   @@index([studentId])
   @@index([routineId])
   @@index([studentId, isActive])
+}
+
+model WeeklyPlanWeek {
+  id               String    @id @default(cuid())
+  studentRoutineId String
+  weekNumber       Int
+  startDate        DateTime?
+  endDate          DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  studentRoutine StudentRoutine @relation(fields: [studentRoutineId], references: [id], onDelete: Cascade)
+
+  @@unique([studentRoutineId, weekNumber])
+  @@index([studentRoutineId])
+  @@index([startDate, endDate])
 }
 
 model WeeklyExerciseOverride {

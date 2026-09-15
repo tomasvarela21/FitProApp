@@ -113,6 +113,7 @@ export async function createTenantFixture(prisma: PrismaClient) {
       studentId: studentAUser.student!.id,
       routineId: routineA.id,
       isActive: true,
+      weeklyPlanWeeks: { create: { weekNumber: 1 } },
     },
   });
 
