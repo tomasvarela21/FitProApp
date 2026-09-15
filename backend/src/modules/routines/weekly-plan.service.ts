@@ -166,6 +166,7 @@ export class WeeklyPlanService {
       },
       weeks: persistedWeeks.map((week) => ({
         weekNumber: week.weekNumber,
+        version: week.version,
         startDate: week.startDate,
         endDate: week.endDate,
         overrides: allOverrides
@@ -237,6 +238,7 @@ export class WeeklyPlanService {
       },
       weeks: studentRoutine.weeklyPlanWeeks.map((week) => ({
         weekNumber: week.weekNumber,
+        version: week.version,
         startDate: week.startDate,
         endDate: week.endDate,
         overrides: studentRoutine.weeklyOverrides
@@ -250,6 +252,7 @@ export class WeeklyPlanService {
     trainerUserId: string,
     studentId: string,
     weekNumber: number,
+    version: number,
     overrides: WeekOverrideInput[]
   ) {
     const trainer = await this.getTrainer(trainerUserId);
@@ -257,17 +260,29 @@ export class WeeklyPlanService {
 
     const studentRoutine = await this.getActiveStudentRoutine(studentId);
 
-    const weekExists = await prisma.weeklyPlanWeek.findUnique({
-      where: {
-        studentRoutineId_weekNumber: { studentRoutineId: studentRoutine.id, weekNumber },
-      },
-      select: { id: true },
-    });
-    if (!weekExists) throw new AppError("Semana no encontrada", 404);
-
     await this.assertRoutineExercises(studentRoutine.routineId, overrides);
 
     const updated = await prisma.$transaction(async (tx) => {
+      const claimed = await tx.weeklyPlanWeek.updateMany({
+        where: {
+          studentRoutineId: studentRoutine.id,
+          weekNumber,
+          version,
+          studentRoutine: { isActive: true },
+        },
+        data: { version: { increment: 1 } },
+      });
+      if (claimed.count !== 1) {
+        const exists = await tx.weeklyPlanWeek.findUnique({
+          where: {
+            studentRoutineId_weekNumber: { studentRoutineId: studentRoutine.id, weekNumber },
+          },
+          select: { id: true },
+        });
+        if (!exists) throw new AppError("Semana no encontrada", 404);
+        throw new AppError("La semana fue modificada por otra sesión", 409);
+      }
+
       await tx.weeklyExerciseOverride.deleteMany({
         where: { studentRoutineId: studentRoutine.id, weekNumber },
       });
@@ -286,19 +301,32 @@ export class WeeklyPlanService {
         });
       }
 
-      return tx.weeklyExerciseOverride.findMany({
-        where: { studentRoutineId: studentRoutine.id, weekNumber },
-      });
+      const [week, savedOverrides] = await Promise.all([
+        tx.weeklyPlanWeek.findUniqueOrThrow({
+          where: {
+            studentRoutineId_weekNumber: { studentRoutineId: studentRoutine.id, weekNumber },
+          },
+        }),
+        tx.weeklyExerciseOverride.findMany({
+          where: { studentRoutineId: studentRoutine.id, weekNumber },
+        }),
+      ]);
+      return { week, savedOverrides };
     });
 
-    return updated.map(toOverrideDto);
+    return {
+      weekNumber,
+      version: updated.week.version,
+      overrides: updated.savedOverrides.map(toOverrideDto),
+    };
   }
 
   static async copyWeekOverrides(
     trainerUserId: string,
     studentId: string,
     fromWeek: number,
-    toWeek: number
+    toWeek: number,
+    version: number
   ) {
     const trainer = await this.getTrainer(trainerUserId);
     await this.getOwnedStudent(trainer.id, studentId);
@@ -319,6 +347,19 @@ export class WeeklyPlanService {
     });
 
     const result = await prisma.$transaction(async (tx) => {
+      const claimed = await tx.weeklyPlanWeek.updateMany({
+        where: {
+          studentRoutineId: studentRoutine.id,
+          weekNumber: toWeek,
+          version,
+          studentRoutine: { isActive: true },
+        },
+        data: { version: { increment: 1 } },
+      });
+      if (claimed.count !== 1) {
+        throw new AppError("La semana fue modificada por otra sesión", 409);
+      }
+
       await tx.weeklyExerciseOverride.deleteMany({
         where: { studentRoutineId: studentRoutine.id, weekNumber: toWeek },
       });
@@ -337,12 +378,27 @@ export class WeeklyPlanService {
         });
       }
 
-      return tx.weeklyExerciseOverride.findMany({
-        where: { studentRoutineId: studentRoutine.id, weekNumber: toWeek },
-      });
+      const [week, savedOverrides] = await Promise.all([
+        tx.weeklyPlanWeek.findUniqueOrThrow({
+          where: {
+            studentRoutineId_weekNumber: {
+              studentRoutineId: studentRoutine.id,
+              weekNumber: toWeek,
+            },
+          },
+        }),
+        tx.weeklyExerciseOverride.findMany({
+          where: { studentRoutineId: studentRoutine.id, weekNumber: toWeek },
+        }),
+      ]);
+      return { week, savedOverrides };
     });
 
-    return result.map(toOverrideDto);
+    return {
+      weekNumber: toWeek,
+      version: result.week.version,
+      overrides: result.savedOverrides.map(toOverrideDto),
+    };
   }
 
   static async setActiveWeek(

@@ -38,6 +38,11 @@ import { getRoutineDays } from "@/types";
 import type { WeeklyPlan } from "@/types";
 import { ExerciseTutorialDialog } from "@/features/student-portal/components/ExerciseTutorialDialog";
 import type { TutorialExercise } from "@/features/student-portal/components/ExerciseTutorialDialog";
+import {
+  createSerializedSaveQueue,
+  saveWeeklyOverride,
+  type WeeklyOverrideField,
+} from "@/features/students/lib/weekly-plan-save";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -639,6 +644,8 @@ const WeeklyPlanTabContent = ({ studentId }: { studentId: string }) => {
   const [initialized, setInitialized] = useState(false);
   const [settingActive, setSettingActive] = useState(false);
   const [copyingWeek, setCopyingWeek] = useState(false);
+  const [weeklySaveError, setWeeklySaveError] = useState<string | null>(null);
+  const saveQueueRef = useRef(createSerializedSaveQueue());
 
   const { data: weeklyPlan, isLoading } = useQuery<WeeklyPlan | null>({
     queryKey: ["weekly-plan", studentId],
@@ -721,74 +728,63 @@ const WeeklyPlanTabContent = ({ studentId }: { studentId: string }) => {
 
   const handleOverrideSave = async (
     routineExerciseId: string,
-    field: "suggestedReps" | "suggestedWeight" | "suggestedRpe" | "notes",
+    field: WeeklyOverrideField,
     rawVal: string
   ) => {
-    const numericFields: string[] = ["suggestedWeight", "suggestedRpe"];
-    const parsedValue = numericFields.includes(field)
-      ? rawVal === ""
-        ? null
-        : Number(rawVal)
-      : rawVal === ""
-        ? null
-        : rawVal;
-
-    const existingOverride = overrideMap.get(routineExerciseId);
-    const newOverride = existingOverride
-      ? { ...existingOverride, [field]: parsedValue }
-      : {
-          id: `temp-${routineExerciseId}`,
+    const targetWeekNumber = selectedWeek;
+    const save = async () => {
+      setWeeklySaveError(null);
+      const current = queryClient.getQueryData<WeeklyPlan | null>(["weekly-plan", studentId]);
+      if (!current) throw new Error("Semana no encontrada");
+      try {
+        await saveWeeklyOverride({
+          plan: current,
+          weekNumber: targetWeekNumber,
           routineExerciseId,
-          weekNumber: selectedWeek,
-          suggestedWeight: null,
-          suggestedReps: null,
-          suggestedRpe: null,
-          notes: null,
-          [field]: parsedValue,
-        };
+          field,
+          rawValue: rawVal,
+          setCache: (plan) => queryClient.setQueryData(["weekly-plan", studentId], plan),
+          persist: async (version, overrides) => {
+            const response = await weeklyPlanApi.updateWeek(
+              studentId,
+              targetWeekNumber,
+              version,
+              overrides
+            );
+            return response.data.data;
+          },
+          reload: () => queryClient.invalidateQueries({ queryKey: ["weekly-plan", studentId] }),
+        });
+      } catch (error: unknown) {
+        const message =
+          (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+          "No se pudo guardar la semana";
+        setWeeklySaveError(message);
+        throw error;
+      }
+    };
 
-    const newOverrides = existingOverride
-      ? currentOverrides.map((o) =>
-          o.routineExerciseId === routineExerciseId ? newOverride : o
-        )
-      : [...currentOverrides, newOverride];
-
-    queryClient.setQueryData<WeeklyPlan | null>(["weekly-plan", studentId], (old) => {
-      if (!old) return old;
-      const weekExists = old.weeks.some((w) => w.weekNumber === selectedWeek);
-      return {
-        ...old,
-        weeks: weekExists
-          ? old.weeks.map((w) =>
-              w.weekNumber === selectedWeek ? { ...w, overrides: newOverrides } : w
-            )
-          : [
-              ...old.weeks,
-              { weekNumber: selectedWeek, startDate: null, endDate: null, overrides: newOverrides },
-            ],
-      };
-    });
-
-    await weeklyPlanApi.updateWeek(
-      studentId,
-      selectedWeek,
-      newOverrides.map((o) => ({
-        routineExerciseId: o.routineExerciseId,
-        suggestedWeight: o.suggestedWeight,
-        suggestedReps: o.suggestedReps,
-        suggestedRpe: o.suggestedRpe,
-        notes: o.notes,
-      }))
-    );
-    queryClient.invalidateQueries({ queryKey: ["weekly-plan", studentId] });
+    return saveQueueRef.current.enqueue(save);
   };
 
   const handleCopyFromPrev = async () => {
     if (selectedWeek <= 1) return;
     setCopyingWeek(true);
+    setWeeklySaveError(null);
     try {
-      await weeklyPlanApi.copyWeek(studentId, selectedWeek - 1, selectedWeek);
-      queryClient.invalidateQueries({ queryKey: ["weekly-plan", studentId] });
+      if (!currentWeek) throw new Error("Semana no encontrada");
+      await weeklyPlanApi.copyWeek(
+        studentId,
+        selectedWeek - 1,
+        selectedWeek,
+        currentWeek.version
+      );
+      await queryClient.invalidateQueries({ queryKey: ["weekly-plan", studentId] });
+    } catch (error: unknown) {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        "No se pudo copiar la semana";
+      setWeeklySaveError(message);
     } finally {
       setCopyingWeek(false);
     }
@@ -846,6 +842,12 @@ const WeeklyPlanTabContent = ({ studentId }: { studentId: string }) => {
         <p className="text-xs text-muted-foreground">
           {formatDate(currentWeek.startDate)} al {formatDate(currentWeek.endDate)}
         </p>
+      )}
+
+      {weeklySaveError && (
+        <div role="alert" className="rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2">
+          <p className="text-xs text-destructive">{weeklySaveError}. Recargamos la versión más reciente.</p>
+        </div>
       )}
 
       {/* Mobile cards */}

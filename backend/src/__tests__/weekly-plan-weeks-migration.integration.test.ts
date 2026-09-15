@@ -9,6 +9,10 @@ const migrationPath = resolve(
   __dirname,
   "../../prisma/migrations/20260914210000_persist_weekly_plan_weeks/migration.sql"
 );
+const versionMigrationPath = resolve(
+  __dirname,
+  "../../prisma/migrations/20260914220000_add_week_version/migration.sql"
+);
 
 const previousSchemaStatements = [
   `CREATE TABLE "StudentRoutine" ("id" TEXT PRIMARY KEY, "weekNumber" INTEGER NOT NULL DEFAULT 1, "startDate" TIMESTAMP(3), "endDate" TIMESTAMP(3))`,
@@ -31,36 +35,40 @@ describe("migración de semanas persistentes", () => {
         for (const statement of previousSchemaStatements) {
           await tx.$executeRawUnsafe(statement);
         }
-        const statements = readFileSync(migrationPath, "utf8")
-          .split(";")
-          .map((statement) => statement.trim())
-          .filter(Boolean);
-        for (const statement of statements) {
-          await tx.$executeRawUnsafe(statement);
+        for (const path of [migrationPath, versionMigrationPath]) {
+          const statements = readFileSync(path, "utf8")
+            .split(";")
+            .map((statement) => statement.trim())
+            .filter(Boolean);
+          for (const statement of statements) {
+            await tx.$executeRawUnsafe(statement);
+          }
         }
       });
 
       const weeks = await prisma.$queryRawUnsafe<Array<{
         studentRoutineId: string;
         weekNumber: number;
+        version: number;
         startDate: Date | null;
         endDate: Date | null;
       }>>(`
-        SELECT "studentRoutineId", "weekNumber", "startDate", "endDate"
+        SELECT "studentRoutineId", "weekNumber", "version", "startDate", "endDate"
         FROM "${TEST_SCHEMA}"."WeeklyPlanWeek"
         ORDER BY "studentRoutineId", "weekNumber"
       `);
 
       expect(weeks).toEqual([
-        { studentRoutineId: "assignment-dated", weekNumber: 1, startDate: null, endDate: null },
+        { studentRoutineId: "assignment-dated", weekNumber: 1, version: 1, startDate: null, endDate: null },
         {
           studentRoutineId: "assignment-dated",
           weekNumber: 2,
+          version: 1,
           startDate: new Date("2026-09-21T00:00:00.000Z"),
           endDate: new Date("2026-09-27T00:00:00.000Z"),
         },
-        { studentRoutineId: "assignment-dated", weekNumber: 3, startDate: null, endDate: null },
-        { studentRoutineId: "assignment-empty", weekNumber: 1, startDate: null, endDate: null },
+        { studentRoutineId: "assignment-dated", weekNumber: 3, version: 1, startDate: null, endDate: null },
+        { studentRoutineId: "assignment-empty", weekNumber: 1, version: 1, startDate: null, endDate: null },
       ]);
 
       await expect(
@@ -68,6 +76,15 @@ describe("migración de semanas persistentes", () => {
           await tx.$executeRawUnsafe(`SET LOCAL search_path TO "${TEST_SCHEMA}"`);
           await tx.$executeRawUnsafe(
             `INSERT INTO "WeeklyPlanWeek" ("id", "studentRoutineId", "weekNumber", "startDate", "updatedAt") VALUES ('invalid-week', 'assignment-empty', 53, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+          );
+        })
+      ).rejects.toThrow();
+
+      await expect(
+        prisma.$transaction(async (tx) => {
+          await tx.$executeRawUnsafe(`SET LOCAL search_path TO "${TEST_SCHEMA}"`);
+          await tx.$executeRawUnsafe(
+            `UPDATE "WeeklyPlanWeek" SET "version" = 0 WHERE "id" LIKE 'legacy-week-%'`
           );
         })
       ).rejects.toThrow();

@@ -136,7 +136,7 @@ describe("persistencia y validación del plan semanal", () => {
     await request(app)
       .patch(`/api/students/${fixture.studentA.id}/weekly-plan/1`)
       .set(trainerAuth())
-      .send({ overrides: [{ routineExerciseId, notes: "Pausa de dos segundos" }] })
+      .send({ version: 1, overrides: [{ routineExerciseId, notes: "Pausa de dos segundos" }] })
       .expect(200);
 
     const portal = await request(app)

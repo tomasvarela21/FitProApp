@@ -457,6 +457,7 @@ model WeeklyPlanWeek {
   id               String    @id @default(cuid())
   studentRoutineId String
   weekNumber       Int
+  version          Int       @default(1)
   startDate        DateTime?
   endDate          DateTime?
   createdAt        DateTime  @default(now())

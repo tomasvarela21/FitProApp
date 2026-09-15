@@ -146,6 +146,7 @@ describe("relaciones de rutinas y planes semanales", () => {
       .patch(`/api/students/${fixture.studentA.id}/weekly-plan/1`)
       .set(trainerAuth())
       .send({
+        version: 1,
         overrides: [{ routineExerciseId: routineExerciseBId, suggestedWeight: 30 }],
       })
       .expect(404);
@@ -166,6 +167,7 @@ describe("relaciones de rutinas y planes semanales", () => {
       .patch(`/api/students/${fixture.studentA.id}/weekly-plan/1`)
       .set(trainerAuth())
       .send({
+        version: 1,
         overrides: [{ routineExerciseId: ownRoutineExerciseId, suggestedWeight: 25 }],
       })
       .expect(200);

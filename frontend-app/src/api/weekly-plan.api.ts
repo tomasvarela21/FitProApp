@@ -16,6 +16,12 @@ type WeekInput = {
   overrides?: OverrideInput[];
 };
 
+type SavedWeek = {
+  weekNumber: number;
+  version: number;
+  overrides: WeeklyPlan["weeks"][number]["overrides"];
+};
+
 export const weeklyPlanApi = {
   get: (studentId: string) =>
     apiClient.get<ApiSuccess<WeeklyPlan | null>>(`/students/${studentId}/weekly-plan`),
@@ -25,11 +31,21 @@ export const weeklyPlanApi = {
     data: { routineId: string; weeks: WeekInput[]; notes?: string }
   ) => apiClient.post<ApiSuccess<WeeklyPlan>>(`/students/${studentId}/weekly-plan`, data),
 
-  updateWeek: (studentId: string, weekNumber: number, overrides: OverrideInput[]) =>
-    apiClient.patch(`/students/${studentId}/weekly-plan/${weekNumber}`, { overrides }),
+  updateWeek: (
+    studentId: string,
+    weekNumber: number,
+    version: number,
+    overrides: OverrideInput[]
+  ) => apiClient.patch<ApiSuccess<SavedWeek>>(
+    `/students/${studentId}/weekly-plan/${weekNumber}`,
+    { version, overrides }
+  ),
 
-  copyWeek: (studentId: string, fromWeek: number, toWeek: number) =>
-    apiClient.post(`/students/${studentId}/weekly-plan/copy`, { fromWeek, toWeek }),
+  copyWeek: (studentId: string, fromWeek: number, toWeek: number, version: number) =>
+    apiClient.post<ApiSuccess<SavedWeek>>(
+      `/students/${studentId}/weekly-plan/copy`,
+      { fromWeek, toWeek, version }
+    ),
 
   setActiveWeek: (studentId: string, weekNumber: number) =>
     apiClient.patch(`/students/${studentId}/active-week`, { weekNumber }),

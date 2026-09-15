@@ -81,12 +81,14 @@ const createWeeklyPlanSchema = z.object({
 });
 
 const updateWeekOverridesSchema = z.object({
+  version: z.number().int().positive(),
   overrides: z.array(weekOverrideSchema),
 });
 
 const copyWeekOverridesSchema = z.object({
   fromWeek: z.number().int().min(1).max(52),
   toWeek: z.number().int().min(1).max(52),
+  version: z.number().int().positive(),
 });
 
 const setActiveWeekSchema = z.object({
@@ -110,11 +112,12 @@ export class WeeklyPlanController {
   static updateWeekOverrides = asyncHandler(async (req: Request, res: Response) => {
     const studentId = cuidSchema.parse(req.params.studentId);
     const weekNumber = weekNumberParamSchema.parse(req.params.weekNumber);
-    const { overrides } = updateWeekOverridesSchema.parse(req.body);
+    const { version, overrides } = updateWeekOverridesSchema.parse(req.body);
     const result = await WeeklyPlanService.updateWeekOverrides(
       req.user!.userId,
       studentId,
       weekNumber,
+      version,
       overrides
     );
     return res.json(successResponse("Overrides de la semana actualizados", result));
@@ -122,12 +125,13 @@ export class WeeklyPlanController {
 
   static copyWeekOverrides = asyncHandler(async (req: Request, res: Response) => {
     const studentId = cuidSchema.parse(req.params.studentId);
-    const { fromWeek, toWeek } = copyWeekOverridesSchema.parse(req.body);
+    const { fromWeek, toWeek, version } = copyWeekOverridesSchema.parse(req.body);
     const result = await WeeklyPlanService.copyWeekOverrides(
       req.user!.userId,
       studentId,
       fromWeek,
-      toWeek
+      toWeek,
+      version
     );
     return res.json(successResponse("Semana copiada", result));
   });

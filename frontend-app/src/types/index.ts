@@ -552,6 +552,7 @@ export type WeeklyPlan = {
   };
   weeks: {
     weekNumber: number;
+    version: number;
     startDate: string | null;
     endDate: string | null;
     overrides: WeeklyExerciseOverride[];
