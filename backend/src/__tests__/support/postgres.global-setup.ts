@@ -42,6 +42,20 @@ async function availablePort(): Promise<number> {
 }
 
 export default async function setup() {
+  const externalDatabaseUrl = process.env.TEST_DATABASE_URL;
+  if (externalDatabaseUrl) {
+    assertDisposableTestDatabase(externalDatabaseUrl);
+    process.env.DATABASE_URL = externalDatabaseUrl;
+    process.env.DIRECT_URL = externalDatabaseUrl;
+    const prismaCli = resolve(backendRoot, "node_modules/prisma/build/index.js");
+    execFileSync(process.execPath, [prismaCli, "migrate", "deploy"], {
+      cwd: backendRoot,
+      env: process.env,
+      stdio: "pipe",
+    });
+    return;
+  }
+
   const clusterRoot = mkdtempSync(join(tmpdir(), "fitpro-test-postgres-"));
   const dataDirectory = join(clusterRoot, "data");
   const logFile = join(clusterRoot, "postgres.log");

@@ -11,8 +11,8 @@ export type PushSubscribePayload = {
 
 export const notificationsApi = {
   subscribe: (payload: PushSubscribePayload) =>
-    apiClient.post<ApiSuccess<any>>("/notifications/subscribe", payload),
+    apiClient.post<ApiSuccess<unknown>>("/notifications/subscribe", payload),
 
   unsubscribe: (payload: { endpoint?: string; token?: string }) =>
-    apiClient.post<ApiSuccess<any>>("/notifications/unsubscribe", payload),
+    apiClient.post<ApiSuccess<{ unsubscribed: boolean }>>("/notifications/unsubscribe", payload),
 };

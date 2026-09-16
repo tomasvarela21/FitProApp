@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -43,7 +43,9 @@ export const ActivateAccountPage = () => {
   const [pageState, setPageState] = useState<PageState>(
     token ? "form" : "error"
   );
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(
+    token ? null : "El link de activación es inválido o está incompleto."
+  );
 
   const {
     register,
@@ -52,13 +54,6 @@ export const ActivateAccountPage = () => {
   } = useForm<ActivateForm>({
     resolver: zodResolver(activateSchema),
   });
-
-  useEffect(() => {
-    if (!token) {
-      setPageState("error");
-      setErrorMessage("El link de activación es inválido o está incompleto.");
-    }
-  }, [token]);
 
   const onSubmit = async (data: ActivateForm) => {
     if (!token) return;

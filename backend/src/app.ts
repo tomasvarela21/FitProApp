@@ -13,8 +13,26 @@ import { errorResponse } from "./shared/responses/api-response";
 export const app = express();
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(",")
+  ? process.env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim()).filter(Boolean)
   : ["http://localhost:5173", "http://localhost:3000"];
+
+function integerSetting(name: string, fallback: number, minimum: number): number {
+  const raw = process.env[name];
+  if (raw === undefined) return fallback;
+  const parsed = Number(raw);
+  if (!Number.isSafeInteger(parsed) || parsed < minimum) {
+    throw new Error(`[ENV] ${name} debe ser un entero mayor o igual a ${minimum}`);
+  }
+  return parsed;
+}
+
+const trustProxyHops = integerSetting("TRUST_PROXY_HOPS", 0, 0);
+const rateLimitWindowMs = integerSetting("RATE_LIMIT_WINDOW_MS", 60_000, 1_000);
+const rateLimitMax = integerSetting("RATE_LIMIT_MAX", 100, 1);
+
+if (trustProxyHops > 0) {
+  app.set("trust proxy", trustProxyHops);
+}
 
 app.use(
   cors({
@@ -29,12 +47,12 @@ app.use(
   })
 );
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
-app.use(express.json());
+app.use(express.json({ limit: "100kb" }));
 app.use(cookieParser());
 
 const globalLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 100,
+  windowMs: rateLimitWindowMs,
+  max: rateLimitMax,
   standardHeaders: true,
   legacyHeaders: false,
   handler: (_req, res) => {

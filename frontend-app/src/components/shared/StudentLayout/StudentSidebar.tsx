@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
+import { authApi } from "@/api/auth.api";
 import {
   UserCircle,
   LogOut,
@@ -57,7 +58,6 @@ export const StudentSidebar = ({
   const handleLogout = async () => {
     clearLocalSession();
     try {
-      const { authApi } = await import("@/api/auth.api");
       await authApi.logout();
     } catch {
       // Si falla el logout en el server, igual limpiamos localmente

@@ -1,0 +1,58 @@
+name: Quality
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Auditar dependencias de producción
+        run: npm run audit:production
+      - run: npx prisma validate
+      - run: npm run build
+      - run: npm run test:unit
+      - name: Localizar PostgreSQL del runner
+        run: echo "PG_BIN=$(pg_config --bindir)" >> "$GITHUB_ENV"
+      - run: npm run test:integration
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend-app/package-lock.json
+      - run: npm ci
+      - name: Auditar dependencias de producción
+        run: npm audit --omit=dev --audit-level=high
+      - run: npm run lint
+      - run: npm run test:unit
+      - run: npm run build
+      - name: Instalar navegadores
+        run: npx playwright install --with-deps chromium firefox webkit
+      - run: npm run test:e2e:all

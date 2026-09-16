@@ -16,6 +16,17 @@ export const errorHandler = (
   }
 
   if (
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    error.status === 413 &&
+    "type" in error &&
+    error.type === "entity.too.large"
+  ) {
+    return res.status(413).json(errorResponse("El cuerpo de la solicitud es demasiado grande"));
+  }
+
+  if (
     error instanceof SyntaxError &&
     "status" in error &&
     error.status === 400 &&
