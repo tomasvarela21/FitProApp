@@ -26,7 +26,7 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 | 4 | Cobros y suscripciones | Completada | 3/3 |
 | 5 | Historial y migraciones | Completada | 2/2 |
 | 6 | Planificación, entrenamientos y fechas | Completada | 4/4 |
-| 7 | Comunicaciones y procesos programados | Pendiente | 0/2 |
+| 7 | Comunicaciones y procesos programados | En progreso | 1/2 |
 | 8 | Rendimiento, regresiones y entrega | Pendiente | 0/3 |
 
 ## Registro de hallazgos pendientes
@@ -349,8 +349,21 @@ Se documentarán aquí el consumo atómico de tokens, la revocación de sesiones
 
 ## Fase 7 — Comunicaciones y procesos programados
 
-**Estado:** pendiente.  
-**Registro de entregas:** todavía no iniciado.
+**Estado:** en progreso; una entrega completada.
+
+### Entrega 7.1 — Contenido y destinos validados
+
+| Elemento | Evidencia |
+|---|---|
+| Problema | Las plantillas insertaban nombres y planes sin escapar, Resend podía devolver un error sin que se detectara y cualquier cuenta autenticada podía reclamar el endpoint Web Push de otra. Tampoco existían límites de destinos, control de concurrencia ni validación contra endpoints internos. |
+| Reproducción | La línea base falló 6/6 casos: dos de correo y cuatro de suscripciones. Se confirmó HTML ejecutable sin escapar, rechazo del proveedor informado como éxito, aceptación de `localhost`, apropiación entre cuentas, más de diez destinos y cancelación sin identificador. |
+| Cambio | Se centralizó el escape HTML, saneamiento de asuntos, validación de destinatarios, timeout y comprobación de aceptación de Resend. Web Push exige HTTPS y proveedores permitidos, claves válidas y contratos estrictos; revalida destinos heredados antes de enviarlos, limita diez por cuenta con bloqueo transaccional, impide apropiación entre usuarios y entrega con concurrencia máxima cinco y timeout. Los rechazos se contabilizan y los endpoints 404/410 se retiran. |
+| Migración | `20260916123000_secure_web_push_subscriptions` comprueba endpoints duplicados y aborta sin borrarlos antes de crear la restricción única. La prueba poblada verificó conservación ante el aborto y rechazo posterior de duplicados. No se ejecutó sobre una base real. |
+| Pruebas | Línea base: 6/6 fallos esperados. Focal final: correo 5/5; Web Push y migración 9/9. Backend completo: 38/38 unitarias y 127/127 de integración sobre PostgreSQL temporal; build exitoso. Frontend: 27/27 unitarias y build exitoso. E2E: 2/2 en Chromium y WebKit. Prisma formateó, validó y generó el cliente. |
+| Regresión | Se cubrieron HTML ingresado por usuarios, destinatarios inválidos, errores y timeout del proveedor, endpoints inseguros heredados, apropiación entre cuentas, once altas simultáneas, fan-out acotado, respuestas 503 y retiro por 410, además de todas las fases anteriores. |
+| Limitaciones | El timeout de correo corta la espera local, pero el proveedor podría aceptar la solicitud después; la outbox de la entrega 7.2 registrará ese resultado como recuperable sin prometer entrega exactamente una vez. Persisten `QA-002`, `QA-003`, `ENV-001`, `PERF-001`, `PERF-002` y el ensayo con volumen de `MIG-001`. |
+| Nuevos hallazgos | No quedaron hallazgos nuevos abiertos dentro de esta entrega. |
+| Commit | `6460e7c` — `fix(notificaciones): validar contenido y destinos` |
 
 Se documentarán aquí la validación de contenidos y destinos, los timeouts, la outbox, los reintentos y la coordinación de procesos.
 
