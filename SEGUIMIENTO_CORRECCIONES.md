@@ -26,7 +26,7 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 | 4 | Cobros y suscripciones | Completada | 3/3 |
 | 5 | Historial y migraciones | Completada | 2/2 |
 | 6 | Planificación, entrenamientos y fechas | Completada | 4/4 |
-| 7 | Comunicaciones y procesos programados | En progreso | 1/2 |
+| 7 | Comunicaciones y procesos programados | Completada | 2/2 |
 | 8 | Rendimiento, regresiones y entrega | Pendiente | 0/3 |
 
 ## Registro de hallazgos pendientes
@@ -34,7 +34,7 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 | ID | Detectado en | Severidad | Hallazgo | Estado | Fase prevista |
 |---|---|---|---|---|---|
 | `DEP-001` | Fase 1 | Alta | `npm audit --omit=dev` informa 21 vulnerabilidades en el árbol de producción: 13 altas, 5 medias y 3 bajas. Incluye dependencias como Axios, React Router y Vite. | Pendiente de análisis y actualización controlada | 2, 3 y 8 |
-| `QA-001` | Fase 1 | Media | El lint global del frontend informa 19 errores y 15 advertencias preexistentes. | Pendiente; los archivos agregados en la Fase 1 pasan lint dirigido | 2 a 8, según módulo |
+| `QA-001` | Fase 1 | Media | El lint global del frontend informa actualmente 18 errores y 13 advertencias preexistentes; la línea base inicial era de 19 errores y 15 advertencias. | Pendiente; la entrega 7.2 no modificó archivos fuente del frontend | 8 |
 | `ENV-001` | Fase 1 | Media | Firefox de Playwright no inicia en el host por un error de activación `SideBySide` del ensamblado `mozglue`. | Limitación del entorno; Chromium y WebKit operativos | 8 |
 | `PERF-001` | Fase 1 | Media | El bundle principal del frontend alcanza aproximadamente 1,22 MB sin comprimir. | Pendiente de medición y optimización | 8 |
 | `PERF-002` | Fase 1 | Baja | `auth.api.ts` se importa de forma estática y dinámica, por lo que Vite no puede separarlo en otro chunk. | Pendiente | 8 |
@@ -43,6 +43,7 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 | `SEC-001` | Fase 3 | Alta | El archivo local ignorado `backend/.env` contiene credenciales de base de datos con apariencia activa en texto plano. | Pendiente de rotación por el propietario y revisión del almacenamiento local; no se versionó ni expuso su contenido | Acción operativa / 8 |
 | `AUTH-001` | Fase 3 | Media | La política productiva de cookies no puede validarse sin conocer los dominios reales del frontend y la API. | Se conservó `SameSite=Strict`, `Secure` y la ruta existente; verificar antes del despliegue | 8 |
 | `MIG-001` | Fase 5 | Media | Reemplazar claves foráneas por restricciones `RESTRICT` requiere bloqueos de esquema cuya duración dependerá del volumen real. | Ensayar con una copia representativa y definir ventana y timeout antes del despliegue | 8 |
+| `ENV-002` | Fase 7 | Media | La outbox admite temporalmente `JWT_ACCESS_SECRET` como clave de cifrado si no se define una clave independiente. Rotar el secreto JWT con eventos pendientes impediría descifrarlos. | Configurar una clave estable y aleatoria en `OUTBOX_ENCRYPTION_SECRET` antes del despliegue | 8 / acción operativa |
 
 Los hallazgos de dependencias se validarán contra su uso real antes de actualizar paquetes. No se ejecutará `npm audit fix` de forma indiscriminada.
 
@@ -349,7 +350,7 @@ Se documentarán aquí el consumo atómico de tokens, la revocación de sesiones
 
 ## Fase 7 — Comunicaciones y procesos programados
 
-**Estado:** en progreso; una entrega completada.
+**Estado:** completada; dos entregas validadas.
 
 ### Entrega 7.1 — Contenido y destinos validados
 
@@ -365,7 +366,22 @@ Se documentarán aquí el consumo atómico de tokens, la revocación de sesiones
 | Nuevos hallazgos | No quedaron hallazgos nuevos abiertos dentro de esta entrega. |
 | Commit | `6460e7c` — `fix(notificaciones): validar contenido y destinos` |
 
-Se documentarán aquí la validación de contenidos y destinos, los timeouts, la outbox, los reintentos y la coordinación de procesos.
+### Entrega 7.2 — Outbox, reintentos y procesos coordinados
+
+| Elemento | Evidencia |
+|---|---|
+| Problema | Correos y push se disparaban después de confirmar las escrituras de negocio. Un fallo entre persistencia y envío podía perder la notificación; los errores se registraban solo en consola, no existían reintentos verificables y dos instancias del cron podían preparar el mismo trabajo. |
+| Cambio | Se agregó una outbox transaccional para invitaciones, verificaciones, resets, asignaciones, pagos, entrenamientos y alertas programadas. Los payloads se validan y cifran, cada evento tiene una clave idempotente y el worker reclama trabajos mediante actualizaciones condicionales seguras entre procesos. Los fallos usan espera exponencial, los locks vencidos se recuperan y el quinto fallo termina en `DEAD`. |
+| Estados y privacidad | `ACCEPTED` significa que el proveedor aceptó la solicitud, no que el destinatario la recibió. Se conserva el identificador retornado por el proveedor y el payload aceptado se reemplaza para no retener tokens. Los estados `FAILED` y `DEAD` conservan el último error; no se promete entrega exactamente una vez ante un timeout ambiguo del proveedor. |
+| Procesos programados | Las alertas de cobros se preparan dentro de una transacción protegida por advisory lock de PostgreSQL y claves idempotentes. La fecha se calcula en `America/Argentina/Buenos_Aires`, el timeout transaccional es configurable y los rechazos del cron se registran. El servidor deja de aceptar conexiones, espera jobs activos y desconecta Prisma durante el apagado. |
+| Migración | `20260916150000_add_notification_outbox` crea canales, estados, restricciones e índices. Se aplicó desde cero en el entorno completo y sobre un esquema aislado poblado: el registro anterior se conservó, una clave idempotente duplicada y un número negativo de intentos fueron rechazados. No se ejecutó sobre una base real. |
+| Pruebas | Outbox focal: 8/8; migración poblada: 1/1; flujos focales de outbox, cobros y entrenamiento: 26/26. Backend completo final: 38/38 unitarias y 136/136 de integración; build y validación Prisma exitosos. Frontend: 27/27 unitarias y build exitoso. E2E: 2/2 en Chromium y WebKit. |
+| Regresión | Se probaron rollback conjunto de negocio y evento, cifrado, aceptación del proveedor, reintento, agotamiento, recuperación de locks, treinta entregas con tres procesadores concurrentes, ejecución simultánea del cron, día de negocio, errores de infraestructura, pago e idempotencia de sesiones, además de toda la matriz de fases anteriores. |
+| Limitaciones | El lint web conserva 18 errores y 13 advertencias preexistentes de `QA-001`; no hubo cambios fuente en el frontend. Persisten `QA-002`, `QA-003`, `ENV-001`, `PERF-001`, `PERF-002` y `MIG-001`. Debe configurarse `OUTBOX_ENCRYPTION_SECRET` según `ENV-002` antes del despliegue. |
+| Nuevos hallazgos | `ENV-002` registra la necesidad de separar operativamente la clave de la outbox del secreto de autenticación. El primer reclamo mediante SQL crudo no devolvía filas bajo el adaptador de testing; se reemplazó por un reclamo optimista condicionado y quedó cubierto con procesadores simultáneos. |
+| Commit | `edfeca5` — `feat(notificaciones): registrar entregas y reintentos` |
+
+**Cierre de la fase:** el contenido y los destinos se validan, las operaciones críticas registran su notificación en la misma transacción y cada intento queda observable. Los procesos simultáneos respetan idempotencia, recuperan fallos y se detienen de forma ordenada sin afirmar una garantía de entrega que el proveedor no ofrece.
 
 ## Fase 8 — Rendimiento, regresiones y entrega
 
