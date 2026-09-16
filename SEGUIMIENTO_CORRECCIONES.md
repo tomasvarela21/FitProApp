@@ -13,7 +13,7 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 - El archivo `Presupuesto De La Rosa.pdf` permanece fuera de los commits.
 - Publicaciones, despliegues, push y migraciones sobre bases reales requieren autorización independiente.
 
-**Última actualización:** 14 de septiembre de 2026
+**Última actualización:** 16 de septiembre de 2026
 **Commit inicial del plan:** `8a9f261`
 
 ## Estado general
@@ -25,7 +25,7 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 | 3 | Autenticación y aislamiento de sesiones | Completada | 4/4 |
 | 4 | Cobros y suscripciones | Completada | 3/3 |
 | 5 | Historial y migraciones | Completada | 2/2 |
-| 6 | Planificación, entrenamientos y fechas | En progreso | 3/4 |
+| 6 | Planificación, entrenamientos y fechas | Completada | 4/4 |
 | 7 | Comunicaciones y procesos programados | Pendiente | 0/2 |
 | 8 | Rendimiento, regresiones y entrega | Pendiente | 0/3 |
 
@@ -284,7 +284,8 @@ Se documentarán aquí el consumo atómico de tokens, la revocación de sesiones
 
 ## Fase 6 — Planificación, entrenamientos y fechas
 
-**Estado:** en progreso; tres entregas completadas.
+**Estado:** completada; cuatro entregas validadas.
+**Objetivo alcanzado:** las semanas y sus ajustes se conservan, los conflictos de edición son explícitos, los registros de entrenamiento son idempotentes y las fechas de negocio se calculan de forma uniforme en `America/Argentina/Buenos_Aires`.
 
 ### Entrega 6.1 — Semanas y ajustes persistentes
 
@@ -330,7 +331,21 @@ Se documentarán aquí el consumo atómico de tokens, la revocación de sesiones
 | Nuevos hallazgos | No se detectaron defectos funcionales o de seguridad adicionales fuera del alcance de esta entrega. |
 | Commit | `1c47f42` — `fix(entrenamientos): evitar registros duplicados` |
 
-Se documentarán aquí las semanas persistentes, conflictos de versión, idempotencia de sesiones, fechas de negocio y rachas.
+### Entrega 6.4 — Fechas de negocio y rachas completas
+
+| Elemento | Evidencia |
+|---|---|
+| Problema | Los entrenamientos cercanos a medianoche podían atribuirse al día UTC en lugar del día de Buenos Aires. Las rachas consultaban solo 90 sesiones, por lo que una racha legítima superior quedaba truncada. El formulario también reutilizaba su clave idempotente si el contenido cambiaba y regeneraba el instante en cada intento. |
+| Reproducción | La línea base falló 2/2 comprobaciones principales: una sesión alrededor de medianoche UTC quedó en el día incorrecto y una racha de 120 días se redujo a 90. Las pruebas web añadidas reprodujeron el riesgo de reutilizar una clave con otro contenido. |
+| Cambio | Se incorporó `businessDate` como fecha de calendario independiente del instante UTC. El backend convierte fechas con zona explícita al día de negocio, rechaza fechas y horas locales ambiguas y usa el mismo criterio en historial, progreso, resumen y rutina diaria. Las rachas se calculan sobre todos los días distintos disponibles. El frontend usa explícitamente la zona de Buenos Aires y mantiene el mismo instante y clave al reintentar un contenido idéntico; si el contenido cambia, genera una clave nueva. |
+| Migración | `20260914240000_add_workout_business_date` agrega la fecha de negocio, recupera cada valor histórico a partir del instante UTC y la zona acordada, la vuelve obligatoria y crea su índice. La prueba sobre un esquema anterior poblado comprobó la conversión alrededor de medianoche y la conservación de sesiones. No se ejecutó sobre una base real. |
+| Pruebas | Línea base: 2/2 fallos esperados. Backend focalizado: 33/33 unitarias. Fechas, migración, idempotencia e historial: 11/11 de integración. Integración completa: 118/118. Frontend: 27/27 unitarias. Builds de backend y frontend exitosos. Lint dirigido sin hallazgos. E2E: 2/2 en Chromium y WebKit. Prisma formateó, validó y generó el cliente. |
+| Regresión | Se comprobaron medianoche, cambio de mes y año, año bisiesto, varias sesiones en un día, rachas superiores al límite anterior, reintentos idénticos, cambios de contenido y la matriz completa de integración de las fases anteriores. |
+| Limitaciones | Firefox continúa bloqueado por `ENV-001`. La compilación conserva las advertencias `PERF-001` y `PERF-002`; Prisma conserva `QA-003`. La migración deberá ensayarse con volumen representativo según `MIG-001` antes de aplicarse en un entorno real. |
+| Nuevos hallazgos | Durante las pruebas se detectó la reutilización de una clave idempotente cuando cambiaba el contenido; se corrigió dentro de la entrega y quedó cubierta por pruebas. No quedan hallazgos nuevos abiertos de esta entrega. |
+| Commit | `7c61302` — `fix(fechas): unificar días de entrenamiento y rachas` |
+
+**Cierre de la fase:** guardar y recargar semanas conserva fechas, notas y ajustes; las ediciones concurrentes producen HTTP 409 recuperable; reenviar una sesión no la duplica; y el portal, el historial, el progreso y las rachas comparten el mismo día de negocio. Las migraciones se validaron desde cero y sobre esquemas anteriores poblados en PostgreSQL temporal.
 
 ## Fase 7 — Comunicaciones y procesos programados
 
