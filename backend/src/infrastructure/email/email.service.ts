@@ -1,4 +1,5 @@
-import { resend } from "./resend";
+import { escapeHtml, sanitizeEmailSubject } from "../../shared/utils/html";
+import { deliverEmail } from "./email-delivery";
 
 const APP_URL = process.env.APP_URL ?? "http://localhost:5173";
 const APP_NAME = "FitPro";
@@ -11,13 +12,17 @@ export class EmailService {
     trainerName: string;
     invitationToken: string;
   }) {
-    const activationUrl = `${APP_URL}/activate-account?token=${params.invitationToken}`;
+    const activationUrl = escapeHtml(
+      `${APP_URL}/activate-account?token=${encodeURIComponent(params.invitationToken)}`
+    );
+    const firstName = escapeHtml(params.firstName);
+    const trainerName = escapeHtml(params.trainerName);
 
     try {
-      const result = await resend.emails.send({
+      const result = await deliverEmail({
         from: FROM,
         to: params.to,
-        subject: `${params.trainerName} te invitó a ${APP_NAME}`,
+        subject: sanitizeEmailSubject(`${params.trainerName} te invitó a ${APP_NAME}`),
         html: `
         <!DOCTYPE html>
         <html>
@@ -40,10 +45,10 @@ export class EmailService {
                     <tr>
                       <td style="background-color:#ffffff;border-radius:12px;padding:40px;border:1px solid #e4e4e7;">
                         <h1 style="margin:0 0 8px 0;font-size:22px;font-weight:700;color:#18181b;">
-                          ¡Hola, ${params.firstName}!
+                          ¡Hola, ${firstName}!
                         </h1>
                         <p style="margin:0 0 24px 0;font-size:15px;color:#71717a;line-height:1.6;">
-                          <strong style="color:#18181b;">${params.trainerName}</strong> te invitó a unirte a ${APP_NAME}, tu plataforma de entrenamiento personalizado.
+                          <strong style="color:#18181b;">${trainerName}</strong> te invitó a unirte a ${APP_NAME}, tu plataforma de entrenamiento personalizado.
                         </p>
                         <p style="margin:0 0 24px 0;font-size:15px;color:#71717a;line-height:1.6;">
                           Hacé click en el botón para activar tu cuenta y empezar:
@@ -101,10 +106,13 @@ export class EmailService {
   }) {
     console.log(`[EmailService] Enviando verificación de email a ${params.to}`);
 
-    const verificationUrl = `${APP_URL}/verify-email?token=${params.verificationToken}`;
+    const verificationUrl = escapeHtml(
+      `${APP_URL}/verify-email?token=${encodeURIComponent(params.verificationToken)}`
+    );
+    const firstName = escapeHtml(params.firstName);
 
     try {
-      const result = await resend.emails.send({
+      const result = await deliverEmail({
         from: FROM,
         to: params.to,
         subject: `Confirmá tu dirección de email — ${APP_NAME}`,
@@ -130,7 +138,7 @@ export class EmailService {
                     <tr>
                       <td style="background-color:#ffffff;border-radius:12px;padding:40px;border:1px solid #e4e4e7;">
                         <h1 style="margin:0 0 8px 0;font-size:22px;font-weight:700;color:#18181b;">
-                          ¡Hola, ${params.firstName}!
+                          ¡Hola, ${firstName}!
                         </h1>
                         <p style="margin:0 0 24px 0;font-size:15px;color:#71717a;line-height:1.6;">
                           Te damos la bienvenida a <strong style="color:#18181b;">${APP_NAME}</strong>. Para activar tu cuenta de entrenador y comenzar tu prueba gratuita de 14 días, confirmá tu dirección de email haciendo click abajo:
@@ -187,9 +195,13 @@ export class EmailService {
     trainerName: string;
     invitationToken: string;
   }) {
-    const resetUrl = `${APP_URL}/activate-account?token=${params.invitationToken}`;
+    const resetUrl = escapeHtml(
+      `${APP_URL}/activate-account?token=${encodeURIComponent(params.invitationToken)}`
+    );
+    const firstName = escapeHtml(params.firstName);
+    const trainerName = escapeHtml(params.trainerName);
 
-    const result = await resend.emails.send({
+    const result = await deliverEmail({
       from: FROM,
       to: params.to,
       subject: `Reseteo de contraseña — ${APP_NAME}`,
@@ -210,10 +222,10 @@ export class EmailService {
                   <tr>
                     <td style="background-color:#ffffff;border-radius:12px;padding:40px;border:1px solid #e4e4e7;">
                       <h1 style="margin:0 0 8px 0;font-size:22px;font-weight:700;color:#18181b;">
-                        Hola, ${params.firstName} 👋
+                        Hola, ${firstName} 👋
                       </h1>
                       <p style="margin:0 0 24px 0;font-size:15px;color:#71717a;line-height:1.6;">
-                        Tu entrenador <strong style="color:#18181b;">${params.trainerName}</strong> reseteó tu contraseña en ${APP_NAME}.
+                        Tu entrenador <strong style="color:#18181b;">${trainerName}</strong> reseteó tu contraseña en ${APP_NAME}.
                       </p>
                       <p style="margin:0 0 24px 0;font-size:15px;color:#71717a;line-height:1.6;">
                         Hacé click en el botón para crear una nueva contraseña:
@@ -278,12 +290,13 @@ export class EmailService {
       daysUntilDue: number;
     }>;
   }) {
+    const trainerName = escapeHtml(params.trainerName);
     const overdueRows = params.overdueInstallments
       .map(
         (i) => `
         <tr>
-          <td style="padding:10px 12px;border-bottom:1px solid #f0f0f0;">${i.studentName}</td>
-          <td style="padding:10px 12px;border-bottom:1px solid #f0f0f0;">${i.planName} · Cuota ${i.installmentNumber}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #f0f0f0;">${escapeHtml(i.studentName)}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #f0f0f0;">${escapeHtml(i.planName)} · Cuota ${i.installmentNumber}</td>
           <td style="padding:10px 12px;border-bottom:1px solid #f0f0f0;">$${i.amount.toLocaleString("es-AR")}</td>
           <td style="padding:10px 12px;border-bottom:1px solid #f0f0f0;color:#dc2626;">Hace ${i.daysOverdue} día${i.daysOverdue !== 1 ? "s" : ""}</td>
         </tr>
@@ -295,8 +308,8 @@ export class EmailService {
       .map(
         (i) => `
         <tr>
-          <td style="padding:10px 12px;border-bottom:1px solid #f0f0f0;">${i.studentName}</td>
-          <td style="padding:10px 12px;border-bottom:1px solid #f0f0f0;">${i.planName} · Cuota ${i.installmentNumber}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #f0f0f0;">${escapeHtml(i.studentName)}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #f0f0f0;">${escapeHtml(i.planName)} · Cuota ${i.installmentNumber}</td>
           <td style="padding:10px 12px;border-bottom:1px solid #f0f0f0;">$${i.amount.toLocaleString("es-AR")}</td>
           <td style="padding:10px 12px;border-bottom:1px solid #f0f0f0;color:#d97706;">En ${i.daysUntilDue} día${i.daysUntilDue !== 1 ? "s" : ""}</td>
         </tr>
@@ -309,7 +322,7 @@ export class EmailService {
 
     if (!hasOverdue && !hasExpiringSoon) return { sent: false };
 
-    await resend.emails.send({
+    await deliverEmail({
       from: FROM,
       to: params.to,
       subject: `💪 ${APP_NAME} — Resumen de pagos pendientes`,
@@ -332,7 +345,7 @@ export class EmailService {
                     <tr>
                       <td style="background-color:#ffffff;border-radius:12px;padding:32px;border:1px solid #e4e4e7;">
                         <h1 style="margin:0 0 8px 0;font-size:20px;font-weight:700;color:#18181b;">
-                          Hola, ${params.trainerName}
+                          Hola, ${trainerName}
                         </h1>
                         <p style="margin:0 0 24px 0;font-size:14px;color:#71717a;">
                           Acá te dejamos el resumen de pagos pendientes de tus alumnos al día de hoy.
@@ -420,25 +433,28 @@ export class EmailService {
     dueDate: Date;
     daysUntilDue: number;
   }) {
+    const studentName = escapeHtml(params.studentName);
+    const trainerName = escapeHtml(params.trainerName);
+    const planName = escapeHtml(params.planName);
     let subject = "";
     let urgencyText = "";
     let urgencyColor = "#d97706";
 
     if (params.daysUntilDue === 0) {
-      subject = `💳 Tu cuota vence hoy — ${params.planName}`;
+      subject = sanitizeEmailSubject(`💳 Tu cuota vence hoy — ${params.planName}`);
       urgencyText = "Tu cuota vence <strong>hoy</strong>.";
       urgencyColor = "#dc2626";
     } else if (params.daysUntilDue === 1) {
-      subject = `⚠️ Tu cuota vence mañana — ${params.planName}`;
+      subject = sanitizeEmailSubject(`⚠️ Tu cuota vence mañana — ${params.planName}`);
       urgencyText = "Tu cuota vence <strong>mañana</strong>.";
       urgencyColor = "#d97706";
     } else {
-      subject = `📅 Recordatorio de pago — ${params.planName}`;
+      subject = sanitizeEmailSubject(`📅 Recordatorio de pago — ${params.planName}`);
       urgencyText = `Tu cuota vence en <strong>${params.daysUntilDue} días</strong>.`;
       urgencyColor = "#2563eb";
     }
 
-    await resend.emails.send({
+    await deliverEmail({
       from: FROM,
       to: params.to,
       subject,
@@ -461,10 +477,10 @@ export class EmailService {
                     <tr>
                       <td style="background-color:#ffffff;border-radius:12px;padding:40px;border:1px solid #e4e4e7;">
                         <h1 style="margin:0 0 8px 0;font-size:20px;font-weight:700;color:#18181b;">
-                          Hola, ${params.studentName} 👋
+                          Hola, ${studentName} 👋
                         </h1>
                         <p style="margin:0 0 24px 0;font-size:15px;color:#71717a;line-height:1.6;">
-                          Tu entrenador <strong style="color:#18181b;">${params.trainerName}</strong> te recuerda que tenés un pago pendiente.
+                          Tu entrenador <strong style="color:#18181b;">${trainerName}</strong> te recuerda que tenés un pago pendiente.
                         </p>
 
                         <div style="background-color:#fafafa;border:1px solid #e4e4e7;border-radius:10px;padding:20px;margin-bottom:24px;">
@@ -472,7 +488,7 @@ export class EmailService {
                             <tr>
                               <td style="padding:6px 0;">
                                 <span style="font-size:13px;color:#71717a;">Plan</span>
-                                <p style="margin:2px 0 0 0;font-size:15px;font-weight:600;color:#18181b;">${params.planName}</p>
+                                <p style="margin:2px 0 0 0;font-size:15px;font-weight:600;color:#18181b;">${planName}</p>
                               </td>
                             </tr>
                             <tr>
@@ -509,7 +525,7 @@ export class EmailService {
                     <tr>
                       <td align="center" style="padding-top:24px;">
                         <p style="margin:0;font-size:12px;color:#a1a1aa;">
-                          ${APP_NAME} · Este recordatorio fue enviado por tu entrenador ${params.trainerName}.
+                          ${APP_NAME} · Este recordatorio fue enviado por tu entrenador ${trainerName}.
                         </p>
                       </td>
                     </tr>
@@ -536,10 +552,14 @@ export class EmailService {
     dueDate: Date;
     daysOverdue: number;
   }) {
-    await resend.emails.send({
+    const studentName = escapeHtml(params.studentName);
+    const trainerName = escapeHtml(params.trainerName);
+    const planName = escapeHtml(params.planName);
+
+    await deliverEmail({
       from: FROM,
       to: params.to,
-      subject: `❌ Cuota vencida — ${params.planName}`,
+      subject: sanitizeEmailSubject(`❌ Cuota vencida — ${params.planName}`),
       html: `
         <!DOCTYPE html>
         <html>
@@ -559,10 +579,10 @@ export class EmailService {
                     <tr>
                       <td style="background-color:#ffffff;border-radius:12px;padding:40px;border:1px solid #e4e4e7;">
                         <h1 style="margin:0 0 8px 0;font-size:20px;font-weight:700;color:#18181b;">
-                          Hola, ${params.studentName} 👋
+                          Hola, ${studentName} 👋
                         </h1>
                         <p style="margin:0 0 24px 0;font-size:15px;color:#71717a;line-height:1.6;">
-                          Tenés una cuota vencida con tu entrenador <strong style="color:#18181b;">${params.trainerName}</strong>.
+                          Tenés una cuota vencida con tu entrenador <strong style="color:#18181b;">${trainerName}</strong>.
                         </p>
 
                         <div style="background-color:#fafafa;border:1px solid #e4e4e7;border-radius:10px;padding:20px;margin-bottom:24px;">
@@ -570,7 +590,7 @@ export class EmailService {
                             <tr>
                               <td style="padding:6px 0;">
                                 <span style="font-size:13px;color:#71717a;">Plan</span>
-                                <p style="margin:2px 0 0 0;font-size:15px;font-weight:600;color:#18181b;">${params.planName}</p>
+                                <p style="margin:2px 0 0 0;font-size:15px;font-weight:600;color:#18181b;">${planName}</p>
                               </td>
                             </tr>
                             <tr>
@@ -607,7 +627,7 @@ export class EmailService {
                     <tr>
                       <td align="center" style="padding-top:24px;">
                         <p style="margin:0;font-size:12px;color:#a1a1aa;">
-                          ${APP_NAME} · Este recordatorio fue enviado por tu entrenador ${params.trainerName}.
+                          ${APP_NAME} · Este recordatorio fue enviado por tu entrenador ${trainerName}.
                         </p>
                       </td>
                     </tr>
