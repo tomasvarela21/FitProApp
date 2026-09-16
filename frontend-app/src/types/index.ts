@@ -326,6 +326,7 @@ export type StudentWorkoutRoutine = {
 export type StudentWorkoutLog = {
   id: string;
   date: string;
+  businessDate: string;
   notes: string | null;
   createdAt: string;
   routine: { id: string; name: string };

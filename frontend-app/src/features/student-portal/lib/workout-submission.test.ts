@@ -28,4 +28,15 @@ describe("createWorkoutSubmitter", () => {
 
     expect(send.mock.calls.map((call) => call[1])).toEqual(["primera", "segunda"]);
   });
+
+  it("rota la clave si el contenido del formulario cambia después de un fallo", async () => {
+    const send = vi.fn().mockRejectedValue(new Error("fallo de red"));
+    const keys = ["original", "editada"];
+    const submit = createWorkoutSubmitter(send, () => keys.shift()!);
+
+    await expect(submit({ reps: 10 })).rejects.toThrow();
+    await expect(submit({ reps: 12 })).rejects.toThrow();
+
+    expect(send.mock.calls.map((call) => call[1])).toEqual(["original", "editada"]);
+  });
 });

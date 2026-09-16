@@ -1,9 +1,16 @@
-import { Prisma, DayOfWeek } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { createHash } from "node:crypto";
 import { prisma } from "../../infrastructure/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
 import { NotificationService } from "../notifications/notifications.service";
 import { computeStreak } from "../../shared/utils/streak";
+import {
+  businessDateString,
+  businessDateValue,
+  businessDayOfWeek,
+  storedBusinessDateString,
+  workoutInstant,
+} from "../../shared/utils/business-date";
 
 type WorkoutSetInput = {
   setNumber: number;
@@ -24,11 +31,6 @@ type LogWorkoutData = {
   date?: string;
 };
 
-
-function getTodayDayOfWeek(): DayOfWeek {
-  const days: DayOfWeek[] = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
-  return days[new Date().getDay()];
-}
 
 const routineExerciseInclude = {
   exercise: {
@@ -158,7 +160,7 @@ export class WorkoutService {
           include: {
             routineExercises: {
               where: {
-                dayOfWeek: getTodayDayOfWeek(),
+                dayOfWeek: businessDayOfWeek(),
                 archivedAt: null,
                 exercise: { archivedAt: null },
               },
@@ -227,6 +229,8 @@ export class WorkoutService {
     const idempotencyHash = createHash("sha256")
       .update(JSON.stringify(data))
       .digest("hex");
+    const performedAt = workoutInstant(data.date);
+    const performedBusinessDate = businessDateString(performedAt);
     const existingLog = await prisma.workoutLog.findFirst({
       where: { studentId: student.id, idempotencyKey },
       select: { id: true, date: true, idempotencyHash: true },
@@ -273,7 +277,8 @@ export class WorkoutService {
             routineName: studentRoutine.routine.name,
             idempotencyKey,
             idempotencyHash,
-            date: data.date ? new Date(data.date) : new Date(),
+            date: performedAt,
+            businessDate: businessDateValue(performedBusinessDate),
             notes: data.notes,
           },
         });
@@ -357,6 +362,7 @@ export class WorkoutService {
     return logs.map((log) => ({
       id: log.id,
       date: log.date,
+      businessDate: storedBusinessDateString(log.businessDate),
       notes: log.notes,
       createdAt: log.createdAt,
       routine: { id: log.routineId, name: log.routineName },
@@ -383,14 +389,14 @@ export class WorkoutService {
     const student = await this.getStudent(userId);
 
     const logs = await prisma.workoutLog.findMany({
-      where: { studentRoutine: { studentId: student.id } },
-      select: { date: true },
-      orderBy: { date: "desc" },
-      take: 90,
+      where: { studentId: student.id },
+      select: { businessDate: true },
+      orderBy: { businessDate: "desc" },
+      distinct: ["businessDate"],
     });
 
-    const today = todayStr ?? new Date().toISOString().split("T")[0];
-    const datestrs = logs.map((l) => l.date.toISOString().split("T")[0]);
+    const today = todayStr ?? businessDateString(new Date());
+    const datestrs = logs.map((log) => storedBusinessDateString(log.businessDate));
     return computeStreak(datestrs, today);
   }
 
@@ -403,7 +409,7 @@ export class WorkoutService {
         exerciseId,
       },
       include: {
-        workoutLog: { select: { date: true } },
+        workoutLog: { select: { date: true, businessDate: true } },
       },
       orderBy: { workoutLog: { date: "asc" } },
     });
@@ -414,7 +420,7 @@ export class WorkoutService {
     >();
 
     for (const set of workoutSets) {
-      const dateKey = set.workoutLog.date.toISOString().split("T")[0];
+      const dateKey = storedBusinessDateString(set.workoutLog.businessDate);
       if (!sessionMap.has(dateKey)) {
         sessionMap.set(dateKey, { date: set.workoutLog.date, maxWeight: null, rpeValues: [], totalSets: 0 });
       }

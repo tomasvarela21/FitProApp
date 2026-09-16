@@ -500,6 +500,7 @@ model WorkoutLog {
   idempotencyKey   String?
   idempotencyHash  String?
   date             DateTime @default(now())
+  businessDate     DateTime @db.Date
   notes            String?
   createdAt        DateTime @default(now())
 
@@ -510,6 +511,7 @@ model WorkoutLog {
   @@index([studentId])
   @@index([studentRoutineId])
   @@index([date])
+  @@index([businessDate])
   @@index([studentRoutineId, date])
 }
 

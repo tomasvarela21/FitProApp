@@ -70,4 +70,22 @@ describe("computeStreak", () => {
     expect(r.trainedToday).toBe(false);
     expect(r.streak).toBe(2);
   });
+
+  it("atraviesa fin de año y un 29 de febrero", () => {
+    expect(computeStreak(["2025-01-01", "2024-12-31"], "2025-01-01").streak).toBe(2);
+    expect(
+      computeStreak(["2024-03-01", "2024-02-29", "2024-02-28"], "2024-03-01").streak
+    ).toBe(3);
+  });
+
+  it("cuenta más de 90 días y deduplica varias sesiones por día", () => {
+    const dates: string[] = [];
+    let current = "2026-04-30";
+    for (let index = 0; index < 120; index++) {
+      dates.push(current, current);
+      current = yesterday(current);
+    }
+
+    expect(computeStreak(dates, "2026-04-30").streak).toBe(120);
+  });
 });

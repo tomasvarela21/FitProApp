@@ -5,7 +5,6 @@ import { successResponse } from "../../shared/responses/api-response";
 import {
   calendarDateSchema,
   cuidSchema,
-  dateInputSchema,
 } from "../../shared/schemas/request.schema";
 import { WorkoutService } from "./workout.service";
 
@@ -27,7 +26,7 @@ const logWorkoutSchema = z.object({
     )
     .min(1),
   notes: z.string().optional(),
-  date: dateInputSchema.optional(),
+  date: z.union([calendarDateSchema, z.iso.datetime({ offset: true })]).optional(),
 });
 
 const idempotencyKeySchema = z.uuid();

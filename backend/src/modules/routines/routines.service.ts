@@ -2,6 +2,7 @@ import { DayOfWeek, Prisma } from "@prisma/client";
 import { prisma } from "../../infrastructure/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
 import { ResourceAccessService } from "../../shared/services/resource-access.service";
+import { storedBusinessDateString } from "../../shared/utils/business-date";
 import { NotificationService } from "../notifications/notifications.service";
 
 type CreateRoutineData = {
@@ -457,6 +458,7 @@ export class RoutinesService {
     return logs.map((log) => ({
       id: log.id,
       date: log.date,
+      businessDate: storedBusinessDateString(log.businessDate),
       notes: log.notes,
       createdAt: log.createdAt,
       routine: { id: log.routineId, name: log.routineName },

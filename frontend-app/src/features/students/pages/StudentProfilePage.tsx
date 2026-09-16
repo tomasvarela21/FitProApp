@@ -25,6 +25,7 @@ import { NotesInjuriesPanel } from "@/features/students/components/NotesInjuries
 import { formatDistanceToNow, format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { Student } from "@/types";
+import { parseLocalDate, todayLocalString } from "@/lib/utils";
 
 // ─── Sessions Chart ───────────────────────────────────────────────────────────
 
@@ -37,12 +38,13 @@ const MONTH_LABELS: Record<string, string> = {
 const SessionsChart = ({ data }: { data: Record<string, number> }) => {
   const entries = Object.entries(data);
   const max = Math.max(...entries.map(([, v]) => v), 1);
+  const currentMonth = todayLocalString().slice(0, 7);
   return (
     <div className="flex items-end gap-1.5 h-24">
       {entries.map(([key, count]) => {
         const [, month] = key.split("-");
         const heightPct = Math.max((count / max) * 100, count > 0 ? 8 : 4);
-        const isCurrentMonth = key === `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+        const isCurrentMonth = key === currentMonth;
         return (
           <div key={key} className="flex flex-col items-center gap-1 flex-1 min-w-0">
             <div className="w-full flex items-end" style={{ height: "76px" }}>
@@ -65,24 +67,24 @@ const SessionsChart = ({ data }: { data: Record<string, number> }) => {
 const HEATMAP_DAYS = 91; // 13 weeks
 
 function buildHeatmapGrid(sessionsByDay: Record<string, number>) {
-  const today = new Date();
+  const today = new Date(`${todayLocalString()}T00:00:00.000Z`);
   // Start from the Monday of the week 13 weeks ago
   const startDate = new Date(today);
-  startDate.setDate(today.getDate() - (HEATMAP_DAYS - 1));
+  startDate.setUTCDate(today.getUTCDate() - (HEATMAP_DAYS - 1));
   // Align to Monday
-  const dayOfWeek = startDate.getDay(); // 0=Sun, 1=Mon...
+  const dayOfWeek = startDate.getUTCDay(); // 0=Sun, 1=Mon...
   const offset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-  startDate.setDate(startDate.getDate() - offset);
+  startDate.setUTCDate(startDate.getUTCDate() - offset);
 
   const weeks: { date: Date; count: number; isFuture: boolean }[][] = [];
-  let current = new Date(startDate);
+  const current = new Date(startDate);
 
   while (current <= today || weeks.length < 13) {
     const week: { date: Date; count: number; isFuture: boolean }[] = [];
     for (let d = 0; d < 7; d++) {
       const key = current.toISOString().split("T")[0];
-      week.push({ date: new Date(current), count: sessionsByDay[key] ?? 0, isFuture: current > today });
-      current.setDate(current.getDate() + 1);
+      week.push({ date: parseLocalDate(key), count: sessionsByDay[key] ?? 0, isFuture: current > today });
+      current.setUTCDate(current.getUTCDate() + 1);
     }
     weeks.push(week);
     if (weeks.length >= 13) break;

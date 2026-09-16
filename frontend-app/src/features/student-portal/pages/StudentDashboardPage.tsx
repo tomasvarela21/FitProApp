@@ -20,7 +20,7 @@ import {
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { ExerciseTutorialDialog } from "@/features/student-portal/components/ExerciseTutorialDialog";
 import type { TutorialExercise } from "@/features/student-portal/components/ExerciseTutorialDialog";
-import { cn, parseLocalDate, todayLocalString } from "@/lib/utils";
+import { businessDayIndex, cn, parseLocalDate, todayLocalString } from "@/lib/utils";
 import { tenant } from "@/lib/tenant";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -169,6 +169,7 @@ const WorkoutForm = ({ exercises, routineName }: {
   );
   const [success, setSuccess] = useState(false);
   const [tutorialExercise, setTutorialExercise] = useState<TutorialExercise | null>(null);
+  const [workoutInstant] = useState(() => new Date().toISOString());
   const [submitWorkout] = useState(() => createWorkoutSubmitter(studentPortalApi.logWorkout));
 
   const mutation = useMutation({
@@ -231,7 +232,7 @@ const WorkoutForm = ({ exercises, routineName }: {
 
   const handleSubmit = () => {
     const payload: WorkoutLogInput = {
-      date: `${todayLocalString()}T12:00:00`,
+      date: workoutInstant,
       routineExercises: exerciseInputs.map((ex) => ({
         routineExerciseId: ex.routineExerciseId,
         sets: ex.sets.map((s) => {
@@ -433,7 +434,7 @@ const WorkoutForm = ({ exercises, routineName }: {
 // ─── Tab: Entrenar hoy ────────────────────────────────────────────────────────
 
 const TodayTab = () => {
-  const today = DAY_MAP[new Date().getDay()];
+  const today = DAY_MAP[businessDayIndex()];
   const todayStr = todayLocalString();
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
@@ -479,8 +480,8 @@ const TodayTab = () => {
     .filter((re) => re.dayOfWeek === resolvedDay)
     .sort((a, b) => a.order - b.order);
 
-  const alreadyLogged = resolvedDay === today && historyData?.some((log) => log.date.split("T")[0] === todayStr);
-  const todayLog = alreadyLogged ? historyData!.find((log) => log.date.split("T")[0] === todayStr) : undefined;
+  const alreadyLogged = resolvedDay === today && historyData?.some((log) => log.businessDate === todayStr);
+  const todayLog = alreadyLogged ? historyData!.find((log) => log.businessDate === todayStr) : undefined;
   const isRecovering = resolvedDay !== today;
 
   return (

@@ -124,6 +124,7 @@ export async function createTenantFixture(prisma: PrismaClient) {
       routineId: routineA.id,
       routineName: routineA.name,
       date: new Date("2026-01-15T12:00:00.000Z"),
+      businessDate: new Date("2026-01-15T00:00:00.000Z"),
       workoutSets: {
         create: {
           routineExerciseId: routineA.routineExercises[0].id,

@@ -2,6 +2,11 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../../infrastructure/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
 import {
+  businessDateString,
+  businessDateValue,
+  storedBusinessDateString,
+} from "../../shared/utils/business-date";
+import {
   daysUntilExpiry,
   effectiveInstallmentStatus,
   effectiveSubscriptionStatus,
@@ -80,6 +85,7 @@ function mapWorkoutLog(log: WorkoutLogWithSets) {
   return {
     id: log.id,
     date: log.date,
+    businessDate: storedBusinessDateString(log.businessDate),
     notes: log.notes,
     createdAt: log.createdAt,
     routine: { id: log.routineId, name: log.routineName },
@@ -107,7 +113,8 @@ function mapWorkoutLog(log: WorkoutLogWithSets) {
 export class StudentSummaryService {
   static async getStudentSummary(trainerUserId: string, studentId: string) {
     const now = new Date();
-    const eightMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 7, 1);
+    const [businessYear, businessMonth] = businessDateString(now).split("-").map(Number);
+    const eightMonthsAgo = new Date(Date.UTC(businessYear, businessMonth - 8, 1));
 
     const student = await prisma.student.findFirst({
       where: { id: studentId, trainer: { userId: trainerUserId }, deletedAt: null },
@@ -129,9 +136,9 @@ export class StudentSummaryService {
     });
 
     const allRecentLogs = await prisma.workoutLog.findMany({
-      where: { studentRoutine: { studentId }, date: { gte: eightMonthsAgo } },
-      select: { date: true },
-      orderBy: { date: "asc" },
+      where: { studentId, businessDate: { gte: eightMonthsAgo } },
+      select: { businessDate: true },
+      orderBy: { businessDate: "asc" },
     });
 
     const totalSessionsCount = await prisma.workoutLog.count({
@@ -154,21 +161,23 @@ export class StudentSummaryService {
     // Sessions by month
     const sessionsByMonth: Record<string, number> = {};
     for (let i = 7; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const d = new Date(Date.UTC(businessYear, businessMonth - 1 - i, 1));
+      const key = d.toISOString().slice(0, 7);
       sessionsByMonth[key] = 0;
     }
     for (const log of allRecentLogs) {
-      const key = `${log.date.getFullYear()}-${String(log.date.getMonth() + 1).padStart(2, "0")}`;
+      const key = storedBusinessDateString(log.businessDate).slice(0, 7);
       if (key in sessionsByMonth) sessionsByMonth[key]++;
     }
 
     // Sessions by day (last 91 days for the heatmap)
-    const ninetyOneDaysAgo = new Date(now.getTime() - 91 * 24 * 60 * 60 * 1000);
+    const todayBusinessDate = businessDateValue(businessDateString(now));
+    const ninetyOneDaysAgo = new Date(todayBusinessDate);
+    ninetyOneDaysAgo.setUTCDate(ninetyOneDaysAgo.getUTCDate() - 91);
     const sessionsByDay: Record<string, number> = {};
     for (const log of allRecentLogs) {
-      if (log.date < ninetyOneDaysAgo) continue;
-      const key = log.date.toISOString().split("T")[0];
+      if (log.businessDate < ninetyOneDaysAgo) continue;
+      const key = storedBusinessDateString(log.businessDate);
       sessionsByDay[key] = (sessionsByDay[key] ?? 0) + 1;
     }
 
