@@ -45,6 +45,6 @@ router.post("/run-alerts", async (req, res) => {
   if (secret !== process.env.CRON_SECRET) {
     return res.status(401).json({ ok: false, message: "No autorizado" });
   }
-  sendDailyPaymentAlerts().catch(console.error);
-  return res.status(200).json({ ok: true, message: "Job iniciado" });
+  const result = await sendDailyPaymentAlerts();
+  return res.status(200).json({ ok: true, message: "Alertas preparadas", data: result });
 });

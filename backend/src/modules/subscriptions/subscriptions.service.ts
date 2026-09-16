@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../infrastructure/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
-import { NotificationService } from "../notifications/notifications.service";
+import { OutboxService } from "../../infrastructure/outbox/outbox.service";
 import type {
   CreateSubscriptionInput,
   PayInstallmentInput,
@@ -216,57 +216,56 @@ export class SubscriptionsService {
     if (!trainer) throw new AppError("Entrenador no encontrado", 404);
 
     const paidAt = data.paidAt ? new Date(data.paidAt) : new Date();
-    const claimed = await prisma.installment.updateMany({
-      where: {
-        id: installmentId,
-        trainerId: trainer.id,
-        status: { in: ["PENDING", "OVERDUE"] },
-        subscription: {
-          status: "ACTIVE",
-          student: { deletedAt: null },
-        },
-      },
-      data: {
-        status: "PAID",
-        paidAt,
-        notes: data.notes,
-      },
-    });
-
-    if (claimed.count !== 1) {
-      const inaccessible = await prisma.installment.findFirst({
+    const updated = await prisma.$transaction(async (tx) => {
+      const claimed = await tx.installment.updateMany({
         where: {
           id: installmentId,
           trainerId: trainer.id,
-          subscription: { student: { deletedAt: null } },
-        },
-        select: { id: true },
-      });
-      if (!inaccessible) throw new AppError("Cuota no encontrada", 404);
-      throw new AppError("La cuota cambió de estado durante la operación", 409);
-    }
-
-    const updated = await prisma.installment.findUniqueOrThrow({
-      where: { id: installmentId },
-      include: {
-        subscription: {
-          include: {
-            student: true,
+          status: { in: ["PENDING", "OVERDUE"] },
+          subscription: {
+            status: "ACTIVE",
+            student: { deletedAt: null },
           },
         },
-      },
-    });
-
-    // Notify student
-    if (updated.subscription.student.userId) {
-      NotificationService.sendNotification(updated.subscription.student.userId, {
-        title: "Pago registrado 💳",
-        body: `Tu entrenador registró el pago de la cuota Nº ${updated.number} de ${updated.subscription.planName}.`,
-        data: { type: "PAYMENT_RECORDED", installmentId: updated.id },
-      }).catch((err) => {
-        console.error("[SubscriptionsService] Error enviando notificación push:", err);
+        data: {
+          status: "PAID",
+          paidAt,
+          notes: data.notes,
+        },
       });
-    }
+
+      if (claimed.count !== 1) {
+        const inaccessible = await tx.installment.findFirst({
+          where: {
+            id: installmentId,
+            trainerId: trainer.id,
+            subscription: { student: { deletedAt: null } },
+          },
+          select: { id: true },
+        });
+        if (!inaccessible) throw new AppError("Cuota no encontrada", 404);
+        throw new AppError("La cuota cambió de estado durante la operación", 409);
+      }
+
+      const installment = await tx.installment.findUniqueOrThrow({
+        where: { id: installmentId },
+        include: { subscription: { include: { student: true } } },
+      });
+      if (installment.subscription.student.userId) {
+        await OutboxService.enqueue(
+          `payment-recorded:${installment.id}`,
+          {
+            channel: "PUSH",
+            userId: installment.subscription.student.userId,
+            title: "Pago registrado 💳",
+            body: `Tu entrenador registró el pago de la cuota Nº ${installment.number} de ${installment.subscription.planName}.`,
+            data: { type: "PAYMENT_RECORDED", installmentId: installment.id },
+          },
+          tx
+        );
+      }
+      return installment;
+    });
 
     return {
       id: updated.id,

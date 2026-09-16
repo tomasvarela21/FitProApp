@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { createHash } from "node:crypto";
 import { prisma } from "../../infrastructure/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
-import { NotificationService } from "../notifications/notifications.service";
+import { OutboxService } from "../../infrastructure/outbox/outbox.service";
 import { computeStreak } from "../../shared/utils/streak";
 import {
   businessDateString,
@@ -249,7 +249,6 @@ export class WorkoutService {
     if (!studentRoutine) throw new AppError("No tienes una rutina activa asignada", 404);
 
     let workoutLog: { id: string; date: Date };
-    let created = false;
     try {
       workoutLog = await prisma.$transaction(async (tx) => {
         const routineExerciseIds = [
@@ -309,9 +308,22 @@ export class WorkoutService {
           });
         }
 
+        if (student.trainer?.user) {
+          await OutboxService.enqueue(
+            `workout-completed:${log.id}`,
+            {
+              channel: "PUSH",
+              userId: student.trainer.userId,
+              title: "Rutina completada 🏃‍♂️",
+              body: `${student.firstName} ${student.lastName} completó su entrenamiento de hoy.`,
+              data: { type: "ROUTINE_COMPLETED", studentId: student.id },
+            },
+            tx
+          );
+        }
+
         return log;
       });
-      created = true;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
         const replay = await prisma.workoutLog.findFirst({
@@ -329,17 +341,6 @@ export class WorkoutService {
       } else {
         throw error;
       }
-    }
-
-    // Notify trainer
-    if (created && student.trainer?.user) {
-      NotificationService.sendNotification(student.trainer.userId, {
-        title: "Rutina completada 🏃‍♂️",
-        body: `${student.firstName} ${student.lastName} completó su entrenamiento de hoy.`,
-        data: { type: "ROUTINE_COMPLETED", studentId: student.id },
-      }).catch((err) => {
-        console.error("[WorkoutService] Error enviando notificación push:", err);
-      });
     }
 
     return { id: workoutLog.id, date: workoutLog.date };

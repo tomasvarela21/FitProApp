@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../../infrastructure/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
 import { generateRawToken, hashToken } from "../../shared/utils/token";
-import { EmailService } from "../../infrastructure/email/email.service";
+import { OutboxService } from "../../infrastructure/outbox/outbox.service";
 import { StudentsMapper } from "./students.mapper";
 import {
   CreateStudentInput,
@@ -66,17 +66,22 @@ export class StudentsService {
         },
       });
 
-      return { student, invitation };
-    });
+      await OutboxService.enqueue(
+        `student-invitation:${invitation.id}`,
+        {
+          channel: "EMAIL",
+          kind: "INVITATION",
+          params: {
+            to: data.email,
+            firstName: data.firstName,
+            trainerName: `${trainer.firstName} ${trainer.lastName}`,
+            invitationToken: rawToken,
+          },
+        },
+        tx
+      );
 
-    // Enviar email de invitación (no bloqueante)
-    EmailService.sendInvitation({
-      to: data.email,
-      firstName: data.firstName,
-      trainerName: `${trainer.firstName} ${trainer.lastName}`,
-      invitationToken: rawToken,
-    }).catch((err) => {
-      console.error("[StudentsService] Error enviando email de invitación:", err);
+      return { student, invitation };
     });
 
     return {
@@ -294,8 +299,7 @@ export class StudentsService {
         },
       });
 
-      // Crear nueva invitación
-      await tx.accountInvitation.create({
+      const invitation = await tx.accountInvitation.create({
         data: {
           studentId: student.id,
           email: student.email,
@@ -304,16 +308,21 @@ export class StudentsService {
           createdByTrainerId: trainer.id,
         },
       });
-    });
 
-    // Enviar email (no bloqueante)
-    EmailService.sendInvitation({
-      to: student.email,
-      firstName: student.firstName,
-      trainerName: `${trainer.firstName} ${trainer.lastName}`,
-      invitationToken: rawToken,
-    }).catch((err) => {
-      console.error("[StudentsService] Error reenviando invitación:", err);
+      await OutboxService.enqueue(
+        `student-invitation:${invitation.id}`,
+        {
+          channel: "EMAIL",
+          kind: "INVITATION",
+          params: {
+            to: student.email,
+            firstName: student.firstName,
+            trainerName: `${trainer.firstName} ${trainer.lastName}`,
+            invitationToken: rawToken,
+          },
+        },
+        tx
+      );
     });
 
     return {
@@ -491,7 +500,7 @@ export class StudentsService {
         where: { studentId, usedAt: null },
         data: { usedAt: resetAt },
       });
-      await tx.accountInvitation.create({
+      const invitation = await tx.accountInvitation.create({
         data: {
           studentId,
           email: student.email,
@@ -500,16 +509,21 @@ export class StudentsService {
           createdByTrainerId: trainer.id,
         },
       });
-    });
 
-    // Enviar email
-    EmailService.sendPasswordReset({
-      to: student.email,
-      firstName: student.firstName,
-      trainerName: `${trainer.firstName} ${trainer.lastName}`,
-      invitationToken: rawToken,
-    }).catch((err) => {
-      console.error("[StudentsService] Error enviando reset:", err);
+      await OutboxService.enqueue(
+        `student-password-reset:${invitation.id}`,
+        {
+          channel: "EMAIL",
+          kind: "PASSWORD_RESET",
+          params: {
+            to: student.email,
+            firstName: student.firstName,
+            trainerName: `${trainer.firstName} ${trainer.lastName}`,
+            invitationToken: rawToken,
+          },
+        },
+        tx
+      );
     });
 
     return {

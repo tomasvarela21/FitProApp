@@ -3,7 +3,7 @@ import { prisma } from "../../infrastructure/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
 import { ResourceAccessService } from "../../shared/services/resource-access.service";
 import { storedBusinessDateString } from "../../shared/utils/business-date";
-import { NotificationService } from "../notifications/notifications.service";
+import { OutboxService } from "../../infrastructure/outbox/outbox.service";
 
 type CreateRoutineData = {
   name: string;
@@ -366,7 +366,7 @@ export class RoutinesService {
           data: { isActive: false },
         });
 
-        return tx.studentRoutine.create({
+        const assignment = await tx.studentRoutine.create({
           data: {
             studentId,
             routineId,
@@ -378,6 +378,21 @@ export class RoutinesService {
             routine: { include: routineInclude },
           },
         });
+
+        if (student.userId) {
+          await OutboxService.enqueue(
+            `routine-assigned:${assignment.id}`,
+            {
+              channel: "PUSH",
+              userId: student.userId,
+              title: "Nueva rutina asignada 🏋️",
+              body: `Tu entrenador te asignó la rutina: ${routine.name}`,
+              data: { type: "ROUTINE_ASSIGNED", routineId: routine.id },
+            },
+            tx
+          );
+        }
+        return assignment;
       });
     } catch (error) {
       if (
@@ -387,16 +402,6 @@ export class RoutinesService {
         throw new AppError("La rutina activa cambió durante la asignación", 409);
       }
       throw error;
-    }
-
-    if (student.userId) {
-      NotificationService.sendNotification(student.userId, {
-        title: "Nueva rutina asignada 🏋️",
-        body: `Tu entrenador te asignó la rutina: ${routine.name}`,
-        data: { type: "ROUTINE_ASSIGNED", routineId: routine.id },
-      }).catch((err) => {
-        console.error("[RoutinesService] Error enviando notificación push:", err);
-      });
     }
 
     return {

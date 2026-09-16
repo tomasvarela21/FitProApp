@@ -21,4 +21,9 @@ export function validateEnv(): void {
   if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
     console.warn("[ENV] VAPID_PUBLIC_KEY/PRIVATE_KEY no configuradas — push notifications deshabilitadas");
   }
+  if (!process.env.OUTBOX_ENCRYPTION_SECRET) {
+    console.warn(
+      "[ENV] OUTBOX_ENCRYPTION_SECRET no configurada — la outbox usa temporalmente JWT_ACCESS_SECRET"
+    );
+  }
 }

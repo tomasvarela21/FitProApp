@@ -92,7 +92,7 @@ export class EmailService {
       `,
       });
       console.log(`[EmailService] ✅ Email enviado:`, result);
-      return { sent: true };
+      return { providerMessageId: result.data!.id };
     } catch (err) {
       console.error(`[EmailService] ❌ Error enviando email:`, err);
       throw err;
@@ -182,7 +182,7 @@ export class EmailService {
       `,
       });
       console.log(`[EmailService] ✅ Email enviado:`, result);
-      return { sent: true };
+      return { providerMessageId: result.data!.id };
     } catch (err) {
       console.error(`[EmailService] ❌ Error enviando email:`, err);
       throw err;
@@ -267,7 +267,7 @@ export class EmailService {
     `,
     });
     console.log(`[EmailService] Password reset enviado a ${params.to}:`, result);
-    return { sent: true };
+    return { providerMessageId: result.data!.id };
   }
 
   static async sendPaymentAlerts(params: {
@@ -320,9 +320,9 @@ export class EmailService {
     const hasOverdue = params.overdueInstallments.length > 0;
     const hasExpiringSoon = params.expiringSoonInstallments.length > 0;
 
-    if (!hasOverdue && !hasExpiringSoon) return { sent: false };
+    if (!hasOverdue && !hasExpiringSoon) return { providerMessageId: "skipped" };
 
-    await deliverEmail({
+    const result = await deliverEmail({
       from: FROM,
       to: params.to,
       subject: `💪 ${APP_NAME} — Resumen de pagos pendientes`,
@@ -420,7 +420,7 @@ export class EmailService {
       `,
     });
 
-    return { sent: true };
+    return { providerMessageId: result.data!.id };
   }
 
   static async sendInstallmentReminder(params: {
@@ -454,7 +454,7 @@ export class EmailService {
       urgencyColor = "#2563eb";
     }
 
-    await deliverEmail({
+    const result = await deliverEmail({
       from: FROM,
       to: params.to,
       subject,
@@ -539,7 +539,7 @@ export class EmailService {
       `,
     });
 
-    return { sent: true };
+    return { providerMessageId: result.data!.id };
   }
 
   static async sendOverdueReminder(params: {
@@ -556,7 +556,7 @@ export class EmailService {
     const trainerName = escapeHtml(params.trainerName);
     const planName = escapeHtml(params.planName);
 
-    await deliverEmail({
+    const result = await deliverEmail({
       from: FROM,
       to: params.to,
       subject: sanitizeEmailSubject(`❌ Cuota vencida — ${params.planName}`),
@@ -641,6 +641,6 @@ export class EmailService {
       `,
     });
 
-    return { sent: true };
+    return { providerMessageId: result.data!.id };
   }
 }

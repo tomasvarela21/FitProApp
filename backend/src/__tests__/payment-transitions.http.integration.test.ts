@@ -1,8 +1,7 @@
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import request from "supertest";
 import { app } from "../app";
 import { prisma } from "../infrastructure/db/prisma";
-import { NotificationService } from "../modules/notifications/notifications.service";
 import { signAccessToken } from "../shared/utils/jwt";
 import { createTenantFixture } from "./support/tenant.fixture";
 import { resetTestDatabase } from "./support/test-database";
@@ -47,10 +46,6 @@ const cancel = () =>
 
 describe("transiciones de cobros", () => {
   it("registra una sola vez dos pagos simultáneos", async () => {
-    const notification = vi
-      .spyOn(NotificationService, "sendNotification")
-      .mockResolvedValue({ sent: 0 });
-
     const responses = await Promise.all([pay("solicitud A"), pay("solicitud B")]);
 
     expect(responses.map((response) => response.status).sort()).toEqual([200, 409]);
@@ -61,7 +56,11 @@ describe("transiciones de cobros", () => {
     expect(installment.status).toBe("PAID");
     expect(["solicitud A", "solicitud B"]).toContain(installment.notes);
     expect(installment.paidAt).not.toBeNull();
-    expect(notification).toHaveBeenCalledTimes(1);
+    expect(
+      await prisma.notificationOutbox.count({
+        where: { idempotencyKey: `payment-recorded:${installmentId}` },
+      })
+    ).toBe(1);
   });
 
   it("permite una sola cancelación simultánea", async () => {
@@ -132,8 +131,6 @@ describe("transiciones de cobros", () => {
   });
 
   it("mantiene una transición válida si pago y cancelación coinciden", async () => {
-    vi.spyOn(NotificationService, "sendNotification").mockResolvedValue({ sent: 0 });
-
     const [paymentResponse, cancellationResponse] = await Promise.all([pay(), cancel()]);
     const [subscription, installment] = await Promise.all([
       prisma.subscription.findUniqueOrThrow({ where: { id: fixture.subscription.id } }),
@@ -153,8 +150,6 @@ describe("transiciones de cobros", () => {
   });
 
   it("permite consultar mientras se registra un pago sin escrituras de lectura", async () => {
-    vi.spyOn(NotificationService, "sendNotification").mockResolvedValue({ sent: 0 });
-
     const [readResponse, paymentResponse] = await Promise.all([
       request(app)
         .get(`/api/subscriptions/student/${fixture.studentA.id}`)

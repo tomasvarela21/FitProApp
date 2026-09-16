@@ -3,7 +3,7 @@ import { AppError } from "../../shared/errors/app-error";
 import { comparePassword, hashPassword } from "../../shared/utils/hash";
 import { signAccessToken } from "../../shared/utils/jwt";
 import { generateRawToken, hashToken } from "../../shared/utils/token";
-import { EmailService } from "../../infrastructure/email/email.service";
+import { OutboxService } from "../../infrastructure/outbox/outbox.service";
 import { CreateTrainerInput } from "../trainers/trainers.schema";
 import { AuthMapper } from "./auth.mapper";
 import {
@@ -329,16 +329,21 @@ export class AuthService {
         },
       });
 
-      return { user: newUser, verification };
-    });
+      await OutboxService.enqueue(
+        `trainer-verification:${verification.id}`,
+        {
+          channel: "EMAIL",
+          kind: "TRAINER_VERIFICATION",
+          params: {
+            to: newUser.email,
+            firstName: data.firstName,
+            verificationToken: rawToken,
+          },
+        },
+        tx
+      );
 
-    // Enviar email de verificación (no bloqueante)
-    EmailService.sendTrainerVerification({
-      to: user.email,
-      firstName: data.firstName,
-      verificationToken: rawToken,
-    }).catch((err) => {
-      console.error("[AuthService] Error enviando email de verificación:", err);
+      return { user: newUser, verification };
     });
 
     return {
