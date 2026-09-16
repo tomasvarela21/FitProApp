@@ -156,6 +156,8 @@ model Student {
   conversations      Conversation[]
 
   @@index([trainerId])
+  @@index([trainerId, deletedAt, status, createdAt])
+  @@index([trainerId, gymId])
   @@index([email])
 }
 
@@ -272,6 +274,7 @@ model Subscription {
   @@index([studentId])
   @@index([planId])
   @@index([trainerId])
+  @@index([trainerId, status, endDate])
   @@index([endDate])
 }
 
@@ -304,6 +307,8 @@ model Installment {
   trainer      Trainer      @relation(fields: [trainerId], references: [id], onDelete: Cascade)
 
   @@index([subscriptionId])
+  @@index([subscriptionId, status, dueDate])
+  @@index([subscriptionId, status, number])
   @@index([trainerId])
   @@index([dueDate])
   @@index([trainerId, status, dueDate])

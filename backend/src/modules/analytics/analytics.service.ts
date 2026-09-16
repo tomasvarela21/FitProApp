@@ -1,8 +1,29 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../../infrastructure/db/prisma";
-import {
-  effectiveInstallmentStatus,
-  effectiveSubscriptionStatus,
-} from "../subscriptions/billing-status";
+
+type RevenueRow = {
+  totalCollected: Prisma.Decimal | null;
+  totalPending: Prisma.Decimal | null;
+  totalOverdue: Prisma.Decimal | null;
+  month: string | null;
+  monthlyAmount: Prisma.Decimal | null;
+};
+
+type StudentStatusRow = {
+  status: string | null;
+  statusCount: number;
+  total: number;
+  newLast30Days: number;
+  unassignedToGym: number;
+};
+
+type SubscriptionStatusRow = { status: string; statusCount: number; total: number };
+type GymSummaryRow = {
+  id: string;
+  name: string;
+  studentCount: number;
+  revenue: Prisma.Decimal;
+};
 
 export class AnalyticsService {
   static async getBusinessAnalytics(trainerUserId: string) {
@@ -11,32 +32,95 @@ export class AnalyticsService {
       select: { id: true },
     });
     const trainerId = trainer.id;
+    const now = new Date();
+    const revenueCutoff = new Date(now);
+    revenueCutoff.setMonth(revenueCutoff.getMonth() - 13);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    const [
-      installments,
-      students,
-      subscriptions,
-      plans,
-      gyms,
-    ] = await Promise.all([
-      prisma.installment.findMany({
-        where: {
-          trainerId,
-          OR: [
-            { paidAt: { gte: new Date(new Date().setMonth(new Date().getMonth() - 13)) } },
-            { paidAt: null, dueDate: { gte: new Date(new Date().setMonth(new Date().getMonth() - 13)) } },
-          ],
-        },
-        select: { amount: true, status: true, paidAt: true, dueDate: true, subscriptionId: true },
-      }),
-      prisma.student.findMany({
-        where: { trainerId, deletedAt: null },
-        select: { id: true, status: true, createdAt: true, gymId: true },
-      }),
-      prisma.subscription.findMany({
-        where: { trainerId },
-        select: { id: true, status: true, studentId: true, endDate: true },
-      }),
+    const [revenueRows, studentRows, subscriptionRows, plans, gyms] = await Promise.all([
+      prisma.$queryRaw<RevenueRow[]>(Prisma.sql`
+        WITH eligible_installments AS MATERIALIZED (
+          SELECT installment.*
+          FROM "Installment" installment
+          WHERE installment."trainerId" = ${trainerId}
+            AND (
+              installment."paidAt" >= ${revenueCutoff}
+              OR (installment."paidAt" IS NULL AND installment."dueDate" >= ${revenueCutoff})
+            )
+        ),
+        totals AS (
+          SELECT
+            COALESCE(SUM("amount") FILTER (WHERE "status" = 'PAID'), 0) AS "totalCollected",
+            COALESCE(SUM("amount") FILTER (
+              WHERE "status" = 'PENDING' AND "dueDate" >= ${now}
+            ), 0) AS "totalPending",
+            COALESCE(SUM("amount") FILTER (
+              WHERE "status" = 'OVERDUE'
+                OR ("status" = 'PENDING' AND "dueDate" < ${now})
+            ), 0) AS "totalOverdue"
+          FROM eligible_installments
+        ),
+        monthly AS (
+          SELECT
+            TO_CHAR(COALESCE("paidAt", "dueDate") AT TIME ZONE 'UTC', 'YYYY-MM') AS month,
+            SUM("amount") AS amount
+          FROM eligible_installments
+          WHERE "status" = 'PAID'
+          GROUP BY month
+        )
+        SELECT
+          totals."totalCollected",
+          totals."totalPending",
+          totals."totalOverdue",
+          monthly.month,
+          monthly.amount AS "monthlyAmount"
+        FROM totals
+        LEFT JOIN monthly ON true
+        ORDER BY monthly.month ASC
+      `),
+      prisma.$queryRaw<StudentStatusRow[]>(Prisma.sql`
+        WITH eligible_students AS MATERIALIZED (
+          SELECT student."status", student."createdAt", student."gymId"
+          FROM "Student" student
+          WHERE student."trainerId" = ${trainerId} AND student."deletedAt" IS NULL
+        ),
+        totals AS (
+          SELECT
+            COUNT(*)::integer AS total,
+            COUNT(*) FILTER (WHERE "createdAt" >= ${thirtyDaysAgo})::integer AS "newLast30Days",
+            COUNT(*) FILTER (WHERE "gymId" IS NULL)::integer AS "unassignedToGym"
+          FROM eligible_students
+        ),
+        statuses AS (
+          SELECT "status"::text AS status, COUNT(*)::integer AS count
+          FROM eligible_students
+          GROUP BY "status"
+        )
+        SELECT
+          statuses.status,
+          COALESCE(statuses.count, 0)::integer AS "statusCount",
+          totals.total,
+          totals."newLast30Days",
+          totals."unassignedToGym"
+        FROM totals
+        LEFT JOIN statuses ON true
+      `),
+      prisma.$queryRaw<SubscriptionStatusRow[]>(Prisma.sql`
+        WITH classified AS (
+          SELECT CASE
+            WHEN subscription."status" = 'ACTIVE' AND subscription."endDate" < ${now}
+              THEN 'EXPIRED'
+            ELSE subscription."status"::text
+          END AS status
+          FROM "Subscription" subscription
+          WHERE subscription."trainerId" = ${trainerId}
+        ),
+        totals AS (SELECT COUNT(*)::integer AS total FROM classified)
+        SELECT classified.status, COUNT(*)::integer AS "statusCount", totals.total
+        FROM classified
+        CROSS JOIN totals
+        GROUP BY classified.status, totals.total
+      `),
       prisma.plan.findMany({
         where: { trainerId },
         select: {
@@ -48,138 +132,117 @@ export class AnalyticsService {
           _count: { select: { subscriptions: true } },
         },
       }),
-      prisma.gym.findMany({
-        where: { trainerId },
-        select: { id: true, name: true },
-      }),
+      prisma.$queryRaw<GymSummaryRow[]>(Prisma.sql`
+        WITH student_counts AS (
+          SELECT student."gymId", COUNT(*)::integer AS count
+          FROM "Student" student
+          WHERE student."trainerId" = ${trainerId}
+            AND student."deletedAt" IS NULL
+            AND student."gymId" IS NOT NULL
+          GROUP BY student."gymId"
+        ),
+        gym_revenue AS (
+          SELECT student."gymId", SUM(installment."amount") AS amount
+          FROM "Installment" installment
+          INNER JOIN "Subscription" subscription ON subscription."id" = installment."subscriptionId"
+          INNER JOIN "Student" student ON student."id" = subscription."studentId"
+          WHERE installment."trainerId" = ${trainerId}
+            AND installment."status" = 'PAID'
+            AND (
+              installment."paidAt" >= ${revenueCutoff}
+              OR (installment."paidAt" IS NULL AND installment."dueDate" >= ${revenueCutoff})
+            )
+            AND student."deletedAt" IS NULL
+            AND student."gymId" IS NOT NULL
+          GROUP BY student."gymId"
+        )
+        SELECT
+          gym."id",
+          gym."name",
+          COALESCE(student_counts.count, 0)::integer AS "studentCount",
+          COALESCE(gym_revenue.amount, 0) AS revenue
+        FROM "Gym" gym
+        LEFT JOIN student_counts ON student_counts."gymId" = gym."id"
+        LEFT JOIN gym_revenue ON gym_revenue."gymId" = gym."id"
+        WHERE gym."trainerId" = ${trainerId}
+        ORDER BY gym."name" ASC, gym."id" ASC
+      `),
     ]);
 
-    // ── Revenue totals ───────────────────────────────────────────────────────
-    let totalCollected = 0;
-    let totalPending = 0;
-    let totalOverdue = 0;
-
-    const monthlyMap: Record<string, number> = {};
-
-    const now = new Date();
-    for (const inst of installments) {
-      const amount = Number(inst.amount);
-      const status = effectiveInstallmentStatus(inst.status, inst.dueDate, now);
-      if (status === "PAID") {
-        totalCollected += amount;
-        // Group by paid month
-        const key = inst.paidAt
-          ? inst.paidAt.toISOString().slice(0, 7)
-          : inst.dueDate.toISOString().slice(0, 7);
-        monthlyMap[key] = (monthlyMap[key] ?? 0) + amount;
-      } else if (status === "OVERDUE") {
-        totalOverdue += amount;
-      } else if (status === "PENDING") {
-        totalPending += amount;
-      }
-    }
-
-    // Last 12 months — fill gaps with 0
+    const revenueTotals = revenueRows[0] ?? {
+      totalCollected: new Prisma.Decimal(0),
+      totalPending: new Prisma.Decimal(0),
+      totalOverdue: new Prisma.Decimal(0),
+      month: null,
+      monthlyAmount: null,
+    };
+    const monthlyMap = new Map(
+      revenueRows
+        .filter((row) => row.month !== null)
+        .map((row) => [row.month!, Number(row.monthlyAmount ?? 0)])
+    );
     const monthlyRevenue: { month: string; amount: number }[] = [];
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      monthlyRevenue.push({ month: key, amount: Math.round((monthlyMap[key] ?? 0) * 100) / 100 });
+    for (let index = 11; index >= 0; index -= 1) {
+      const date = new Date(now.getFullYear(), now.getMonth() - index, 1);
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      monthlyRevenue.push({ month: key, amount: Math.round((monthlyMap.get(key) ?? 0) * 100) / 100 });
     }
 
-    // ── Students by status ───────────────────────────────────────────────────
     const studentsByStatus: Record<string, number> = {
       ACTIVE: 0,
       INVITED: 0,
       PAUSED: 0,
       INACTIVE: 0,
     };
-    for (const s of students) {
-      studentsByStatus[s.status] = (studentsByStatus[s.status] ?? 0) + 1;
+    for (const row of studentRows) {
+      if (row.status) studentsByStatus[row.status] = row.statusCount;
     }
+    const studentTotals = studentRows[0] ?? {
+      status: null,
+      statusCount: 0,
+      total: 0,
+      newLast30Days: 0,
+      unassignedToGym: 0,
+    };
 
-    // New students last 30 days
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const newStudentsLast30 = students.filter(
-      (s) => s.createdAt >= thirtyDaysAgo
-    ).length;
-
-    // ── Subscriptions by status ──────────────────────────────────────────────
     const subscriptionsByStatus: Record<string, number> = {
       ACTIVE: 0,
       EXPIRED: 0,
       CANCELLED: 0,
     };
-    for (const sub of subscriptions) {
-      const status = effectiveSubscriptionStatus(sub.status, sub.endDate, now);
-      subscriptionsByStatus[status] = (subscriptionsByStatus[status] ?? 0) + 1;
-    }
-
-    // ── Plans summary ────────────────────────────────────────────────────────
-    const plansSummary = plans.map((p) => ({
-      id: p.id,
-      name: p.name,
-      price: Number(p.price),
-      duration: p.duration,
-      isActive: p.isActive,
-      subscriberCount: p._count.subscriptions,
-    }));
-
-    // ── Gyms analytics ───────────────────────────────────────────────────────
-    // Map studentId → gymId for revenue lookup
-    const studentGymMap = new Map<string, string | null>(
-      students.map((s) => [s.id, s.gymId ?? null])
-    );
-
-    // Revenue per gym — sin query extra: cruzar installments → subscription → student → gym
-    const subToStudent = new Map<string, string>(
-      subscriptions.map((s) => [s.id, s.studentId])
-    );
-
-    const gymRevenue = new Map<string, number>();
-    for (const inst of installments) {
-      if (inst.status !== "PAID") continue;
-      const studentId = subToStudent.get(inst.subscriptionId);
-      if (!studentId) continue;
-      const gymId = studentGymMap.get(studentId) ?? null;
-      if (!gymId) continue;
-      gymRevenue.set(gymId, (gymRevenue.get(gymId) ?? 0) + Number(inst.amount));
-    }
-
-    const gymStudentCount = new Map<string, number>();
-    for (const s of students) {
-      if (!s.gymId) continue;
-      gymStudentCount.set(s.gymId, (gymStudentCount.get(s.gymId) ?? 0) + 1);
-    }
-
-    const gymsSummary = gyms.map((g) => ({
-      id: g.id,
-      name: g.name,
-      studentCount: gymStudentCount.get(g.id) ?? 0,
-      revenue: Math.round((gymRevenue.get(g.id) ?? 0) * 100) / 100,
-    }));
-
-    const unassignedStudents = students.filter((s) => !s.gymId).length;
+    for (const row of subscriptionRows) subscriptionsByStatus[row.status] = row.statusCount;
 
     return {
       revenue: {
-        totalCollected: Math.round(totalCollected * 100) / 100,
-        totalPending: Math.round(totalPending * 100) / 100,
-        totalOverdue: Math.round(totalOverdue * 100) / 100,
+        totalCollected: Math.round(Number(revenueTotals.totalCollected ?? 0) * 100) / 100,
+        totalPending: Math.round(Number(revenueTotals.totalPending ?? 0) * 100) / 100,
+        totalOverdue: Math.round(Number(revenueTotals.totalOverdue ?? 0) * 100) / 100,
         monthlyRevenue,
       },
       students: {
-        total: students.length,
-        newLast30Days: newStudentsLast30,
+        total: studentTotals.total,
+        newLast30Days: studentTotals.newLast30Days,
         byStatus: studentsByStatus,
-        unassignedToGym: unassignedStudents,
+        unassignedToGym: studentTotals.unassignedToGym,
       },
       subscriptions: {
-        total: subscriptions.length,
+        total: subscriptionRows[0]?.total ?? 0,
         byStatus: subscriptionsByStatus,
       },
-      plans: plansSummary,
-      gyms: gymsSummary,
+      plans: plans.map((plan) => ({
+        id: plan.id,
+        name: plan.name,
+        price: Number(plan.price),
+        duration: plan.duration,
+        isActive: plan.isActive,
+        subscriberCount: plan._count.subscriptions,
+      })),
+      gyms: gyms.map((gym) => ({
+        id: gym.id,
+        name: gym.name,
+        studentCount: gym.studentCount,
+        revenue: Math.round(Number(gym.revenue) * 100) / 100,
+      })),
     };
   }
 }

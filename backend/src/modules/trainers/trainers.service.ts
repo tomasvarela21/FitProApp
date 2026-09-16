@@ -4,12 +4,50 @@ import { AppError } from "../../shared/errors/app-error";
 import { hashPassword } from "../../shared/utils/hash";
 import { TrainersMapper } from "./trainers.mapper";
 import { CreateTrainerInput, ListSubscriptionsQueryInput } from "./trainers.schema";
-import {
-  effectiveInstallmentStatus,
-  effectiveSubscriptionStatus,
-} from "../subscriptions/billing-status";
 
 const DASHBOARD_RECENT_LIMIT = 5;
+
+type SubscriptionListRow = {
+  subscriptionId: string;
+  studentId: string;
+  studentName: string;
+  studentEmail: string;
+  studentStatus: string;
+  planName: string;
+  startDate: Date;
+  endDate: Date;
+  totalAmount: Prisma.Decimal;
+  installmentCount: number;
+  frequency: string;
+  subscriptionStatus: string;
+  paymentStatus: string;
+  paidCount: number;
+  overdueCount: number;
+  pendingCount: number;
+  nextDueDate: Date | null;
+  nextAmount: Prisma.Decimal | null;
+  totalRows: number;
+};
+
+type DashboardInstallmentRow = {
+  subscriptionId: string;
+  installmentId: string;
+  studentId: string;
+  studentFirstName: string;
+  studentLastName: string;
+  planName: string;
+  installmentNumber: number;
+  amount: Prisma.Decimal;
+  dueDate: Date;
+};
+
+type DashboardInactiveRow = {
+  category: "7" | "14";
+  id: string;
+  firstName: string;
+  lastName: string;
+  lastWorkoutDate: Date | null;
+};
 
 export class TrainersService {
   static async createTrainer(data: CreateTrainerInput) {
@@ -100,24 +138,53 @@ export class TrainersService {
         where: { date: { gte: twoWeeksAgo, lt: weekAgo }, studentRoutine: { student: { trainerId: trainer.id } } },
       }),
       prisma.student.count({ where: { ...baseWhere, createdAt: { gte: monthStart } } }),
-      prisma.installment.findMany({
-        where: {
-          trainerId: trainer.id,
-          status: { in: ["OVERDUE", "PENDING"] },
-          dueDate: { lt: now },
-        },
-        include: { subscription: { include: { student: true } } },
-        orderBy: { dueDate: "asc" },
-      }),
-      prisma.installment.findMany({
-        where: {
-          trainerId: trainer.id,
-          status: "PENDING",
-          dueDate: { gte: now, lte: in7Days },
-        },
-        include: { subscription: { include: { student: true } } },
-        orderBy: { dueDate: "asc" },
-      }),
+      prisma.$queryRaw<DashboardInstallmentRow[]>(Prisma.sql`
+        SELECT selected.*
+        FROM (
+          SELECT DISTINCT ON (subscription."studentId")
+            subscription."id" AS "subscriptionId",
+            installment."id" AS "installmentId",
+            subscription."studentId",
+            student."firstName" AS "studentFirstName",
+            student."lastName" AS "studentLastName",
+            subscription."planName",
+            installment."number" AS "installmentNumber",
+            installment."amount",
+            installment."dueDate"
+          FROM "Installment" installment
+          INNER JOIN "Subscription" subscription ON subscription."id" = installment."subscriptionId"
+          INNER JOIN "Student" student ON student."id" = subscription."studentId"
+          WHERE installment."trainerId" = ${trainer.id}
+            AND installment."status" IN ('OVERDUE', 'PENDING')
+            AND installment."dueDate" < ${now}
+          ORDER BY subscription."studentId", installment."dueDate" ASC, installment."id" ASC
+        ) selected
+        ORDER BY selected."dueDate" ASC, selected."installmentId" ASC
+      `),
+      prisma.$queryRaw<DashboardInstallmentRow[]>(Prisma.sql`
+        SELECT selected.*
+        FROM (
+          SELECT DISTINCT ON (subscription."studentId")
+            subscription."id" AS "subscriptionId",
+            installment."id" AS "installmentId",
+            subscription."studentId",
+            student."firstName" AS "studentFirstName",
+            student."lastName" AS "studentLastName",
+            subscription."planName",
+            installment."number" AS "installmentNumber",
+            installment."amount",
+            installment."dueDate"
+          FROM "Installment" installment
+          INNER JOIN "Subscription" subscription ON subscription."id" = installment."subscriptionId"
+          INNER JOIN "Student" student ON student."id" = subscription."studentId"
+          WHERE installment."trainerId" = ${trainer.id}
+            AND installment."status" = 'PENDING'
+            AND installment."dueDate" >= ${now}
+            AND installment."dueDate" <= ${in7Days}
+          ORDER BY subscription."studentId", installment."dueDate" ASC, installment."id" ASC
+        ) selected
+        ORDER BY selected."dueDate" ASC, selected."installmentId" ASC
+      `),
       prisma.student.findMany({
         where: {
           trainerId: trainer.id,
@@ -128,29 +195,46 @@ export class TrainersService {
         select: { id: true, firstName: true, lastName: true },
         take: 5,
       }),
-      prisma.student.findMany({
-        where: {
-          trainerId: trainer.id,
-          status: "ACTIVE",
-          deletedAt: null,
-          studentRoutines: { some: { isActive: true } },
-        },
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          studentRoutines: {
-            where: { isActive: true },
-            select: {
-              workoutLogs: {
-                orderBy: { date: "desc" },
-                take: 1,
-                select: { date: true },
-              },
-            },
-          },
-        },
-      }),
+      prisma.$queryRaw<DashboardInactiveRow[]>(Prisma.sql`
+        WITH candidates AS MATERIALIZED (
+          SELECT
+            student."id",
+            student."firstName",
+            student."lastName",
+            latest_workout."date" AS "lastWorkoutDate"
+          FROM "Student" student
+          INNER JOIN "StudentRoutine" assignment
+            ON assignment."studentId" = student."id" AND assignment."isActive" = true
+          LEFT JOIN LATERAL (
+            SELECT workout."date"
+            FROM "WorkoutLog" workout
+            WHERE workout."studentRoutineId" = assignment."id"
+            ORDER BY workout."date" DESC
+            LIMIT 1
+          ) latest_workout ON true
+          WHERE student."trainerId" = ${trainer.id}
+            AND student."status" = 'ACTIVE'
+            AND student."deletedAt" IS NULL
+        ),
+        categorized AS (
+          SELECT '7'::text AS category, candidates.*
+          FROM candidates
+          WHERE candidates."lastWorkoutDate" IS NULL OR candidates."lastWorkoutDate" < ${weekAgo}
+          UNION ALL
+          SELECT '14'::text AS category, candidates.*
+          FROM candidates
+          WHERE candidates."lastWorkoutDate" IS NULL OR candidates."lastWorkoutDate" < ${twoWeeksAgo}
+        ),
+        ranked AS (
+          SELECT categorized.*,
+            ROW_NUMBER() OVER (PARTITION BY category ORDER BY "id" ASC) AS row_number
+          FROM categorized
+        )
+        SELECT category, "id", "firstName", "lastName", "lastWorkoutDate"
+        FROM ranked
+        WHERE row_number <= 5
+        ORDER BY category, row_number
+      `),
     ]);
 
     const countByStatus = (status: string) =>
@@ -161,63 +245,36 @@ export class TrainersService {
     const paused = countByStatus("PAUSED");
     const inactive = countByStatus("INACTIVE");
 
-    // Deduplicar por alumno
-    const seenStudentsOverdue = new Set<string>();
-    const expiredAlerts = overdueInstallments
-      .filter((i) => {
-        if (seenStudentsOverdue.has(i.subscription.studentId)) return false;
-        seenStudentsOverdue.add(i.subscription.studentId);
-        return true;
-      })
-      .map((i) => ({
-        subscriptionId: i.subscriptionId,
-        installmentId: i.id,
-        studentId: i.subscription.studentId,
-        studentName: `${i.subscription.student.firstName} ${i.subscription.student.lastName}`,
-        planName: i.subscription.planName,
-        installmentNumber: i.number,
-        amount: Number(i.amount),
-        endDate: i.dueDate,
+    const expiredAlerts = overdueInstallments.map((installment) => ({
+        subscriptionId: installment.subscriptionId,
+        installmentId: installment.installmentId,
+        studentId: installment.studentId,
+        studentName: `${installment.studentFirstName} ${installment.studentLastName}`,
+        planName: installment.planName,
+        installmentNumber: installment.installmentNumber,
+        amount: Number(installment.amount),
+        endDate: installment.dueDate,
         daysUntilExpiry: Math.floor(
-          (i.dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+          (installment.dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
         ),
       }));
 
-    const seenStudentsExpiring = new Set<string>();
-    const expiringSoonAlerts = expiringSoonInstallments
-      .filter((i) => {
-        if (seenStudentsExpiring.has(i.subscription.studentId)) return false;
-        seenStudentsExpiring.add(i.subscription.studentId);
-        return true;
-      })
-      .map((i) => ({
-        subscriptionId: i.subscriptionId,
-        installmentId: i.id,
-        studentId: i.subscription.studentId,
-        studentName: `${i.subscription.student.firstName} ${i.subscription.student.lastName}`,
-        planName: i.subscription.planName,
-        installmentNumber: i.number,
-        amount: Number(i.amount),
-        endDate: i.dueDate,
+    const expiringSoonAlerts = expiringSoonInstallments.map((installment) => ({
+        subscriptionId: installment.subscriptionId,
+        installmentId: installment.installmentId,
+        studentId: installment.studentId,
+        studentName: `${installment.studentFirstName} ${installment.studentLastName}`,
+        planName: installment.planName,
+        installmentNumber: installment.installmentNumber,
+        amount: Number(installment.amount),
+        endDate: installment.dueDate,
         daysUntilExpiry: Math.ceil(
-          (i.dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+          (installment.dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
         ),
       }));
 
-    const withLastWorkout = studentsWithRoutine.map((s) => {
-      const lastDate =
-        s.studentRoutines
-          .flatMap((sr) => sr.workoutLogs.map((l) => l.date))
-          .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
-      return { id: s.id, firstName: s.firstName, lastName: s.lastName, lastWorkoutDate: lastDate };
-    });
-
-    const noWorkoutLast7 = withLastWorkout
-      .filter((s) => !s.lastWorkoutDate || s.lastWorkoutDate < weekAgo)
-      .slice(0, 5);
-    const noWorkoutLast14 = withLastWorkout
-      .filter((s) => !s.lastWorkoutDate || s.lastWorkoutDate < twoWeeksAgo)
-      .slice(0, 5);
+    const noWorkoutLast7 = studentsWithRoutine.filter((student) => student.category === "7");
+    const noWorkoutLast14 = studentsWithRoutine.filter((student) => student.category === "14");
 
     const retentionRate = total > 0 ? Math.round((active / total) * 100) : 0;
     const activePercentage = total > 0 ? Math.round((active / total) * 100) : 0;
@@ -312,96 +369,122 @@ export class TrainersService {
     const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     const search = query.search?.trim();
 
-    const where: Prisma.SubscriptionWhereInput = {
-      trainerId: trainer.id,
-      status: { in: ["ACTIVE", "EXPIRED"] },
-      student: {
-        deletedAt: null,
-        ...(search ? {
-          OR: [
-            { firstName: { contains: search, mode: "insensitive" } },
-            { lastName: { contains: search, mode: "insensitive" } },
-          ],
-        } : {}),
-      },
-    };
-
-    const allSubs = await prisma.subscription.findMany({
-      where,
-      orderBy: { endDate: "asc" },
-      include: {
-        student: {
-          select: { id: true, firstName: true, lastName: true, email: true, status: true, deletedAt: true },
-        },
-        plan: { select: { name: true } },
-        installments: { orderBy: { number: "asc" } },
-      },
-    });
-
-    const withStatus = allSubs
-      .map((sub) => {
-        const installments = sub.installments;
-        const hasOverdue = installments.some(
-          (i) => effectiveInstallmentStatus(i.status, i.dueDate, now) === "OVERDUE"
-        );
-        const hasExpiringSoon = installments.some(
-          (i) => i.status === "PENDING" && i.dueDate >= now && i.dueDate <= in7Days
-        );
-        const allPaid = installments.length > 0 && installments.every((i) => i.status === "PAID");
-
-        let paymentStatus: string;
-        if (hasOverdue) paymentStatus = "OVERDUE";
-        else if (hasExpiringSoon) paymentStatus = "EXPIRING_SOON";
-        else if (allPaid) paymentStatus = "PAID";
-        else paymentStatus = "ACTIVE";
-
-        const paidCount = installments.filter((i) => i.status === "PAID").length;
-        const overdueCount = installments.filter(
-          (i) => effectiveInstallmentStatus(i.status, i.dueDate, now) === "OVERDUE"
-        ).length;
-        const pendingFuture = installments.filter(
-          (i) => i.status === "PENDING" && i.dueDate >= now
-        );
-        const nextPending = pendingFuture[0] ?? null;
-
-        return {
-          subscriptionId: sub.id,
-          studentId: sub.student.id,
-          studentName: `${sub.student.firstName} ${sub.student.lastName}`,
-          studentEmail: sub.student.email,
-          studentStatus: sub.student.status,
-          planName: sub.planName,
-          startDate: sub.startDate,
-          endDate: sub.endDate,
-          totalAmount: Number(sub.totalAmount),
-          installmentCount: sub.installmentCount,
-          frequency: sub.frequency,
-          subscriptionStatus: effectiveSubscriptionStatus(sub.status, sub.endDate, now),
-          paymentStatus,
-          paidCount,
-          overdueCount,
-          pendingCount: pendingFuture.length,
-          nextDueDate: nextPending?.dueDate ?? null,
-          nextAmount: nextPending ? Number(nextPending.amount) : null,
-        };
-      });
-
-    const filtered =
-      query.status && query.status !== "ALL"
-        ? withStatus.filter((s) => s.paymentStatus === query.status)
-        : withStatus;
-
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const skip = (page - 1) * limit;
+    const escapedSearch = search?.replace(/[\\%_]/g, "\\$&");
+    const searchFilter = escapedSearch
+      ? Prisma.sql`AND (
+          student."firstName" ILIKE ${`%${escapedSearch}%`} ESCAPE '\\'
+          OR student."lastName" ILIKE ${`%${escapedSearch}%`} ESCAPE '\\'
+        )`
+      : Prisma.empty;
+    const statusFilter = query.status && query.status !== "ALL"
+      ? Prisma.sql`WHERE metrics."paymentStatus" = ${query.status}`
+      : Prisma.empty;
+
+    const metricsQuery = Prisma.sql`
+      SELECT
+        subscription."id" AS "subscriptionId",
+        student."id" AS "studentId",
+        CONCAT(student."firstName", ' ', student."lastName") AS "studentName",
+        student."email" AS "studentEmail",
+        student."status"::text AS "studentStatus",
+        subscription."planName",
+        subscription."startDate",
+        subscription."endDate",
+        subscription."totalAmount",
+        subscription."installmentCount",
+        subscription."frequency"::text AS "frequency",
+        CASE
+          WHEN subscription."status" = 'ACTIVE' AND subscription."endDate" < ${now}
+            THEN 'EXPIRED'
+          ELSE subscription."status"::text
+        END AS "subscriptionStatus",
+        CASE
+          WHEN installment_metrics."overdueCount" > 0 THEN 'OVERDUE'
+          WHEN installment_metrics."expiringSoonCount" > 0 THEN 'EXPIRING_SOON'
+          WHEN installment_metrics."installmentTotal" > 0
+            AND installment_metrics."paidCount" = installment_metrics."installmentTotal" THEN 'PAID'
+          ELSE 'ACTIVE'
+        END AS "paymentStatus",
+        installment_metrics."paidCount"::integer AS "paidCount",
+        installment_metrics."overdueCount"::integer AS "overdueCount",
+        installment_metrics."pendingCount"::integer AS "pendingCount",
+        next_installment."dueDate" AS "nextDueDate",
+        next_installment."amount" AS "nextAmount"
+      FROM "Subscription" subscription
+      INNER JOIN "Student" student ON student."id" = subscription."studentId"
+      CROSS JOIN LATERAL (
+        SELECT
+          COUNT(*) AS "installmentTotal",
+          COUNT(*) FILTER (WHERE installment."status" = 'PAID') AS "paidCount",
+          COUNT(*) FILTER (
+            WHERE installment."status" = 'OVERDUE'
+              OR (installment."status" = 'PENDING' AND installment."dueDate" < ${now})
+          ) AS "overdueCount",
+          COUNT(*) FILTER (
+            WHERE installment."status" = 'PENDING'
+              AND installment."dueDate" >= ${now}
+              AND installment."dueDate" <= ${in7Days}
+          ) AS "expiringSoonCount",
+          COUNT(*) FILTER (
+            WHERE installment."status" = 'PENDING' AND installment."dueDate" >= ${now}
+          ) AS "pendingCount"
+        FROM "Installment" installment
+        WHERE installment."subscriptionId" = subscription."id"
+      ) installment_metrics
+      LEFT JOIN LATERAL (
+        SELECT installment."dueDate", installment."amount"
+        FROM "Installment" installment
+        WHERE installment."subscriptionId" = subscription."id"
+          AND installment."status" = 'PENDING'
+          AND installment."dueDate" >= ${now}
+        ORDER BY installment."number" ASC
+        LIMIT 1
+      ) next_installment ON true
+      WHERE subscription."trainerId" = ${trainer.id}
+        AND subscription."status" IN ('ACTIVE', 'EXPIRED')
+        AND student."deletedAt" IS NULL
+        ${searchFilter}
+    `;
+
+    const rows = await prisma.$queryRaw<SubscriptionListRow[]>(Prisma.sql`
+      WITH metrics AS (${metricsQuery}),
+      filtered AS (
+        SELECT metrics.*
+        FROM metrics
+        ${statusFilter}
+      )
+      SELECT filtered.*, (SELECT COUNT(*)::integer FROM filtered) AS "totalRows"
+      FROM filtered
+      ORDER BY filtered."endDate" ASC, filtered."subscriptionId" ASC
+      LIMIT ${limit}
+      OFFSET ${skip}
+    `);
+
+    let total = rows[0]?.totalRows ?? 0;
+    if (rows.length === 0 && page > 1) {
+      const countRows = await prisma.$queryRaw<Array<{ total: number }>>(Prisma.sql`
+        WITH metrics AS (${metricsQuery})
+        SELECT COUNT(*)::integer AS total
+        FROM metrics
+        ${statusFilter}
+      `);
+      total = countRows[0]?.total ?? 0;
+    }
 
     return {
-      items: filtered.slice(skip, skip + limit),
+      items: rows.map(({ totalRows: _totalRows, ...row }) => ({
+        ...row,
+        totalAmount: Number(row.totalAmount),
+        nextAmount: row.nextAmount === null ? null : Number(row.nextAmount),
+      })),
       meta: {
         page,
         limit,
-        total: filtered.length,
-        totalPages: Math.ceil(filtered.length / limit) || 1,
+        total,
+        totalPages: Math.ceil(total / limit) || 1,
       },
     };
   }
