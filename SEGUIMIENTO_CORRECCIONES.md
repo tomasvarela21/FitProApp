@@ -27,23 +27,25 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 | 5 | Historial y migraciones | Completada | 2/2 |
 | 6 | Planificación, entrenamientos y fechas | Completada | 4/4 |
 | 7 | Comunicaciones y procesos programados | Completada | 2/2 |
-| 8 | Rendimiento, regresiones y entrega | Pendiente | 0/3 |
+| 8 | Rendimiento, regresiones y entrega | Completada con acciones operativas registradas | 3/3 |
 
 ## Registro de hallazgos pendientes
 
 | ID | Detectado en | Severidad | Hallazgo | Estado | Fase prevista |
 |---|---|---|---|---|---|
-| `DEP-001` | Fase 1 | Alta | `npm audit --omit=dev` informa 21 vulnerabilidades en el árbol de producción: 13 altas, 5 medias y 3 bajas. Incluye dependencias como Axios, React Router y Vite. | Pendiente de análisis y actualización controlada | 2, 3 y 8 |
-| `QA-001` | Fase 1 | Media | El lint global del frontend informa actualmente 18 errores y 13 advertencias preexistentes; la línea base inicial era de 19 errores y 15 advertencias. | Pendiente; la entrega 7.2 no modificó archivos fuente del frontend | 8 |
+| `DEP-001` | Fase 1 | Alta | `npm audit --omit=dev` informaba 21 vulnerabilidades en el frontend: 13 altas, 5 medias y 3 bajas. | Resuelto en Fase 8: Axios, React Router, Vite y transitivas actualizadas; auditoría final 0 | Cerrado |
+| `DEP-002` | Fase 8 | Media | npm marca como alta la cadena `prisma → @prisma/config → deepmerge-ts`; la única corrección propuesta degrada Prisma a 6.12. | Excepción temporal limitada a Prisma CLI; CI bloquea cualquier hallazgo alto adicional | Seguimiento de dependencias |
+| `QA-001` | Fase 1 | Media | El lint global partía de 19 errores y 15 advertencias. | Corregido dentro del alcance: 0 errores y 11 advertencias de dependencias de hooks; chat excluido por acuerdo | Cerrado con advertencias bajas |
 | `ENV-001` | Fase 1 | Media | Firefox de Playwright no inicia en el host por un error de activación `SideBySide` del ensamblado `mozglue`. | Limitación del entorno; Chromium y WebKit operativos | 8 |
-| `PERF-001` | Fase 1 | Media | El bundle principal del frontend alcanza aproximadamente 1,22 MB sin comprimir. | Pendiente de medición y optimización | 8 |
-| `PERF-002` | Fase 1 | Baja | `auth.api.ts` se importa de forma estática y dinámica, por lo que Vite no puede separarlo en otro chunk. | Pendiente | 8 |
-| `QA-002` | Fase 1 | Baja | Vitest/Vite informa una advertencia futura de configuración y `node-cron` genera una advertencia de source map durante las pruebas del backend. | Pendiente de revisión | 8 |
-| `QA-003` | Fase 3 | Baja | Prisma 6 advierte que `package.json#prisma` será retirado en Prisma 7 y recomienda `prisma.config.ts`. | Pendiente; no afecta la generación actual | 8 |
+| `PERF-001` | Fase 1 | Media | El bundle principal del frontend alcanzaba aproximadamente 1,23 MB sin comprimir. | Resuelto: chunks separados; mayor fragmento final ~400 KB | Cerrado |
+| `PERF-002` | Fase 1 | Baja | `auth.api.ts` se importaba de forma estática y dinámica. | Resuelto: importación única y build sin esa advertencia | Cerrado |
+| `QA-002` | Fase 1 | Baja | Vitest/Vite informaba una advertencia futura de configuración y `node-cron` genera una advertencia de source map. | Configuración Vitest corregida; permanece el source map defectuoso de la dependencia | Seguimiento de dependencia |
+| `QA-003` | Fase 3 | Baja | Prisma advertía que `package.json#prisma` será retirado en Prisma 7. | Resuelto con `prisma.config.ts` y generación reproducible | Cerrado |
 | `SEC-001` | Fase 3 | Alta | El archivo local ignorado `backend/.env` contiene credenciales de base de datos con apariencia activa en texto plano. | Pendiente de rotación por el propietario y revisión del almacenamiento local; no se versionó ni expuso su contenido | Acción operativa / 8 |
 | `AUTH-001` | Fase 3 | Media | La política productiva de cookies no puede validarse sin conocer los dominios reales del frontend y la API. | Se conservó `SameSite=Strict`, `Secure` y la ruta existente; verificar antes del despliegue | 8 |
 | `MIG-001` | Fase 5 | Media | Reemplazar claves foráneas por restricciones `RESTRICT` requiere bloqueos de esquema cuya duración dependerá del volumen real. | Ensayar con una copia representativa y definir ventana y timeout antes del despliegue | 8 |
 | `ENV-002` | Fase 7 | Media | La outbox admite temporalmente `JWT_ACCESS_SECRET` como clave de cifrado si no se define una clave independiente. Rotar el secreto JWT con eventos pendientes impediría descifrarlos. | Configurar una clave estable y aleatoria en `OUTBOX_ENCRYPTION_SECRET` antes del despliegue | 8 / acción operativa |
+| `OPS-001` | Fase 8 | Media | El rate limit global usa memoria local del proceso. Varias réplicas contarían solicitudes por separado. | Configurar un store compartido antes de escalar horizontalmente | Acción operativa |
 
 Los hallazgos de dependencias se validarán contra su uso real antes de actualizar paquetes. No se ejecutará `npm audit fix` de forma indiscriminada.
 
@@ -385,10 +387,56 @@ Se documentarán aquí el consumo atómico de tokens, la revocación de sesiones
 
 ## Fase 8 — Rendimiento, regresiones y entrega
 
-**Estado:** pendiente.  
-**Registro de entregas:** todavía no iniciado.
+**Estado:** completada con acciones operativas registradas.
 
-Se documentarán aquí las mediciones antes y después, la paginación, los controles de integración continua, las pruebas completas y las limitaciones finales.
+### Entrega 8.1 — Paginación y agregaciones en PostgreSQL
+
+| Elemento | Evidencia |
+|---|---|
+| Problema | El listado de cobros cargaba todas las suscripciones y cuotas para filtrar y paginar en memoria. Analíticas y dashboard materializaban colecciones completas y deduplicaban después. |
+| Cambio | Cobros filtra estados derivados, busca, cuenta y pagina en SQL parametrizado. Analíticas agrega importes, alumnos, suscripciones y gimnasios en PostgreSQL. Dashboard deduplica alertas y limita inactividad en la consulta. Se agregaron cinco índices compuestos. |
+| Rendimiento | Con 601 suscripciones y 1202 cuotas, la mediana del listado bajó de ~57,5 ms a ~11,5 ms, aproximadamente 80 %. La respuesta materializa 20 filas y los bloques web se dividieron en fragmentos de hasta ~400 KB. |
+| Migración | `20260916180000_add_query_indexes` es aditiva. La prueba poblada conserva todos los registros y verifica los cinco índices. No se aplicó a una base real. |
+| Pruebas | Casos de estados, búsqueda literal, tenant, página vacía, analíticas, dashboard, volumen e índices. Cierre de entrega: 38/38 unitarias y 142/142 de integración; build y Prisma válidos. |
+| Limitaciones | Los tiempos son locales y orientativos. Los índices deben medirse con volumen productivo y el ensayo de locks de `MIG-001` continúa como acción operativa. |
+| Commit | `9ba54b4` — `perf: paginar y agregar datos en la base` |
+
+### Entrega 8.2 — Dependencias, límites y CI
+
+| Elemento | Evidencia |
+|---|---|
+| Problema | Dependencias directas y transitivas vulnerables, Nodemailer sin uso, instalación de Prisma no reproducible, configuración obsoleta, ausencia de CI y límites de proxy/body implícitos. |
+| Cambio | Se retiró Nodemailer; se actualizaron Axios, React Router, Vite, Resend, Morgan y transitivas. Prisma Client/CLI quedaron alineados en 6.19.3 y `postinstall` genera el cliente. Se fijó body JSON de 100 KB, respuesta 413, CORS normalizado, proxy y rate limit configurables. GitHub Actions ejecuta auditorías, builds, lint, unitarias, integración y tres navegadores. |
+| Instalación | `npm ci` reconstruyó ambos proyectos desde sus lockfiles. La prueba descubrió el cliente Prisma ausente, se corrigió y una segunda instalación limpia compiló exitosamente. |
+| Pruebas | Backend final: 38/38 unitarias, 145/145 integración y build. Frontend: 27/27 unitarias, 0 errores de lint, build y auditoría con 0 vulnerabilidades. CORS, límite 413 y confianza de proxy quedaron cubiertos. |
+| Navegadores | Chromium y WebKit pasaron. Firefox falló antes del caso con `spawn UNKNOWN` en el host Windows (`ENV-001`); CI lo ejecuta en Ubuntu. |
+| Dependencias | Backend no conserva hallazgos altos no aceptados. `DEP-002` documenta la excepción temporal del CLI Prisma; una degradación automática no se aplicó. |
+| Commit | `d4830b8` — `ci: automatizar controles de calidad` |
+
+### Entrega 8.3 — Arquitectura y procedimientos
+
+| Elemento | Evidencia |
+|---|---|
+| Problema | La arquitectura describía versiones, cantidad de modelos y sesión anteriores a las correcciones; el README web era el texto de Vite y no existían procedimientos consolidados. |
+| Cambio | Se actualizó arquitectura, stack, seguridad, datos, outbox, frontend, contratos y limitaciones. Se agregaron guías de testing, migraciones, despliegue y contratos HTTP, además de READMEs operativos. |
+| Validación | Se comprobaron rutas y destinos locales, ausencia de referencias a versiones antiguas y `git diff --check`. Los procedimientos reflejan los comandos ejecutados y sus resultados reales. |
+| Limitaciones | La documentación prepara despliegues y migraciones, pero no los autoriza ni ejecuta. Permanecen `SEC-001`, `AUTH-001`, `MIG-001`, `ENV-002`, `ENV-001`, `DEP-002`, `OPS-001` y 11 advertencias de hooks. |
+| Commit | `ea3f6a9` — `docs: actualizar arquitectura y validación` |
+
+**Cierre de la fase:** la paginación y agregación pesada se ejecutan en PostgreSQL, el frontend entrega chunks acotados, las instalaciones son reproducibles y CI conserva los controles principales. No quedan regresiones críticas o altas conocidas dentro del código corregido. Las acciones que dependen de infraestructura real están identificadas y no se ejecutaron sin autorización.
+
+### Mapa final de fases y commits principales
+
+| Fase | Resultado | Commits de código principales |
+|---|---|---|
+| 1 | Entorno aislado de backend y web | `14b0ae8`, `b5e58f0` |
+| 2 | Autorización y validación | `3a3466e`, `a3da01b`, `c9d35e8` |
+| 3 | Tokens, revocación y caché de sesión | `916f079`, `f9fa945`, `2e8738d`, `2c7dcac` |
+| 4 | Cobros transaccionales | `7eb3847`, `0adeda0`, `8edbd9f` |
+| 5 | Retiro seguro y snapshots | `2124526`, `5472b2d` |
+| 6 | Semanas, conflictos, idempotencia y fechas | `77b86d8`, `543b318`, `1c47f42`, `7c61302` |
+| 7 | Validación de comunicaciones y outbox | `6460e7c`, `edfeca5` |
+| 8 | Rendimiento, CI y documentación | `9ba54b4`, `d4830b8`, `ea3f6a9` |
 
 ## Plantilla para próximas entregas
 
