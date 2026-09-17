@@ -9,7 +9,9 @@ import {
   type SessionSnapshot,
 } from "@/auth/session-coordinator";
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? "/api";
+const BASE_URL = import.meta.env.PROD
+  ? "/api"
+  : import.meta.env.VITE_API_URL ?? "/api";
 
 type AuthContext = { userId: string; revision: number };
 type AuthRequestConfig = InternalAxiosRequestConfig & {

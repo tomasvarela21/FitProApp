@@ -10,7 +10,7 @@ Usa [backend/.env.example](../backend/.env.example) como inventario. Antes de pr
 - secretos JWT, admin y cron largos, distintos y rotados.
 - `OUTBOX_ENCRYPTION_SECRET` estable e independiente.
 - `ALLOWED_ORIGINS` con orígenes exactos, sin comodines con credenciales.
-- `APP_URL` definitivo. El frontend usa `VITE_API_URL=/api` y Vercel reenvía esa ruta al backend configurado en `frontend-app/vercel.json`.
+- `APP_URL` definitivo. Los builds web de producción fuerzan `/api` y Vercel reenvía esa ruta al backend configurado en `frontend-app/vercel.json`; no dependen de un `VITE_API_URL` antiguo del proyecto.
 - `TRUST_PROXY_HOPS` con la cantidad exacta de proxies.
 - claves Resend y VAPID.
 
