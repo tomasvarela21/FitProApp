@@ -3,3 +3,6 @@
 
 # Archivos temporales de trabajo
 *.html
+
+# Respaldos locales de base de datos (pueden contener datos sensibles)
+/backups/

@@ -41,10 +41,10 @@ Este documento registra el avance del plan de corrección, la evidencia de prueb
 | `PERF-002` | Fase 1 | Baja | `auth.api.ts` se importaba de forma estática y dinámica. | Resuelto: importación única y build sin esa advertencia | Cerrado |
 | `QA-002` | Fase 1 | Baja | Vitest/Vite informaba una advertencia futura de configuración y `node-cron` genera una advertencia de source map. | Configuración Vitest corregida; permanece el source map defectuoso de la dependencia | Seguimiento de dependencia |
 | `QA-003` | Fase 3 | Baja | Prisma advertía que `package.json#prisma` será retirado en Prisma 7. | Resuelto con `prisma.config.ts` y generación reproducible | Cerrado |
-| `SEC-001` | Fase 3 | Alta | El archivo local ignorado `backend/.env` contiene credenciales de base de datos con apariencia activa en texto plano. | Pendiente de rotación por el propietario y revisión del almacenamiento local; no se versionó ni expuso su contenido | Acción operativa / 8 |
+| `SEC-001` | Fase 3 | Alta | El archivo local ignorado `backend/.env` contiene credenciales de base de datos con apariencia activa en texto plano. | Los secretos internos fueron rotados y todas las sesiones de prueba revocadas. La contraseña administrada por Supabase requiere rotación manual en su panel y actualización posterior de `DATABASE_URL`/`DIRECT_URL` | Acción manual previa a publicación |
 | `AUTH-001` | Fase 3 | Media | La política productiva de cookies no puede validarse sin conocer los dominios reales del frontend y la API. | Se conservó `SameSite=Strict`, `Secure` y la ruta existente; verificar antes del despliegue | 8 |
-| `MIG-001` | Fase 5 | Media | Reemplazar claves foráneas por restricciones `RESTRICT` requiere bloqueos de esquema cuya duración dependerá del volumen real. | Ensayar con una copia representativa y definir ventana y timeout antes del despliegue | 8 |
-| `ENV-002` | Fase 7 | Media | La outbox admite temporalmente `JWT_ACCESS_SECRET` como clave de cifrado si no se define una clave independiente. Rotar el secreto JWT con eventos pendientes impediría descifrarlos. | Configurar una clave estable y aleatoria en `OUTBOX_ENCRYPTION_SECRET` antes del despliegue | 8 / acción operativa |
+| `MIG-001` | Fase 5 | Media | Reemplazar claves foráneas por restricciones `RESTRICT` requiere bloqueos de esquema cuya duración dependerá del volumen real. | Resuelto para la base actual de prueba: respaldo validado, 11 migraciones aplicadas y datos verificados. Repetir el ensayo si el volumen crece sustancialmente antes de otra migración estructural | Cerrado para el lanzamiento actual |
+| `ENV-002` | Fase 7 | Media | La outbox admite temporalmente `JWT_ACCESS_SECRET` como clave de cifrado si no se define una clave independiente. Rotar el secreto JWT con eventos pendientes impediría descifrarlos. | `OUTBOX_ENCRYPTION_SECRET` local configurada con una clave criptográfica independiente de 64 bytes; la variable deberá copiarse de forma segura al proveedor de hosting | Resuelto localmente / pendiente en hosting |
 | `OPS-001` | Fase 8 | Media | El rate limit global usa memoria local del proceso. Varias réplicas contarían solicitudes por separado. | Configurar un store compartido antes de escalar horizontalmente | Acción operativa |
 
 Los hallazgos de dependencias se validarán contra su uso real antes de actualizar paquetes. No se ejecutará `npm audit fix` de forma indiscriminada.
@@ -437,6 +437,20 @@ Se documentarán aquí el consumo atómico de tokens, la revocación de sesiones
 | 6 | Semanas, conflictos, idempotencia y fechas | `77b86d8`, `543b318`, `1c47f42`, `7c61302` |
 | 7 | Validación de comunicaciones y outbox | `6460e7c`, `edfeca5` |
 | 8 | Rendimiento, CI y documentación | `9ba54b4`, `d4830b8`, `ea3f6a9` |
+
+## Cierre operativo previo al lanzamiento — 17 de septiembre de 2026
+
+| Elemento | Evidencia |
+|---|---|
+| Respaldo | Se generó un dump completo de PostgreSQL 17.6 en formato custom y se validó su catálogo con `pg_restore --list`. La carpeta local `backups/` quedó excluida de Git porque puede contener datos sensibles. |
+| Migraciones | La base Supabase de prueba pasó de 20 a 31 migraciones aplicadas mediante `prisma migrate deploy`. Prisma confirmó `Database schema is up to date` y no registró migraciones fallidas. |
+| Conservación | Antes y después se conservaron 9 usuarios, 6 entrenadores y 4 alumnos. No quedaron suscripciones activas duplicadas ni rutinas activas duplicadas. |
+| Sesiones | Se rotaron los secretos locales de acceso, administración y cron; se eliminaron 155 refresh tokens de prueba y se incrementó `authVersion` para los 9 usuarios. El próximo acceso exige iniciar sesión nuevamente. |
+| Outbox | Se configuró una clave independiente y estable de 64 bytes. La tabla se creó vacía, por lo que la rotación no dejó eventos anteriores imposibles de descifrar. |
+| Conexión | La comprobación de runtime descubrió que las URLs no exigían SSL. Se agregó `sslmode=require` a las conexiones ignoradas por Git y una consulta real de Prisma a Supabase pasó correctamente. |
+| Runtime local | Backend y frontend se iniciaron en segundo plano. `/health` respondió HTTP 200, una autenticación inexistente consultó la base y devolvió el 401 esperado, y `/login` respondió HTTP 200. |
+| Pruebas finales | Backend: 38/38 unitarias, 145/145 integración y build. Frontend: 27/27 unitarias, lint con 0 errores y 11 advertencias conocidas, build y 2/2 E2E en Chromium/WebKit. Auditoría frontend: 0 vulnerabilidades de producción. |
+| Pendientes externos | Rotar la contraseña de Supabase desde el panel; configurar secretos y dominios en el hosting; verificar cookies/CORS con esos dominios; ejecutar Firefox en CI Linux; usar un store compartido de rate limit solo antes de agregar una segunda réplica. |
 
 ## Plantilla para próximas entregas
 
