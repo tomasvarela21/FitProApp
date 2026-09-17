@@ -5,7 +5,7 @@ import { successResponse } from "../../shared/responses/api-response";
 import { ChatService } from "./chat.service";
 
 const sendMessageSchema = z.object({ body: z.string().min(1).max(2000) });
-const markReadSchema = z.object({ readBefore: z.string().min(1) });
+const markReadSchema = z.object({ readBefore: z.string().datetime() });
 const createConvSchema = z.object({ studentId: z.string().min(1) });
 
 export class ChatController {
@@ -34,8 +34,10 @@ export class ChatController {
   static getMessages = asyncHandler(async (req: Request, res: Response) => {
     const conversationId = req.params.conversationId as string;
     const role = req.user!.role as "TRAINER" | "STUDENT";
-    const since = typeof req.query.since === "string" ? req.query.since : undefined;
-    const limit = req.query.limit ? Math.min(Number(req.query.limit), 100) : 50;
+    const sinceRaw = typeof req.query.since === "string" ? req.query.since : undefined;
+    const since = sinceRaw && !isNaN(new Date(sinceRaw).getTime()) ? sinceRaw : undefined;
+    const limitNum = parseInt(req.query.limit as string, 10);
+    const limit = !isNaN(limitNum) ? Math.min(limitNum, 100) : 50;
 
     const result = await ChatService.getMessages(req.user!.userId, role, conversationId, since, limit);
     return res.json(successResponse("Mensajes obtenidos", result));

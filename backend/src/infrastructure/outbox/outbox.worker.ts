@@ -69,49 +69,28 @@ export async function deliverOutboxPayload(payload: OutboxPayload): Promise<Deli
 
 async function claimBatch(): Promise<NotificationOutbox[]> {
   const staleBefore = new Date(Date.now() - LOCK_TIMEOUT_MS);
-  const claimed: NotificationOutbox[] = [];
+  const lockedAt = new Date();
 
-  while (claimed.length < BATCH_SIZE) {
-    const candidates = await prisma.notificationOutbox.findMany({
-      where: {
-        attempts: { lt: MAX_ATTEMPTS },
-        OR: [
-          { status: { in: ["PENDING", "FAILED"] }, availableAt: { lte: new Date() } },
-          { status: "PROCESSING", lockedAt: { lt: staleBefore } },
-        ],
-      },
-      orderBy: { createdAt: "asc" },
-      take: BATCH_SIZE - claimed.length,
-    });
-    if (candidates.length === 0) break;
-
-    for (const candidate of candidates) {
-      const lockedAt = new Date();
-      const result = await prisma.notificationOutbox.updateMany({
-        where: {
-          id: candidate.id,
-          attempts: { equals: candidate.attempts, lt: MAX_ATTEMPTS },
-          OR: [
-            { status: { in: ["PENDING", "FAILED"] }, availableAt: { lte: lockedAt } },
-            { status: "PROCESSING", lockedAt: { lt: staleBefore } },
-          ],
-        },
-        data: {
-          status: "PROCESSING",
-          attempts: { increment: 1 },
-          lockedAt,
-        },
-      });
-      if (result.count === 1) {
-        claimed.push({
-          ...candidate,
-          status: "PROCESSING",
-          attempts: candidate.attempts + 1,
-          lockedAt,
-        });
-      }
-    }
-  }
+  const claimed = await prisma.$queryRaw<NotificationOutbox[]>`
+    WITH candidates AS (
+      SELECT id FROM "NotificationOutbox"
+      WHERE attempts < ${MAX_ATTEMPTS}
+        AND (
+          (status IN ('PENDING', 'FAILED') AND "availableAt" <= ${lockedAt})
+          OR (status = 'PROCESSING' AND "lockedAt" < ${staleBefore})
+        )
+      ORDER BY "createdAt" ASC
+      LIMIT ${BATCH_SIZE}
+      FOR UPDATE SKIP LOCKED
+    )
+    UPDATE "NotificationOutbox" o
+    SET status = 'PROCESSING',
+        attempts = o.attempts + 1,
+        "lockedAt" = ${lockedAt}
+    FROM candidates
+    WHERE o.id = candidates.id
+    RETURNING o.*
+  `;
 
   return claimed;
 }

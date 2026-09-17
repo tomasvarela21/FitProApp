@@ -413,6 +413,7 @@ export class WorkoutService {
         workoutLog: { select: { date: true, businessDate: true } },
       },
       orderBy: { workoutLog: { date: "asc" } },
+      take: 500,
     });
 
     const sessionMap = new Map<
