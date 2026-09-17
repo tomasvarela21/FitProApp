@@ -450,7 +450,10 @@ Se documentarán aquí el consumo atómico de tokens, la revocación de sesiones
 | Conexión | La comprobación de runtime descubrió que las URLs no exigían SSL. Se agregó `sslmode=require`, se activó la obligación de SSL en Supabase y se rotó la contraseña de PostgreSQL. Prisma confirmó las 31 migraciones con la credencial nueva. |
 | Runtime local | Backend y frontend se reiniciaron con la configuración rotada. `/health` respondió HTTP 200, una autenticación inexistente consultó la base y devolvió el 401 esperado, y `/login` respondió HTTP 200. |
 | Pruebas finales | Backend: 38/38 unitarias, 145/145 integración y build. Frontend: 27/27 unitarias, lint con 0 errores y 11 advertencias conocidas, build y 2/2 E2E en Chromium/WebKit. Auditoría frontend: 0 vulnerabilidades de producción. |
-| Pendientes externos | Configurar secretos y dominios en el hosting; verificar cookies/CORS con esos dominios; ejecutar Firefox en CI Linux; usar un store compartido de rate limit solo antes de agregar una segunda réplica. |
+| Publicación | `main` se publicó en GitHub. El primer workflow detectó que Prisma no recibía URLs de testing y que el PostgreSQL preinstalado del runner no podía iniciar un clúster temporal; ambos fallos eran de CI y no de las suites. |
+| Correcciones de CI | `9377373` agregó URLs locales seguras para Prisma y actualizó `checkout`/`setup-node` a v5. `29674bf` reemplazó el PostgreSQL del runner por un contenedor PostgreSQL 17 aislado, con health check y `TEST_DATABASE_URL`. |
+| CI remoto | GitHub Actions `Quality #3` finalizó correctamente en 2m04s. Backend: 38/38 unitarias y 145/145 de integración. Frontend: 27/27 unitarias, lint, build y E2E completos en Chromium, Firefox y WebKit. Se conservan las advertencias conocidas de hooks, sin errores de lint. |
+| Pendientes externos | Configurar secretos y dominios en el hosting; verificar cookies/CORS con esos dominios; usar un store compartido de rate limit solo antes de agregar una segunda réplica. |
 
 ## Plantilla para próximas entregas
 
