@@ -10,7 +10,7 @@ Usa [backend/.env.example](../backend/.env.example) como inventario. Antes de pr
 - secretos JWT, admin y cron largos, distintos y rotados.
 - `OUTBOX_ENCRYPTION_SECRET` estable e independiente.
 - `ALLOWED_ORIGINS` con orígenes exactos, sin comodines con credenciales.
-- `APP_URL` y `VITE_API_URL` definitivos.
+- `APP_URL` definitivo. El frontend usa `VITE_API_URL=/api` y Vercel reenvía esa ruta al backend configurado en `frontend-app/vercel.json`.
 - `TRUST_PROXY_HOPS` con la cantidad exacta de proxies.
 - claves Resend y VAPID.
 
@@ -38,7 +38,7 @@ npm run build
 npm run test:e2e:all
 ```
 
-Verifica dominios reales en navegador: login, cookie de refresh, CORS, renovación, logout y cuenta A → cuenta B.
+Verifica dominios reales en navegador: proxy `/api`, login, cookie de refresh de primera parte, renovación, logout y cuenta A → cuenta B.
 
 ## Secuencia
 
